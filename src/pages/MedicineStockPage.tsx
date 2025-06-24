@@ -73,14 +73,12 @@ const MedicineStockPage = () => {
       // Insert medicine
       const { data: medicineData, error: medicineError } = await supabase
         .from('medicines')
-        .insert([
-          {
-            name: formData.name,
-            category: formData.category,
-            total_quantity: 0, // Will be updated by trigger
-            expiry_date: formData.expiry_date
-          }
-        ])
+        .insert({
+          name: formData.name,
+          category: formData.category as 'tablet' | 'syrup' | 'injection',
+          total_quantity: 0, // Will be updated by trigger
+          expiry_date: formData.expiry_date
+        })
         .select()
         .single();
 
@@ -89,15 +87,13 @@ const MedicineStockPage = () => {
       // Add initial stock
       const { error: stockError } = await supabase
         .from('medicine_stock_history')
-        .insert([
-          {
-            medicine_id: medicineData.id,
-            stock_type: 'add',
-            quantity: parseInt(formData.quantity),
-            expiry_date: formData.expiry_date,
-            created_by: user.id
-          }
-        ]);
+        .insert({
+          medicine_id: medicineData.id,
+          stock_type: 'add',
+          quantity: parseInt(formData.quantity),
+          expiry_date: formData.expiry_date,
+          created_by: user.id
+        });
 
       if (stockError) throw stockError;
 
