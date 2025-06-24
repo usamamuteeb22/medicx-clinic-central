@@ -36,7 +36,7 @@ const MedicineStockPage = () => {
   });
   const [searchFilters, setSearchFilters] = useState({
     name: '',
-    category: '',
+    category: 'all',
     expiry_date: ''
   });
   const [loading, setLoading] = useState(false);
@@ -132,7 +132,7 @@ const MedicineStockPage = () => {
   const filteredMedicines = medicines.filter(medicine => {
     const matchesName = searchFilters.name === '' || 
       medicine.name.toLowerCase().includes(searchFilters.name.toLowerCase());
-    const matchesCategory = searchFilters.category === '' || 
+    const matchesCategory = searchFilters.category === 'all' || 
       medicine.category === searchFilters.category;
     const matchesExpiryDate = searchFilters.expiry_date === '' || 
       medicine.expiry_date === searchFilters.expiry_date;
@@ -244,7 +244,7 @@ const MedicineStockPage = () => {
                     <SelectValue placeholder="All categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     <SelectItem value="tablet">Tablet</SelectItem>
                     <SelectItem value="syrup">Syrup</SelectItem>
                     <SelectItem value="injection">Injection</SelectItem>
