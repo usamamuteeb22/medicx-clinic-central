@@ -80,8 +80,8 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
               <title>Medical Report - ${patient.name}</title>
               <style>
                 @page {
-                  size: A4;
-                  margin: 10mm;
+                  size: A4 portrait;
+                  margin: 5mm 7mm;
                 }
                 * {
                   margin: 0;
@@ -89,87 +89,108 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
                   box-sizing: border-box;
                 }
                 body {
-                  font-family: Arial, sans-serif;
-                  font-size: 11px;
-                  line-height: 1.2;
+                  font-family: 'Roboto', 'Arial', sans-serif;
+                  font-size: 10pt;
+                  line-height: 1.1;
                   color: #000;
+                  height: 100vh;
+                  width: 100%;
+                }
+                .report-container {
                   height: 100vh;
                   display: flex;
                   flex-direction: column;
-                }
-                .report-container {
-                  flex: 1;
-                  display: flex;
-                  flex-direction: column;
-                  height: 100%;
+                  justify-content: space-between;
                 }
                 
-                /* Header Styles */
+                /* Header Section - 15-17% of page height */
                 .header {
-                  height: 15%;
-                  border-bottom: 1px solid #000;
-                  padding: 8px 0;
-                  margin-bottom: 8px;
+                  height: 16%;
+                  border-bottom: 1px solid #ccc;
+                  padding: 3mm 0 2mm 0;
+                  margin-bottom: 2mm;
                 }
                 .header-title {
                   text-align: center;
-                  font-size: 16px;
+                  font-size: 17pt;
                   font-weight: bold;
-                  margin-bottom: 8px;
+                  margin-bottom: 4mm;
+                  line-height: 1.2;
                 }
                 .header-content {
                   display: flex;
                   justify-content: space-between;
                   align-items: flex-start;
-                  font-size: 10px;
+                  font-size: 11pt;
+                  margin-bottom: 2mm;
                 }
                 .doctor-info {
                   flex: 1;
+                  line-height: 1.2;
                 }
                 .doctor-info h4 {
                   font-weight: bold;
-                  margin-bottom: 2px;
+                  margin-bottom: 1mm;
+                  font-size: 12pt;
+                }
+                .doctor-info div {
+                  margin-bottom: 0.5mm;
                 }
                 .timing-info {
                   text-align: right;
-                  flex: 0 0 120px;
+                  flex: 0 0 100px;
+                  line-height: 1.2;
                 }
                 .timing-info h4 {
                   font-weight: bold;
-                  margin-bottom: 2px;
+                  margin-bottom: 1mm;
+                  font-size: 12pt;
                 }
                 .report-meta {
                   text-align: right;
-                  font-size: 9px;
-                  margin-top: 4px;
+                  font-size: 10pt;
+                  margin-top: 2mm;
+                  line-height: 1.1;
                 }
                 
-                /* Content Styles */
+                /* Content Area - Dynamic height */
                 .content {
                   flex: 1;
                   display: flex;
                   flex-direction: column;
-                  gap: 6px;
+                  gap: 2mm;
+                  min-height: 0;
                 }
+                
+                /* Section Styling */
                 .section {
-                  border: 1px solid #ccc;
-                  padding: 6px;
+                  border: 0.5px solid #ccc;
+                  padding: 2mm 3mm;
                   background: #fff;
+                  margin-bottom: 1mm;
                 }
                 .section-title {
                   font-weight: bold;
-                  font-size: 12px;
-                  margin-bottom: 4px;
-                  border-bottom: 1px solid #ddd;
-                  padding-bottom: 2px;
+                  font-size: 11pt;
+                  margin-bottom: 2mm;
+                  border-bottom: 0.5px solid #ddd;
+                  padding-bottom: 1mm;
+                  line-height: 1.1;
                 }
                 
-                /* Patient Info */
+                /* Patient Information - Fixed 18mm height */
+                .patient-section {
+                  height: 18mm;
+                  display: flex;
+                  flex-direction: column;
+                  justify-content: space-between;
+                }
                 .patient-info-grid {
                   display: grid;
                   grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-                  gap: 8px;
-                  font-size: 10px;
+                  gap: 4mm;
+                  font-size: 10pt;
+                  line-height: 1.2;
                 }
                 .patient-info-item {
                   display: flex;
@@ -177,20 +198,27 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
                 }
                 .patient-info-item strong {
                   font-weight: bold;
-                  margin-bottom: 1px;
+                  margin-bottom: 0.5mm;
                 }
                 
-                /* Medical Vitals */
+                /* Medical Vitals - Fixed 18mm height */
+                .vitals-section {
+                  height: 18mm;
+                  display: flex;
+                  flex-direction: column;
+                  justify-content: space-between;
+                }
                 .vitals-grid {
                   display: grid;
                   grid-template-columns: 1fr 1fr 1fr;
-                  gap: 8px;
-                  font-size: 10px;
+                  gap: 4mm;
+                  font-size: 10pt;
+                  line-height: 1.2;
                 }
                 .vitals-row {
                   display: grid;
                   grid-template-columns: 1fr 1fr;
-                  gap: 8px;
+                  gap: 4mm;
                 }
                 .vital-item {
                   display: flex;
@@ -198,63 +226,80 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
                 }
                 .vital-item strong {
                   font-weight: bold;
-                  margin-bottom: 1px;
+                  margin-bottom: 0.5mm;
                 }
                 
-                /* Clinical Details */
-                .clinical-content {
-                  font-size: 10px;
-                  line-height: 1.3;
-                  max-height: 45px;
+                /* Clinical Details - Max 24mm height */
+                .clinical-section {
+                  max-height: 24mm;
                   overflow: hidden;
                 }
+                .clinical-content {
+                  font-size: 10pt;
+                  line-height: 1.3;
+                  text-align: justify;
+                }
                 
-                /* Medicine Table */
+                /* Medicine Table - Dynamic height up to 60mm */
+                .medicine-section {
+                  max-height: 60mm;
+                  overflow: hidden;
+                }
                 .medicine-table {
                   width: 100%;
                   border-collapse: collapse;
-                  font-size: 10px;
-                }
-                .medicine-table th,
-                .medicine-table td {
-                  border: 1px solid #ccc;
-                  padding: 4px;
-                  text-align: left;
-                  vertical-align: top;
+                  font-size: 10pt;
+                  line-height: 1.1;
                 }
                 .medicine-table th {
-                  background-color: #f5f5f5;
+                  background-color: #f8f9fa;
                   font-weight: bold;
+                  font-size: 11pt;
+                  padding: 2mm;
+                  border: 0.5px solid #ccc;
+                  text-align: left;
+                  height: 8mm;
+                }
+                .medicine-table td {
+                  padding: 2mm;
+                  border: 0.5px solid #ccc;
+                  text-align: left;
+                  vertical-align: top;
+                  height: 8mm;
                 }
                 
-                /* Medical History */
+                /* Medical History - Dynamic height up to 60mm */
                 .history-section {
                   flex: 1;
-                  font-size: 10px;
+                  max-height: 60mm;
+                  overflow: hidden;
                 }
                 .history-item {
-                  margin-bottom: 4px;
+                  margin-bottom: 2mm;
                 }
                 .history-item h4 {
                   font-weight: bold;
-                  margin-bottom: 2px;
+                  margin-bottom: 1mm;
+                  font-size: 10pt;
                 }
                 .history-item p {
                   line-height: 1.3;
-                  max-height: 30px;
-                  overflow: hidden;
+                  font-size: 10pt;
+                  text-align: justify;
+                  margin-bottom: 1mm;
                 }
                 
-                /* Footer */
+                /* Footer - 6-8% of page height */
                 .footer {
-                  height: 8%;
-                  border-top: 1px solid #000;
+                  height: 7%;
+                  border-top: 1px solid #ccc;
                   display: flex;
                   justify-content: space-between;
                   align-items: center;
-                  padding: 6px 0;
-                  margin-top: auto;
-                  font-size: 10px;
+                  padding: 2mm 0;
+                  margin-top: 2mm;
+                  font-size: 10pt;
+                  line-height: 1.2;
                 }
                 .footer-contact {
                   font-weight: bold;
@@ -262,10 +307,12 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
                 .footer-address {
                   text-align: right;
                   font-weight: bold;
+                  max-width: 60%;
                 }
                 
                 @media print {
                   .no-print { display: none !important; }
+                  body { print-color-adjust: exact; }
                 }
               </style>
             </head>
@@ -309,10 +356,10 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
         <div id="medical-report-print" className="bg-white">
           <div className="report-container">
             
-            {/* Header Section */}
+            {/* Header Section - 15-17% height */}
             <div className="header">
               <div className="header-title">
-                Project : Awaam Dost Welfare Organization Kasur
+                Project: Awaam Dost Welfare Organization Kasur
               </div>
               <div className="header-content">
                 <div className="doctor-info">
@@ -324,7 +371,7 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
                 <div className="doctor-info">
                   <h4>Dr. Muhammad Kamal</h4>
                   <div>MBBS, FCPS</div>
-                  <div>Consultant : Pediatrician</div>
+                  <div>Consultant: Pediatrician</div>
                   <div>DHQ Hospital Kasur</div>
                   <div>Ex Senior Registrar</div>
                   <div>Children Hospital & ICH, Lahore</div>
@@ -342,8 +389,8 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
             {/* Content Sections */}
             <div className="content">
               
-              {/* Patient Information */}
-              <div className="section">
+              {/* Patient Information - Fixed 18mm height */}
+              <div className="section patient-section">
                 <div className="section-title">Patient Information</div>
                 <div className="patient-info-grid">
                   <div className="patient-info-item">
@@ -369,8 +416,8 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
                 </div>
               </div>
 
-              {/* Medical Vitals */}
-              <div className="section">
+              {/* Medical Vitals - Fixed 18mm height */}
+              <div className="section vitals-section">
                 <div className="section-title">Medical Vitals</div>
                 <div className="vitals-grid">
                   <div className="vitals-row">
@@ -397,7 +444,7 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
                     {reportData.blood_pressure && (
                       <div className="vital-item">
                         <strong>Blood Pressure:</strong>
-                        <span>{reportData.blood_pressure}mmHg</span>
+                        <span>{reportData.blood_pressure} mmHg</span>
                       </div>
                     )}
                   </div>
@@ -418,9 +465,9 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
                 </div>
               </div>
 
-              {/* Clinical Details */}
+              {/* Clinical Details - Max 24mm height */}
               {reportData.clinical_complaint && (
-                <div className="section">
+                <div className="section clinical-section">
                   <div className="section-title">Clinical Details</div>
                   <div className="clinical-content">
                     {reportData.clinical_complaint}
@@ -428,8 +475,8 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
                 </div>
               )}
 
-              {/* Prescribed Medicines */}
-              <div className="section">
+              {/* Prescribed Medicines - Dynamic height up to 60mm */}
+              <div className="section medicine-section">
                 <div className="section-title">Prescribed Medicines</div>
                 <table className="medicine-table">
                   <thead>
@@ -441,7 +488,7 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {prescribedMedicines.slice(0, 5).map((medicine, index) => (
+                    {prescribedMedicines.slice(0, 6).map((medicine, index) => (
                       <tr key={index}>
                         <td>{medicine.medicine.name}</td>
                         <td className="capitalize">{medicine.medicine.category}</td>
@@ -454,8 +501,8 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
                         <td colSpan={4} style={{textAlign: 'center', color: '#666'}}>No medicines prescribed</td>
                       </tr>
                     )}
-                    {/* Fill empty rows to maintain table structure */}
-                    {Array.from({ length: Math.max(0, 5 - prescribedMedicines.length) }).map((_, index) => (
+                    {/* Fill empty rows to maintain consistent spacing */}
+                    {Array.from({ length: Math.max(0, 6 - prescribedMedicines.length) }).map((_, index) => (
                       <tr key={`empty-${index}`}>
                         <td>--</td>
                         <td>--</td>
@@ -467,7 +514,7 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
                 </table>
               </div>
 
-              {/* Medical History & Notes */}
+              {/* Medical History & Notes - Dynamic height up to 60mm */}
               <div className="section history-section">
                 <div className="section-title">Medical History & Notes</div>
                 {reportData.medical_history && (
@@ -491,13 +538,13 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
               </div>
             </div>
 
-            {/* Footer */}
+            {/* Footer - 6-8% height */}
             <div className="footer">
               <div className="footer-contact">
-                Contact : 0306-0200076
+                Contact: 0306-0200076
               </div>
               <div className="footer-address">
-                Address : 194 near Naeem Safdar Dhera, Munir Shaheed Colony<br />
+                Address: 194 near Naeem Safdar Dhera, Munir Shaheed Colony<br />
                 Shahbaz Khan Road Kasur
               </div>
             </div>
