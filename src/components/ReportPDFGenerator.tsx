@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Print, Download, X } from 'lucide-react';
+import { Printer, Download, X } from 'lucide-react';
 
 interface Patient {
   id: string;
@@ -110,7 +109,7 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
             <DialogTitle>Patient Medical Report</DialogTitle>
             <div className="flex items-center space-x-2 no-print">
               <Button onClick={handlePrint} size="sm" className="flex items-center space-x-2">
-                <Print className="h-4 w-4" />
+                <Printer className="h-4 w-4" />
                 <span>Print</span>
               </Button>
               <Button onClick={onClose} variant="outline" size="sm">

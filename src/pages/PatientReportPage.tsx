@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { FileText, Plus, Trash2, User, Stethoscope, Pill, Print } from 'lucide-react';
+import { FileText, Plus, Trash2, User, Stethoscope, Pill, Printer } from 'lucide-react';
 import PatientSelector from '@/components/PatientSelector';
 import MedicinePrescriptionForm from '@/components/MedicinePrescriptionForm';
 import ReportPDFGenerator from '@/components/ReportPDFGenerator';
@@ -43,7 +43,7 @@ interface PrescribedMedicine {
 const PatientReportPage = () => {
   const { user } = useAuth();
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [reportData, setReportData] = useState({
+  const [formData, setFormData] = useState({
     hemoglobin: '',
     wbc: '',
     platelets: '',
@@ -98,20 +98,20 @@ const PatientReportPage = () => {
     setLoading(true);
     try {
       // Create patient report
-      const { data: reportData, error: reportError } = await supabase
+      const { data: reportResult, error: reportError } = await supabase
         .from('patient_reports')
         .insert({
           patient_id: selectedPatient.id,
-          hemoglobin: reportData.hemoglobin ? parseFloat(reportData.hemoglobin) : null,
-          wbc: reportData.wbc ? parseInt(reportData.wbc) : null,
-          platelets: reportData.platelets ? parseInt(reportData.platelets) : null,
-          blood_pressure: reportData.blood_pressure || null,
-          temperature: reportData.temperature ? parseFloat(reportData.temperature) : null,
-          weight: reportData.weight ? parseFloat(reportData.weight) : null,
-          clinical_complaint: reportData.clinical_complaint || null,
-          medical_history: reportData.medical_history || null,
-          observations: reportData.observations || null,
-          recommendations: reportData.recommendations || null,
+          hemoglobin: formData.hemoglobin ? parseFloat(formData.hemoglobin) : null,
+          wbc: formData.wbc ? parseInt(formData.wbc) : null,
+          platelets: formData.platelets ? parseInt(formData.platelets) : null,
+          blood_pressure: formData.blood_pressure || null,
+          temperature: formData.temperature ? parseFloat(formData.temperature) : null,
+          weight: formData.weight ? parseFloat(formData.weight) : null,
+          clinical_complaint: formData.clinical_complaint || null,
+          medical_history: formData.medical_history || null,
+          observations: formData.observations || null,
+          recommendations: formData.recommendations || null,
           created_by: user?.id
         })
         .select()
@@ -124,7 +124,7 @@ const PatientReportPage = () => {
         supabase
           .from('medicine_prescriptions')
           .insert({
-            patient_report_id: reportData.id,
+            patient_report_id: reportResult.id,
             medicine_id: med.medicine.id,
             quantity: med.quantity,
             morning: med.morning,
@@ -135,7 +135,7 @@ const PatientReportPage = () => {
 
       await Promise.all(prescriptionPromises);
 
-      setSavedReportId(reportData.id);
+      setSavedReportId(reportResult.id);
       toast({
         title: "Success",
         description: "Patient report saved successfully!"
@@ -158,7 +158,7 @@ const PatientReportPage = () => {
 
   const resetForm = () => {
     setSelectedPatient(null);
-    setReportData({
+    setFormData({
       hemoglobin: '',
       wbc: '',
       platelets: '',
@@ -227,8 +227,8 @@ const PatientReportPage = () => {
                     type="number"
                     step="0.1"
                     placeholder="e.g., 12.5"
-                    value={reportData.hemoglobin}
-                    onChange={(e) => setReportData({...reportData, hemoglobin: e.target.value})}
+                    value={formData.hemoglobin}
+                    onChange={(e) => setFormData({...formData, hemoglobin: e.target.value})}
                   />
                 </div>
                 <div className="space-y-2">
@@ -237,8 +237,8 @@ const PatientReportPage = () => {
                     id="wbc"
                     type="number"
                     placeholder="e.g., 7000"
-                    value={reportData.wbc}
-                    onChange={(e) => setReportData({...reportData, wbc: e.target.value})}
+                    value={formData.wbc}
+                    onChange={(e) => setFormData({...formData, wbc: e.target.value})}
                   />
                 </div>
                 <div className="space-y-2">
@@ -247,8 +247,8 @@ const PatientReportPage = () => {
                     id="platelets"
                     type="number"
                     placeholder="e.g., 250000"
-                    value={reportData.platelets}
-                    onChange={(e) => setReportData({...reportData, platelets: e.target.value})}
+                    value={formData.platelets}
+                    onChange={(e) => setFormData({...formData, platelets: e.target.value})}
                   />
                 </div>
               </div>
@@ -259,8 +259,8 @@ const PatientReportPage = () => {
                   <Input
                     id="blood_pressure"
                     placeholder="e.g., 120/80"
-                    value={reportData.blood_pressure}
-                    onChange={(e) => setReportData({...reportData, blood_pressure: e.target.value})}
+                    value={formData.blood_pressure}
+                    onChange={(e) => setFormData({...formData, blood_pressure: e.target.value})}
                   />
                 </div>
                 <div className="space-y-2">
@@ -270,8 +270,8 @@ const PatientReportPage = () => {
                     type="number"
                     step="0.1"
                     placeholder="e.g., 98.6"
-                    value={reportData.temperature}
-                    onChange={(e) => setReportData({...reportData, temperature: e.target.value})}
+                    value={formData.temperature}
+                    onChange={(e) => setFormData({...formData, temperature: e.target.value})}
                   />
                 </div>
                 <div className="space-y-2">
@@ -281,8 +281,8 @@ const PatientReportPage = () => {
                     type="number"
                     step="0.1"
                     placeholder="e.g., 70.5"
-                    value={reportData.weight}
-                    onChange={(e) => setReportData({...reportData, weight: e.target.value})}
+                    value={formData.weight}
+                    onChange={(e) => setFormData({...formData, weight: e.target.value})}
                   />
                 </div>
               </div>
@@ -292,8 +292,8 @@ const PatientReportPage = () => {
                 <Textarea
                   id="clinical_complaint"
                   placeholder="Describe the patient's complaints and symptoms..."
-                  value={reportData.clinical_complaint}
-                  onChange={(e) => setReportData({...reportData, clinical_complaint: e.target.value})}
+                  value={formData.clinical_complaint}
+                  onChange={(e) => setFormData({...formData, clinical_complaint: e.target.value})}
                   rows={3}
                 />
               </div>
@@ -330,8 +330,8 @@ const PatientReportPage = () => {
                 <Textarea
                   id="medical_history"
                   placeholder="Previous medical conditions, surgeries, allergies..."
-                  value={reportData.medical_history}
-                  onChange={(e) => setReportData({...reportData, medical_history: e.target.value})}
+                  value={formData.medical_history}
+                  onChange={(e) => setFormData({...formData, medical_history: e.target.value})}
                   rows={3}
                 />
               </div>
@@ -340,8 +340,8 @@ const PatientReportPage = () => {
                 <Textarea
                   id="observations"
                   placeholder="Doctor's observations and findings..."
-                  value={reportData.observations}
-                  onChange={(e) => setReportData({...reportData, observations: e.target.value})}
+                  value={formData.observations}
+                  onChange={(e) => setFormData({...formData, observations: e.target.value})}
                   rows={3}
                 />
               </div>
@@ -350,8 +350,8 @@ const PatientReportPage = () => {
                 <Textarea
                   id="recommendations"
                   placeholder="Treatment recommendations and follow-up instructions..."
-                  value={reportData.recommendations}
-                  onChange={(e) => setReportData({...reportData, recommendations: e.target.value})}
+                  value={formData.recommendations}
+                  onChange={(e) => setFormData({...formData, recommendations: e.target.value})}
                   rows={3}
                 />
               </div>
@@ -376,7 +376,7 @@ const PatientReportPage = () => {
                     variant="outline"
                     className="flex items-center space-x-2"
                   >
-                    <Print className="h-4 w-4" />
+                    <Printer className="h-4 w-4" />
                     <span>View PDF Report</span>
                   </Button>
                 )}
@@ -391,7 +391,7 @@ const PatientReportPage = () => {
         <ReportPDFGenerator
           reportId={savedReportId}
           patient={selectedPatient}
-          reportData={reportData}
+          reportData={formData}
           prescribedMedicines={prescribedMedicines}
           onClose={() => setShowPDFPreview(false)}
         />
