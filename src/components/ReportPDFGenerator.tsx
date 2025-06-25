@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -70,15 +71,66 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
             <head>
               <title>Patient Report - ${patient.name}</title>
               <style>
-                body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
-                .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 20px; }
+                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; line-height: 1.4; }
+                .custom-header { 
+                  display: flex; 
+                  align-items: center; 
+                  justify-content: space-between; 
+                  border-bottom: 2px solid #333; 
+                  padding-bottom: 20px; 
+                  margin-bottom: 30px;
+                  background: url('/lovable-uploads/2688fc7d-99b4-4724-9f2d-913690188200.png') no-repeat;
+                  background-size: contain;
+                  background-position: top left;
+                  min-height: 120px;
+                  position: relative;
+                }
+                .header-content {
+                  width: 100%;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: flex-start;
+                  padding-left: 80px;
+                }
+                .project-title {
+                  text-align: center;
+                  flex: 1;
+                  font-size: 18px;
+                  font-weight: bold;
+                  margin: 0 20px;
+                }
+                .doctors-info {
+                  display: flex;
+                  justify-content: space-between;
+                  width: 100%;
+                  font-size: 12px;
+                  margin-top: 10px;
+                }
+                .doctor-column {
+                  flex: 1;
+                  padding: 0 20px;
+                }
+                .timing-info {
+                  text-align: right;
+                  font-size: 12px;
+                }
                 .patient-info { display: flex; justify-content: space-between; margin-bottom: 20px; }
                 .vitals-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
                 .medicine-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
                 .medicine-table th, .medicine-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
                 .medicine-table th { background-color: #f5f5f5; }
                 .signature-area { margin-top: 40px; text-align: right; }
-                .footer { margin-top: 40px; text-align: center; border-top: 1px solid #ccc; padding-top: 10px; font-size: 12px; color: #666; }
+                .custom-footer { 
+                  margin-top: 40px; 
+                  border-top: 1px solid #333; 
+                  padding-top: 15px; 
+                  display: flex; 
+                  justify-content: space-between; 
+                  font-size: 12px; 
+                  color: #333;
+                }
+                .footer-contact { font-weight: bold; }
+                .footer-address { text-align: right; }
                 @media print { .no-print { display: none; } }
               </style>
             </head>
@@ -120,11 +172,37 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
         </DialogHeader>
 
         <div id="pdf-report-content" className="space-y-6">
-          {/* Header */}
-          <div className="text-center border-b-2 border-gray-800 pb-4">
-            <h1 className="text-2xl font-bold">MEDICX CLINIC</h1>
-            <p className="text-gray-600">Medical Report & Prescription</p>
-            <div className="flex justify-between mt-2 text-sm">
+          {/* Custom Header */}
+          <div className="custom-header">
+            <div className="header-content">
+              <div className="project-title">
+                <h1 className="text-lg font-bold">Project : Awaam Dost Welfare Organization Kasur</h1>
+                <div className="doctors-info">
+                  <div className="doctor-column">
+                    <div><strong>Dr. Muhammad Jaffar</strong></div>
+                    <div>MBBS/MD</div>
+                    <div>EX. Medical Officer</div>
+                    <div>Children Hospital, Lahore</div>
+                  </div>
+                  <div className="doctor-column">
+                    <div><strong>Dr. Muhammad Kamal</strong></div>
+                    <div>MBBS, FCPS</div>
+                    <div>Consultant : Pediatrician</div>
+                    <div>DHQ Hospital Kasur</div>
+                    <div>Ex Senior Registrar</div>
+                    <div>Children Hospital & ICH, Lahore</div>
+                  </div>
+                  <div className="timing-info">
+                    <div><strong>Timing</strong></div>
+                    <div>3:00 pm to 6:00 pm</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center mb-4">
+            <div className="flex justify-between text-sm">
               <span>Report ID: {reportId.slice(0, 8)}</span>
               <span>Date: {currentDate} | Time: {currentTime}</span>
             </div>
@@ -257,10 +335,15 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="text-center border-t border-gray-300 pt-4 text-sm text-gray-600">
-            <p>This is a computer-generated report. Please consult your physician for any questions.</p>
-            <p>© 2024 Medicx Clinic. All rights reserved.</p>
+          {/* Custom Footer */}
+          <div className="custom-footer">
+            <div className="footer-contact">
+              <strong>Contact :</strong> 0306-0200076
+            </div>
+            <div className="footer-address">
+              <strong>Address :</strong> 194 near Naeem Safdar Dhera, Munir Shaheed<br />
+              Colony, Shahbaz Khan Road Kasur
+            </div>
           </div>
         </div>
       </DialogContent>
