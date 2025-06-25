@@ -9,6 +9,54 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      medicine_prescriptions: {
+        Row: {
+          created_at: string | null
+          evening: boolean | null
+          id: string
+          medicine_id: string | null
+          morning: boolean | null
+          night: boolean | null
+          patient_report_id: string | null
+          quantity: number
+        }
+        Insert: {
+          created_at?: string | null
+          evening?: boolean | null
+          id?: string
+          medicine_id?: string | null
+          morning?: boolean | null
+          night?: boolean | null
+          patient_report_id?: string | null
+          quantity: number
+        }
+        Update: {
+          created_at?: string | null
+          evening?: boolean | null
+          id?: string
+          medicine_id?: string | null
+          morning?: boolean | null
+          night?: boolean | null
+          patient_report_id?: string | null
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicine_prescriptions_medicine_id_fkey"
+            columns: ["medicine_id"]
+            isOneToOne: false
+            referencedRelation: "medicines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medicine_prescriptions_patient_report_id_fkey"
+            columns: ["patient_report_id"]
+            isOneToOne: false
+            referencedRelation: "patient_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medicine_stock_history: {
         Row: {
           created_at: string | null
@@ -135,6 +183,75 @@ export type Database = {
           total_quantity?: number | null
         }
         Relationships: []
+      }
+      patient_reports: {
+        Row: {
+          blood_pressure: string | null
+          clinical_complaint: string | null
+          created_at: string | null
+          created_by: string | null
+          hemoglobin: number | null
+          id: string
+          medical_history: string | null
+          observations: string | null
+          patient_id: string
+          platelets: number | null
+          recommendations: string | null
+          report_date: string | null
+          temperature: number | null
+          wbc: number | null
+          weight: number | null
+        }
+        Insert: {
+          blood_pressure?: string | null
+          clinical_complaint?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          hemoglobin?: number | null
+          id?: string
+          medical_history?: string | null
+          observations?: string | null
+          patient_id: string
+          platelets?: number | null
+          recommendations?: string | null
+          report_date?: string | null
+          temperature?: number | null
+          wbc?: number | null
+          weight?: number | null
+        }
+        Update: {
+          blood_pressure?: string | null
+          clinical_complaint?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          hemoglobin?: number | null
+          id?: string
+          medical_history?: string | null
+          observations?: string | null
+          patient_id?: string
+          platelets?: number | null
+          recommendations?: string | null
+          report_date?: string | null
+          temperature?: number | null
+          wbc?: number | null
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_reports_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       patients: {
         Row: {
