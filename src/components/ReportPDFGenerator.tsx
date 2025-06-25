@@ -2,7 +2,6 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Printer, Download, X } from 'lucide-react';
 
 interface Patient {
@@ -58,80 +57,216 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
   prescribedMedicines,
   onClose
 }) => {
-  const currentDate = new Date().toLocaleDateString();
-  const currentTime = new Date().toLocaleTimeString();
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+  const currentTime = new Date().toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
 
   const handlePrint = () => {
-    const printContent = document.getElementById('pdf-report-content');
+    const printContent = document.getElementById('medical-report-print');
     if (printContent) {
       const printWindow = window.open('', '_blank');
       if (printWindow) {
         printWindow.document.write(`
           <html>
             <head>
-              <title>Patient Report - ${patient.name}</title>
+              <title>Medical Report - ${patient.name}</title>
               <style>
-                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; line-height: 1.4; }
-                .custom-header { 
-                  display: flex; 
-                  align-items: center; 
-                  justify-content: space-between; 
-                  border-bottom: 2px solid #333; 
-                  padding-bottom: 20px; 
-                  margin-bottom: 30px;
-                  background: url('/lovable-uploads/2688fc7d-99b4-4724-9f2d-913690188200.png') no-repeat;
-                  background-size: contain;
-                  background-position: top left;
-                  min-height: 120px;
-                  position: relative;
+                @page {
+                  size: A4;
+                  margin: 10mm;
+                }
+                * {
+                  margin: 0;
+                  padding: 0;
+                  box-sizing: border-box;
+                }
+                body {
+                  font-family: Arial, sans-serif;
+                  font-size: 11px;
+                  line-height: 1.2;
+                  color: #000;
+                  height: 100vh;
+                  display: flex;
+                  flex-direction: column;
+                }
+                .report-container {
+                  flex: 1;
+                  display: flex;
+                  flex-direction: column;
+                  height: 100%;
+                }
+                
+                /* Header Styles */
+                .header {
+                  height: 15%;
+                  border-bottom: 1px solid #000;
+                  padding: 8px 0;
+                  margin-bottom: 8px;
+                }
+                .header-title {
+                  text-align: center;
+                  font-size: 16px;
+                  font-weight: bold;
+                  margin-bottom: 8px;
                 }
                 .header-content {
-                  width: 100%;
                   display: flex;
                   justify-content: space-between;
                   align-items: flex-start;
-                  padding-left: 80px;
+                  font-size: 10px;
                 }
-                .project-title {
-                  text-align: center;
+                .doctor-info {
                   flex: 1;
-                  font-size: 18px;
+                }
+                .doctor-info h4 {
                   font-weight: bold;
-                  margin: 0 20px;
-                }
-                .doctors-info {
-                  display: flex;
-                  justify-content: space-between;
-                  width: 100%;
-                  font-size: 12px;
-                  margin-top: 10px;
-                }
-                .doctor-column {
-                  flex: 1;
-                  padding: 0 20px;
+                  margin-bottom: 2px;
                 }
                 .timing-info {
                   text-align: right;
+                  flex: 0 0 120px;
+                }
+                .timing-info h4 {
+                  font-weight: bold;
+                  margin-bottom: 2px;
+                }
+                .report-meta {
+                  text-align: right;
+                  font-size: 9px;
+                  margin-top: 4px;
+                }
+                
+                /* Content Styles */
+                .content {
+                  flex: 1;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 6px;
+                }
+                .section {
+                  border: 1px solid #ccc;
+                  padding: 6px;
+                  background: #fff;
+                }
+                .section-title {
+                  font-weight: bold;
                   font-size: 12px;
+                  margin-bottom: 4px;
+                  border-bottom: 1px solid #ddd;
+                  padding-bottom: 2px;
                 }
-                .patient-info { display: flex; justify-content: space-between; margin-bottom: 20px; }
-                .vitals-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
-                .medicine-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                .medicine-table th, .medicine-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                .medicine-table th { background-color: #f5f5f5; }
-                .signature-area { margin-top: 40px; text-align: right; }
-                .custom-footer { 
-                  margin-top: 40px; 
-                  border-top: 1px solid #333; 
-                  padding-top: 15px; 
-                  display: flex; 
-                  justify-content: space-between; 
-                  font-size: 12px; 
-                  color: #333;
+                
+                /* Patient Info */
+                .patient-info-grid {
+                  display: grid;
+                  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+                  gap: 8px;
+                  font-size: 10px;
                 }
-                .footer-contact { font-weight: bold; }
-                .footer-address { text-align: right; }
-                @media print { .no-print { display: none; } }
+                .patient-info-item {
+                  display: flex;
+                  flex-direction: column;
+                }
+                .patient-info-item strong {
+                  font-weight: bold;
+                  margin-bottom: 1px;
+                }
+                
+                /* Medical Vitals */
+                .vitals-grid {
+                  display: grid;
+                  grid-template-columns: 1fr 1fr 1fr;
+                  gap: 8px;
+                  font-size: 10px;
+                }
+                .vitals-row {
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 8px;
+                }
+                .vital-item {
+                  display: flex;
+                  flex-direction: column;
+                }
+                .vital-item strong {
+                  font-weight: bold;
+                  margin-bottom: 1px;
+                }
+                
+                /* Clinical Details */
+                .clinical-content {
+                  font-size: 10px;
+                  line-height: 1.3;
+                  max-height: 45px;
+                  overflow: hidden;
+                }
+                
+                /* Medicine Table */
+                .medicine-table {
+                  width: 100%;
+                  border-collapse: collapse;
+                  font-size: 10px;
+                }
+                .medicine-table th,
+                .medicine-table td {
+                  border: 1px solid #ccc;
+                  padding: 4px;
+                  text-align: left;
+                  vertical-align: top;
+                }
+                .medicine-table th {
+                  background-color: #f5f5f5;
+                  font-weight: bold;
+                }
+                
+                /* Medical History */
+                .history-section {
+                  flex: 1;
+                  font-size: 10px;
+                }
+                .history-item {
+                  margin-bottom: 4px;
+                }
+                .history-item h4 {
+                  font-weight: bold;
+                  margin-bottom: 2px;
+                }
+                .history-item p {
+                  line-height: 1.3;
+                  max-height: 30px;
+                  overflow: hidden;
+                }
+                
+                /* Footer */
+                .footer {
+                  height: 8%;
+                  border-top: 1px solid #000;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  padding: 6px 0;
+                  margin-top: auto;
+                  font-size: 10px;
+                }
+                .footer-contact {
+                  font-weight: bold;
+                }
+                .footer-address {
+                  text-align: right;
+                  font-weight: bold;
+                }
+                
+                @media print {
+                  .no-print { display: none !important; }
+                }
               </style>
             </head>
             <body>
@@ -150,15 +285,15 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
     if (medicine.morning) times.push('Morning');
     if (medicine.evening) times.push('Evening');
     if (medicine.night) times.push('Night');
-    return times.length > 0 ? times.join(', ') : 'Not specified';
+    return times.length > 0 ? times.join(', ') : 'Not Specified';
   };
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-4">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Patient Medical Report</DialogTitle>
+          <div className="flex items-center justify-between mb-4">
+            <DialogTitle>Medical Report Preview</DialogTitle>
             <div className="flex items-center space-x-2 no-print">
               <Button onClick={handlePrint} size="sm" className="flex items-center space-x-2">
                 <Printer className="h-4 w-4" />
@@ -171,178 +306,200 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
           </div>
         </DialogHeader>
 
-        <div id="pdf-report-content" className="space-y-6">
-          {/* Custom Header */}
-          <div className="custom-header">
-            <div className="header-content">
-              <div className="project-title">
-                <h1 className="text-lg font-bold">Project : Awaam Dost Welfare Organization Kasur</h1>
-                <div className="doctors-info">
-                  <div className="doctor-column">
-                    <div><strong>Dr. Muhammad Jaffar</strong></div>
-                    <div>MBBS/MD</div>
-                    <div>EX. Medical Officer</div>
-                    <div>Children Hospital, Lahore</div>
-                  </div>
-                  <div className="doctor-column">
-                    <div><strong>Dr. Muhammad Kamal</strong></div>
-                    <div>MBBS, FCPS</div>
-                    <div>Consultant : Pediatrician</div>
-                    <div>DHQ Hospital Kasur</div>
-                    <div>Ex Senior Registrar</div>
-                    <div>Children Hospital & ICH, Lahore</div>
-                  </div>
-                  <div className="timing-info">
-                    <div><strong>Timing</strong></div>
-                    <div>3:00 pm to 6:00 pm</div>
-                  </div>
+        <div id="medical-report-print" className="bg-white">
+          <div className="report-container">
+            
+            {/* Header Section */}
+            <div className="header">
+              <div className="header-title">
+                Project : Awaam Dost Welfare Organization Kasur
+              </div>
+              <div className="header-content">
+                <div className="doctor-info">
+                  <h4>Dr. Muhammad Jaffar</h4>
+                  <div>MBBS/MD</div>
+                  <div>EX. Medical Officer</div>
+                  <div>Children Hospital, Lahore</div>
                 </div>
+                <div className="doctor-info">
+                  <h4>Dr. Muhammad Kamal</h4>
+                  <div>MBBS, FCPS</div>
+                  <div>Consultant : Pediatrician</div>
+                  <div>DHQ Hospital Kasur</div>
+                  <div>Ex Senior Registrar</div>
+                  <div>Children Hospital & ICH, Lahore</div>
+                </div>
+                <div className="timing-info">
+                  <h4>Timing</h4>
+                  <div>3:00 pm to 6:00 pm</div>
+                </div>
+              </div>
+              <div className="report-meta">
+                Report ID: {reportId.slice(0, 8)} | Date: {currentDate} | Time: {currentTime}
               </div>
             </div>
-          </div>
 
-          <div className="text-center mb-4">
-            <div className="flex justify-between text-sm">
-              <span>Report ID: {reportId.slice(0, 8)}</span>
-              <span>Date: {currentDate} | Time: {currentTime}</span>
-            </div>
-          </div>
-
-          {/* Patient Information */}
-          <Card>
-            <CardContent className="pt-4">
-              <h2 className="text-lg font-semibold mb-3">Patient Information</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <span className="font-medium">Name:</span> {patient.name}
-                </div>
-                <div>
-                  <span className="font-medium">Patient ID:</span> {patient.patient_id}
-                </div>
-                <div>
-                  <span className="font-medium">Age:</span> {patient.age} years
-                </div>
-                <div>
-                  <span className="font-medium">Gender:</span> {patient.gender}
-                </div>
-                <div className="col-span-2">
-                  <span className="font-medium">Phone:</span> {patient.phone_number || 'N/A'}
+            {/* Content Sections */}
+            <div className="content">
+              
+              {/* Patient Information */}
+              <div className="section">
+                <div className="section-title">Patient Information</div>
+                <div className="patient-info-grid">
+                  <div className="patient-info-item">
+                    <strong>Patient ID:</strong>
+                    <span>{patient.patient_id}</span>
+                  </div>
+                  <div className="patient-info-item">
+                    <strong>Name:</strong>
+                    <span>{patient.name}</span>
+                  </div>
+                  <div className="patient-info-item">
+                    <strong>Age:</strong>
+                    <span>{patient.age} years</span>
+                  </div>
+                  <div className="patient-info-item">
+                    <strong>Gender:</strong>
+                    <span>{patient.gender}</span>
+                  </div>
+                  <div className="patient-info-item">
+                    <strong>Phone:</strong>
+                    <span>{patient.phone_number || 'N/A'}</span>
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Medical Vitals */}
-          <Card>
-            <CardContent className="pt-4">
-              <h2 className="text-lg font-semibold mb-3">Medical Vitals</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {reportData.hemoglobin && (
-                  <div><span className="font-medium">Hemoglobin:</span> {reportData.hemoglobin} g/dL</div>
-                )}
-                {reportData.wbc && (
-                  <div><span className="font-medium">WBC:</span> {reportData.wbc}</div>
-                )}
-                {reportData.platelets && (
-                  <div><span className="font-medium">Platelets:</span> {reportData.platelets}</div>
-                )}
-                {reportData.blood_pressure && (
-                  <div><span className="font-medium">Blood Pressure:</span> {reportData.blood_pressure} mmHg</div>
-                )}
-                {reportData.temperature && (
-                  <div><span className="font-medium">Temperature:</span> {reportData.temperature}°F</div>
-                )}
-                {reportData.weight && (
-                  <div><span className="font-medium">Weight:</span> {reportData.weight} kg</div>
-                )}
+              {/* Medical Vitals */}
+              <div className="section">
+                <div className="section-title">Medical Vitals</div>
+                <div className="vitals-grid">
+                  <div className="vitals-row">
+                    {reportData.hemoglobin && (
+                      <div className="vital-item">
+                        <strong>Hemoglobin:</strong>
+                        <span>{reportData.hemoglobin} g/dL</span>
+                      </div>
+                    )}
+                    {reportData.wbc && (
+                      <div className="vital-item">
+                        <strong>WBC:</strong>
+                        <span>{reportData.wbc}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="vitals-row">
+                    {reportData.platelets && (
+                      <div className="vital-item">
+                        <strong>Platelets:</strong>
+                        <span>{reportData.platelets}</span>
+                      </div>
+                    )}
+                    {reportData.blood_pressure && (
+                      <div className="vital-item">
+                        <strong>Blood Pressure:</strong>
+                        <span>{reportData.blood_pressure}mmHg</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="vitals-row">
+                    {reportData.temperature && (
+                      <div className="vital-item">
+                        <strong>Temperature:</strong>
+                        <span>{reportData.temperature}°F</span>
+                      </div>
+                    )}
+                    {reportData.weight && (
+                      <div className="vital-item">
+                        <strong>Weight:</strong>
+                        <span>{reportData.weight} kg</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Clinical Complaint */}
-          {reportData.clinical_complaint && (
-            <Card>
-              <CardContent className="pt-4">
-                <h2 className="text-lg font-semibold mb-3">Clinical Complaint</h2>
-                <p className="text-gray-700">{reportData.clinical_complaint}</p>
-              </CardContent>
-            </Card>
-          )}
+              {/* Clinical Details */}
+              {reportData.clinical_complaint && (
+                <div className="section">
+                  <div className="section-title">Clinical Details</div>
+                  <div className="clinical-content">
+                    {reportData.clinical_complaint}
+                  </div>
+                </div>
+              )}
 
-          {/* Prescribed Medicines */}
-          <Card>
-            <CardContent className="pt-4">
-              <h2 className="text-lg font-semibold mb-3">Prescribed Medicines</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-300">
+              {/* Prescribed Medicines */}
+              <div className="section">
+                <div className="section-title">Prescribed Medicines</div>
+                <table className="medicine-table">
                   <thead>
-                    <tr className="bg-gray-50">
-                      <th className="border border-gray-300 px-4 py-2 text-left">Medicine</th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">Category</th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">Quantity</th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">Dosage Timing</th>
+                    <tr>
+                      <th style={{width: '30%'}}>Medicine</th>
+                      <th style={{width: '20%'}}>Category</th>
+                      <th style={{width: '15%'}}>Quantity</th>
+                      <th style={{width: '35%'}}>Dosage Timing</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {prescribedMedicines.map((medicine, index) => (
+                    {prescribedMedicines.slice(0, 5).map((medicine, index) => (
                       <tr key={index}>
-                        <td className="border border-gray-300 px-4 py-2">{medicine.medicine.name}</td>
-                        <td className="border border-gray-300 px-4 py-2 capitalize">{medicine.medicine.category}</td>
-                        <td className="border border-gray-300 px-4 py-2">{medicine.quantity}</td>
-                        <td className="border border-gray-300 px-4 py-2">{getDosageText(medicine)}</td>
+                        <td>{medicine.medicine.name}</td>
+                        <td className="capitalize">{medicine.medicine.category}</td>
+                        <td>{medicine.quantity}</td>
+                        <td>{getDosageText(medicine)}</td>
+                      </tr>
+                    ))}
+                    {prescribedMedicines.length === 0 && (
+                      <tr>
+                        <td colSpan={4} style={{textAlign: 'center', color: '#666'}}>No medicines prescribed</td>
+                      </tr>
+                    )}
+                    {/* Fill empty rows to maintain table structure */}
+                    {Array.from({ length: Math.max(0, 5 - prescribedMedicines.length) }).map((_, index) => (
+                      <tr key={`empty-${index}`}>
+                        <td>--</td>
+                        <td>--</td>
+                        <td>--</td>
+                        <td>--</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Medical History & Notes */}
-          {(reportData.medical_history || reportData.observations || reportData.recommendations) && (
-            <Card>
-              <CardContent className="pt-4">
-                <h2 className="text-lg font-semibold mb-3">Medical History & Notes</h2>
-                <div className="space-y-3">
-                  {reportData.medical_history && (
-                    <div>
-                      <h3 className="font-medium">Medical History:</h3>
-                      <p className="text-gray-700">{reportData.medical_history}</p>
-                    </div>
-                  )}
-                  {reportData.observations && (
-                    <div>
-                      <h3 className="font-medium">Clinical Observations:</h3>
-                      <p className="text-gray-700">{reportData.observations}</p>
-                    </div>
-                  )}
-                  {reportData.recommendations && (
-                    <div>
-                      <h3 className="font-medium">Recommendations:</h3>
-                      <p className="text-gray-700">{reportData.recommendations}</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Signature Area */}
-          <div className="flex justify-end mt-8">
-            <div className="text-center">
-              <div className="w-48 border-t border-gray-400 mb-2"></div>
-              <p className="text-sm">Doctor's Signature</p>
+              {/* Medical History & Notes */}
+              <div className="section history-section">
+                <div className="section-title">Medical History & Notes</div>
+                {reportData.medical_history && (
+                  <div className="history-item">
+                    <h4>Medical History:</h4>
+                    <p>{reportData.medical_history}</p>
+                  </div>
+                )}
+                {reportData.observations && (
+                  <div className="history-item">
+                    <h4>Clinical Observations:</h4>
+                    <p>{reportData.observations}</p>
+                  </div>
+                )}
+                {reportData.recommendations && (
+                  <div className="history-item">
+                    <h4>Recommendations:</h4>
+                    <p>{reportData.recommendations}</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Custom Footer */}
-          <div className="custom-footer">
-            <div className="footer-contact">
-              <strong>Contact :</strong> 0306-0200076
-            </div>
-            <div className="footer-address">
-              <strong>Address :</strong> 194 near Naeem Safdar Dhera, Munir Shaheed<br />
-              Colony, Shahbaz Khan Road Kasur
+            {/* Footer */}
+            <div className="footer">
+              <div className="footer-contact">
+                Contact : 0306-0200076
+              </div>
+              <div className="footer-address">
+                Address : 194 near Naeem Safdar Dhera, Munir Shaheed Colony<br />
+                Shahbaz Khan Road Kasur
+              </div>
             </div>
           </div>
         </div>
