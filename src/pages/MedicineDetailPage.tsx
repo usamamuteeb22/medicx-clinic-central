@@ -1,24 +1,25 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Plus, Minus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, Plus, Minus, History } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Medicine {
   id: string;
-  serial_number: number;
   name: string;
-  category: 'tablet' | 'syrup' | 'injection';
+  category: string;
+  serial_number: number;
   total_quantity: number;
   expiry_date: string;
+  last_updated: string;
 }
 
 interface StockHistory {
@@ -27,34 +28,24 @@ interface StockHistory {
   quantity: number;
   expiry_date: string;
   created_at: string;
+  user_type: string;
+  created_by: string;
+  patient_name?: string;
 }
 
 const MedicineDetailPage = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [medicine, setMedicine] = useState<Medicine | null>(null);
-  const [stockHistory, setStockHistory] = useState<StockHistory[]>([]);
-  const [isAddStockOpen, setIsAddStockOpen] = useState(false);
-  const [isRemoveStockOpen, setIsRemoveStockOpen] = useState(false);
-  const [addStockData, setAddStockData] = useState({
-    quantity: '',
-    expiry_date: ''
-  });
-  const [removeStockData, setRemoveStockData] = useState({
-    quantity: ''
-  });
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
+  
+  const [addQuantity, setAddQuantity] = useState('');
+  const [removeQuantity, setRemoveQuantity] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
 
-  useEffect(() => {
-    if (id) {
-      fetchMedicineDetails();
-      fetchStockHistory();
-    }
-  }, [id]);
-
-  const fetchMedicineDetails = async () => {
-    try {
+  const { data: medicine, isLoading: medicineLoading } = useQuery({
+    queryKey: ['medicine', id],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('medicines')
         .select('*')
@@ -62,357 +53,333 @@ const MedicineDetailPage = () => {
         .single();
 
       if (error) throw error;
-      setMedicine(data);
-    } catch (error) {
-      console.error('Error fetching medicine details:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch medicine details"
-      });
-    }
-  };
+      return data as Medicine;
+    },
+    enabled: !!id
+  });
 
-  const fetchStockHistory = async () => {
-    try {
+  const { data: stockHistory = [], isLoading: historyLoading } = useQuery({
+    queryKey: ['stock-history', id],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('medicine_stock_history')
-        .select('*')
+        .select(`
+          *,
+          users(full_name)
+        `)
         .eq('medicine_id', id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setStockHistory(data || []);
-    } catch (error) {
-      console.error('Error fetching stock history:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch stock history"
-      });
-    }
-  };
 
-  const handleAddStock = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !medicine) return;
+      // Enhance the data with patient names for medicine usage
+      const enhancedHistory = await Promise.all(
+        data.map(async (record) => {
+          if (record.stock_type === 'remove' && record.user_type === null) {
+            // This might be from patient usage, try to find the patient name
+            const { data: usageData } = await supabase
+              .from('medicine_usage')
+              .select(`
+                patients(name)
+              `)
+              .eq('medicine_id', id)
+              .eq('quantity_used', record.quantity)
+              .limit(1);
 
-    setLoading(true);
-    try {
+            if (usageData && usageData.length > 0) {
+              return {
+                ...record,
+                patient_name: usageData[0].patients?.name,
+                user_type: 'patient_usage'
+              };
+            }
+          }
+          return record;
+        })
+      );
+
+      return enhancedHistory;
+    },
+    enabled: !!id
+  });
+
+  const addStockMutation = useMutation({
+    mutationFn: async ({ quantity, expiry }: { quantity: number; expiry?: string }) => {
       const { error } = await supabase
         .from('medicine_stock_history')
-        .insert([
-          {
-            medicine_id: medicine.id,
-            stock_type: 'add',
-            quantity: parseInt(addStockData.quantity),
-            expiry_date: addStockData.expiry_date,
-            created_by: user.id
-          }
-        ]);
+        .insert({
+          medicine_id: id,
+          stock_type: 'add',
+          quantity,
+          expiry_date: expiry || null,
+          created_by: user?.id,
+          user_type: 'pharmacy'
+        });
 
       if (error) throw error;
-
+    },
+    onSuccess: () => {
       toast({
-        title: "Success",
-        description: "Stock added successfully"
+        title: "Stock Added",
+        description: "Medicine stock has been successfully added."
       });
-
-      setAddStockData({ quantity: '', expiry_date: '' });
-      setIsAddStockOpen(false);
-      fetchMedicineDetails();
-      fetchStockHistory();
-    } catch (error) {
+      setAddQuantity('');
+      setExpiryDate('');
+      queryClient.invalidateQueries({ queryKey: ['medicine', id] });
+      queryClient.invalidateQueries({ queryKey: ['stock-history', id] });
+    },
+    onError: (error) => {
       console.error('Error adding stock:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add stock"
+        description: "Failed to add stock. Please try again."
       });
-    } finally {
-      setLoading(false);
     }
-  };
+  });
 
-  const handleRemoveStock = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !medicine) return;
-
-    const quantityToRemove = parseInt(removeStockData.quantity);
-    if (quantityToRemove > medicine.total_quantity) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Cannot remove more stock than available"
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
+  const removeStockMutation = useMutation({
+    mutationFn: async (quantity: number) => {
       const { error } = await supabase
         .from('medicine_stock_history')
-        .insert([
-          {
-            medicine_id: medicine.id,
-            stock_type: 'remove',
-            quantity: quantityToRemove,
-            created_by: user.id
-          }
-        ]);
+        .insert({
+          medicine_id: id,
+          stock_type: 'remove',
+          quantity,
+          created_by: user?.id,
+          user_type: 'pharmacy'
+        });
 
       if (error) throw error;
-
+    },
+    onSuccess: () => {
       toast({
-        title: "Success",
-        description: "Stock removed successfully"
+        title: "Stock Removed",
+        description: "Medicine stock has been successfully removed."
       });
-
-      setRemoveStockData({ quantity: '' });
-      setIsRemoveStockOpen(false);
-      fetchMedicineDetails();
-      fetchStockHistory();
-    } catch (error) {
+      setRemoveQuantity('');
+      queryClient.invalidateQueries({ queryKey: ['medicine', id] });
+      queryClient.invalidateQueries({ queryKey: ['stock-history', id] });
+    },
+    onError: (error) => {
       console.error('Error removing stock:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to remove stock"
+        description: "Failed to remove stock. Please try again."
       });
-    } finally {
-      setLoading(false);
     }
+  });
+
+  const handleAddStock = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addQuantity || parseInt(addQuantity) <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Quantity",
+        description: "Please enter a valid quantity to add."
+      });
+      return;
+    }
+
+    addStockMutation.mutate({
+      quantity: parseInt(addQuantity),
+      expiry: expiryDate
+    });
   };
 
-  const getCategoryDisplayName = (category: string) => {
-    return category.charAt(0).toUpperCase() + category.slice(1);
+  const handleRemoveStock = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!removeQuantity || parseInt(removeQuantity) <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Quantity",
+        description: "Please enter a valid quantity to remove."
+      });
+      return;
+    }
+
+    if (medicine && parseInt(removeQuantity) > medicine.total_quantity) {
+      toast({
+        variant: "destructive",
+        title: "Insufficient Stock",
+        description: "Cannot remove more stock than available."
+      });
+      return;
+    }
+
+    removeStockMutation.mutate(parseInt(removeQuantity));
   };
+
+  const getUserDisplayName = (record: StockHistory) => {
+    if (record.user_type === 'pharmacy') {
+      return 'Pharmacy';
+    } else if (record.user_type === 'patient_usage' && record.patient_name) {
+      return record.patient_name;
+    } else if (record.user_type === null && record.patient_name) {
+      return record.patient_name;
+    }
+    return 'System';
+  };
+
+  if (medicineLoading || historyLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center">Loading medicine details...</div>
+      </div>
+    );
+  }
 
   if (!medicine) {
     return (
-      <div className="max-w-7xl mx-auto p-6">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate('/medicines')}
-          className="mb-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Medicine Stock
-        </Button>
-        <div className="text-center py-8">
-          <p className="text-gray-500">Loading medicine details...</p>
-        </div>
+      <div className="container mx-auto p-6">
+        <div className="text-center">Medicine not found</div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
-      <Button 
-        variant="ghost" 
-        onClick={() => navigate('/medicines')}
-        className="mb-4"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Medicine Stock
-      </Button>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center space-x-4">
+        <Button
+          variant="outline"
+          onClick={() => navigate('/medicines')}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Medicines
+        </Button>
+        <h1 className="text-2xl font-bold text-gray-900">{medicine.name}</h1>
+      </div>
 
-      {/* Medicine Details Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">
-            {medicine.name} - {getCategoryDisplayName(medicine.category)}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-500">Serial Number</Label>
-              <p className="text-lg font-semibold">{medicine.serial_number}</p>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-500">Current Stock</Label>
-              <p className={`text-lg font-semibold ${
-                medicine.total_quantity < 10 ? 'text-red-600' : 
-                medicine.total_quantity < 50 ? 'text-yellow-600' : 
-                'text-green-600'
-              }`}>
-                {medicine.total_quantity} units
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-500">Category</Label>
-              <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                medicine.category === 'tablet' ? 'bg-blue-100 text-blue-800' :
-                medicine.category === 'syrup' ? 'bg-green-100 text-green-800' :
-                'bg-purple-100 text-purple-800'
-              }`}>
-                {getCategoryDisplayName(medicine.category)}
-              </span>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-500">Expiry Date</Label>
-              <p className="text-lg font-semibold">
-                {medicine.expiry_date ? new Date(medicine.expiry_date).toLocaleDateString() : 'N/A'}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Stock Management Actions */}
+      {/* Medicine Details */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Add Stock */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-green-700">
-              <Plus className="h-5 w-5" />
-              <span>Add Stock</span>
-            </CardTitle>
+            <CardTitle>Medicine Information</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Dialog open={isAddStockOpen} onOpenChange={setIsAddStockOpen}>
-              <DialogTrigger asChild>
-                <Button className="w-full bg-green-600 hover:bg-green-700">
-                  Add New Stock
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Stock</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleAddStock} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Date and Time</Label>
-                    <p className="text-sm text-gray-600">{new Date().toLocaleString()}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="add-quantity">Quantity</Label>
-                    <Input
-                      id="add-quantity"
-                      type="number"
-                      value={addStockData.quantity}
-                      onChange={(e) => setAddStockData({...addStockData, quantity: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="add-expiry">Expiry Date</Label>
-                    <Input
-                      id="add-expiry"
-                      type="date"
-                      value={addStockData.expiry_date}
-                      onChange={(e) => setAddStockData({...addStockData, expiry_date: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <Button type="submit" disabled={loading} className="w-full">
-                    {loading ? 'Adding...' : 'Add Stock'}
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Serial Number</Label>
+                <p className="text-lg">{medicine.serial_number}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Category</Label>
+                <p className="text-lg">
+                  <Badge variant="secondary">{medicine.category}</Badge>
+                </p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Current Stock</Label>
+                <p className="text-lg">
+                  <Badge variant={medicine.total_quantity < 10 ? "destructive" : "default"}>
+                    {medicine.total_quantity} units
+                  </Badge>
+                </p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Expiry Date</Label>
+                <p className="text-lg">
+                  {medicine.expiry_date ? new Date(medicine.expiry_date).toLocaleDateString() : 'N/A'}
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Remove Stock */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-red-700">
-              <Minus className="h-5 w-5" />
-              <span>Remove Stock</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Dialog open={isRemoveStockOpen} onOpenChange={setIsRemoveStockOpen}>
-              <DialogTrigger asChild>
-                <Button variant="destructive" className="w-full">
+        {/* Stock Management */}
+        {user?.role === 'pharmacy' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Stock Management</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <form onSubmit={handleAddStock} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="addQuantity">Add Stock</Label>
+                  <Input
+                    id="addQuantity"
+                    type="number"
+                    value={addQuantity}
+                    onChange={(e) => setAddQuantity(e.target.value)}
+                    placeholder="Enter quantity to add"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="expiryDate">Expiry Date (Optional)</Label>
+                  <Input
+                    id="expiryDate"
+                    type="date"
+                    value={expiryDate}
+                    onChange={(e) => setExpiryDate(e.target.value)}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={addStockMutation.isPending}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Stock
+                </Button>
+              </form>
+
+              <hr />
+
+              <form onSubmit={handleRemoveStock} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="removeQuantity">Remove Stock</Label>
+                  <Input
+                    id="removeQuantity"
+                    type="number"
+                    value={removeQuantity}
+                    onChange={(e) => setRemoveQuantity(e.target.value)}
+                    placeholder="Enter quantity to remove"
+                  />
+                </div>
+                <Button type="submit" variant="destructive" className="w-full" disabled={removeStockMutation.isPending}>
+                  <Minus className="h-4 w-4 mr-2" />
                   Remove Stock
                 </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Remove Stock</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleRemoveStock} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Date and Time</Label>
-                    <p className="text-sm text-gray-600">{new Date().toLocaleString()}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="remove-quantity">Quantity</Label>
-                    <Input
-                      id="remove-quantity"
-                      type="number"
-                      max={medicine.total_quantity}
-                      value={removeStockData.quantity}
-                      onChange={(e) => setRemoveStockData({quantity: e.target.value})}
-                      required
-                    />
-                    <p className="text-sm text-gray-500">
-                      Available stock: {medicine.total_quantity} units
-                    </p>
-                  </div>
-                  <Button type="submit" disabled={loading} variant="destructive" className="w-full">
-                    {loading ? 'Removing...' : 'Remove Stock'}
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </CardContent>
-        </Card>
+              </form>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Stock History */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <History className="h-5 w-5" />
-            <span>Stock History</span>
-          </CardTitle>
+          <CardTitle>Stock History</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>Expiry Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stockHistory.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4">
-                      No stock history found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  stockHistory.map((record) => (
-                    <TableRow key={record.id}>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          record.stock_type === 'add' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {record.stock_type === 'add' ? 'Add Stock' : 'Remove Stock'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {record.stock_type === 'add' ? '+' : '-'}{record.quantity}
-                      </TableCell>
-                      <TableCell>
-                        {new Date(record.created_at).toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        {record.expiry_date ? new Date(record.expiry_date).toLocaleDateString() : 'N/A'}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2 font-medium">Date</th>
+                  <th className="text-left p-2 font-medium">Action</th>
+                  <th className="text-left p-2 font-medium">Quantity</th>
+                  <th className="text-left p-2 font-medium">User</th>
+                  <th className="text-left p-2 font-medium">Expiry Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stockHistory.map((record) => (
+                  <tr key={record.id} className="border-b hover:bg-gray-50">
+                    <td className="p-2">
+                      {new Date(record.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="p-2">
+                      <Badge variant={record.stock_type === 'add' ? 'default' : 'destructive'}>
+                        {record.stock_type === 'add' ? 'Added' : 'Removed'}
+                      </Badge>
+                    </td>
+                    <td className="p-2">{record.quantity}</td>
+                    <td className="p-2">{getUserDisplayName(record)}</td>
+                    <td className="p-2">
+                      {record.expiry_date ? new Date(record.expiry_date).toLocaleDateString() : 'N/A'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>

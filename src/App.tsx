@@ -10,6 +10,7 @@ import Layout from "./components/Layout";
 import HomePage from "./pages/HomePage";
 import AddPatientPage from "./pages/AddPatientPage";
 import PatientsPage from "./pages/PatientsPage";
+import PatientEditPage from "./pages/PatientEditPage";
 import MedicineStockPage from "./pages/MedicineStockPage";
 import MedicineDetailPage from "./pages/MedicineDetailPage";
 import PatientReportPage from "./pages/PatientReportPage";
@@ -98,6 +99,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <PatientsPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/patient/:id/edit" 
+              element={
+                <ProtectedRoute>
+                  <PatientEditPage />
                 </ProtectedRoute>
               } 
             />

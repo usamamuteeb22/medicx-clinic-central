@@ -44,8 +44,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       
-      // For demo purposes, we'll use simple authentication
-      // In production, you'd want to use proper password hashing
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -61,8 +59,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Simple password check (in production, use proper hashing)
-      if (username === 'ummi' && password === 'ummi999') {
+      // Check credentials for each role
+      let isValidCredentials = false;
+      
+      switch (username) {
+        case 'ummi':
+          isValidCredentials = password === 'ummi999';
+          break;
+        case 'reception':
+          isValidCredentials = password === '4568';
+          break;
+        case 'doctor':
+          isValidCredentials = password === '7891';
+          break;
+        case 'pharmacy':
+          isValidCredentials = password === '1235';
+          break;
+        default:
+          isValidCredentials = false;
+      }
+
+      if (isValidCredentials) {
         const user: User = {
           id: data.id,
           username: data.username,

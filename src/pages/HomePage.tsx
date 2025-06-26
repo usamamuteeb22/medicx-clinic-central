@@ -1,79 +1,179 @@
 
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3, Users, Pill, Activity } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { format, subDays, startOfDay } from 'date-fns';
+import { Users, Pill, FileText, Activity } from 'lucide-react';
 
 const HomePage = () => {
   const { user } = useAuth();
 
+  // Fetch daily patient counts for the last 7 days
+  const { data: dailyPatients = [] } = useQuery({
+    queryKey: ['daily-patients'],
+    queryFn: async () => {
+      const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const date = startOfDay(subDays(new Date(), i));
+        return {
+          date,
+          formattedDate: format(date, 'MMM dd'),
+          sqlDate: format(date, 'yyyy-MM-dd')
+        };
+      }).reverse();
+
+      const results = await Promise.all(
+        last7Days.map(async ({ date, formattedDate, sqlDate }) => {
+          const { count } = await supabase
+            .from('patients')
+            .select('*', { count: 'exact', head: true })
+            .gte('registration_date', sqlDate)
+            .lt('registration_date', format(new Date(date.getTime() + 24 * 60 * 60 * 1000), 'yyyy-MM-dd'));
+          
+          return {
+            date: formattedDate,
+            patients: count || 0
+          };
+        })
+      );
+
+      return results;
+    }
+  });
+
+  // Fetch low stock medicines
+  const { data: lowStockMedicines = [] } = useQuery({
+    queryKey: ['low-stock-medicines'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .select('name, total_quantity')
+        .order('total_quantity', { ascending: true })
+        .limit(10);
+
+      if (error) throw error;
+
+      return data.map(medicine => ({
+        name: medicine.name.length > 15 ? medicine.name.substring(0, 15) + '...' : medicine.name,
+        stock: medicine.total_quantity || 0
+      }));
+    }
+  });
+
+  // Fetch summary statistics
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: async () => {
+      const [patientsResult, medicinesResult, reportsResult] = await Promise.all([
+        supabase.from('patients').select('*', { count: 'exact', head: true }),
+        supabase.from('medicines').select('*', { count: 'exact', head: true }),
+        supabase.from('patient_reports').select('*', { count: 'exact', head: true })
+      ]);
+
+      return {
+        totalPatients: patientsResult.count || 0,
+        totalMedicines: medicinesResult.count || 0,
+        totalReports: reportsResult.count || 0
+      };
+    }
+  });
+
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Welcome to Medicx Dashboard
-        </h1>
-        <p className="text-gray-600">
-          Medical Clinic Management System - {user?.role} Panel
-        </p>
+    <div className="container mx-auto p-6 space-y-8">
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold text-gray-900">Welcome to Medicx Dashboard</h1>
+        <p className="text-gray-600">Hello, {user?.full_name} ({user?.role})</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Patients</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Coming Soon</div>
-            <p className="text-xs text-muted-foreground">Analytics will be added here</p>
+            <div className="text-2xl font-bold">{stats?.totalPatients || 0}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Medicine Stock</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Medicines</CardTitle>
             <Pill className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Coming Soon</div>
-            <p className="text-xs text-muted-foreground">Stock overview will be added</p>
+            <div className="text-2xl font-bold">{stats?.totalMedicines || 0}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Daily Activity</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Reports</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Coming Soon</div>
-            <p className="text-xs text-muted-foreground">Activity logs will be shown</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reports</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Coming Soon</div>
-            <p className="text-xs text-muted-foreground">Graphs and charts will be added</p>
+            <div className="text-2xl font-bold">{stats?.totalReports || 0}</div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
+      {/* Daily Patients Chart */}
+      <Card className="w-full">
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+          <CardTitle>Daily Patients Count (Last 7 Days)</CardTitle>
+          <CardDescription>Number of patients registered each day</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-600">
-            This dashboard will be enhanced with real-time analytics, charts, and quick action buttons in future updates.
-          </p>
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={dailyPatients}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line 
+                  type="monotone" 
+                  dataKey="patients" 
+                  stroke="#3b82f6" 
+                  strokeWidth={2}
+                  dot={{ fill: '#3b82f6' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Low Stock Medicines Chart */}
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Low Stock Medicines (Lowest to Highest)</CardTitle>
+          <CardDescription>Current medicine inventory levels</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={lowStockMedicines} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis dataKey="name" type="category" width={100} />
+                <Tooltip />
+                <Bar dataKey="stock" fill="#ef4444" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Footer - Only on Home Page */}
+      <footer className="mt-12 py-6 border-t border-gray-200">
+        <div className="text-center text-sm text-gray-600">
+          This Website is Developed by Usama Muteeb
+        </div>
+      </footer>
     </div>
   );
 };

@@ -30,12 +30,12 @@ const Navbar = () => {
         return [
           ...baseItems,
           { path: '/patients', label: 'Add Patient', icon: UserPlus },
-          { path: '/all-patients', label: 'Patients', icon: Users }
+          { path: '/all-patients', label: 'Patients', icon: Users },
+          { path: '/reports', label: 'Reports', icon: BarChart3 }
         ];
       case 'doctor':
         return [
           ...baseItems,
-          { path: '/patients', label: 'Add Patient', icon: UserPlus },
           { path: '/all-patients', label: 'Patients', icon: Users },
           { path: '/patient-reports', label: 'Patient Reports', icon: FileText },
           { path: '/reports', label: 'Reports', icon: BarChart3 },

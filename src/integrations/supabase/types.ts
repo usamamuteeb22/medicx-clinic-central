@@ -66,6 +66,7 @@ export type Database = {
           medicine_id: string | null
           quantity: number
           stock_type: string
+          user_type: string | null
         }
         Insert: {
           created_at?: string | null
@@ -75,6 +76,7 @@ export type Database = {
           medicine_id?: string | null
           quantity: number
           stock_type: string
+          user_type?: string | null
         }
         Update: {
           created_at?: string | null
@@ -84,6 +86,7 @@ export type Database = {
           medicine_id?: string | null
           quantity?: number
           stock_type?: string
+          user_type?: string | null
         }
         Relationships: [
           {
@@ -338,7 +341,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_uuid: string }
+        Returns: string
+      }
     }
     Enums: {
       medicine_category: "tablet" | "syrup" | "injection"

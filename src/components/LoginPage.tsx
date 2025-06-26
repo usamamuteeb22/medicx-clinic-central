@@ -70,10 +70,6 @@ const LoginPage = () => {
               )}
             </Button>
           </form>
-          <div className="mt-6 text-center text-sm text-gray-600">
-            <p>Demo credentials:</p>
-            <p className="font-mono">Username: ummi | Password: ummi999</p>
-          </div>
         </CardContent>
       </Card>
     </div>
