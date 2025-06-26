@@ -36,6 +36,7 @@ interface PrescribedMedicine {
   medicine: Medicine;
   quantity: number;
   morning: boolean;
+  afternoon: boolean;
   evening: boolean;
   night: boolean;
 }
