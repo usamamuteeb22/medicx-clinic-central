@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { Pill, Plus, Search, Edit } from 'lucide-react';
+import { Pill, Plus, Search, Edit, Download, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface Medicine {
@@ -36,8 +36,7 @@ const MedicineStockPage = () => {
   });
   const [searchFilters, setSearchFilters] = useState({
     name: '',
-    category: 'all',
-    expiry_date: ''
+    category: 'all'
   });
   const [loading, setLoading] = useState(false);
 
@@ -125,8 +124,117 @@ const MedicineStockPage = () => {
     }
   };
 
+  const handleDeleteMedicine = async (medicineId: string, medicineName: string) => {
+    if (!user || user.role !== 'admin') {
+      toast({
+        variant: "destructive",
+        title: "Access Denied",
+        description: "Only admin users can delete medicines"
+      });
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${medicineName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('medicines')
+        .delete()
+        .eq('id', medicineId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Medicine deleted successfully"
+      });
+
+      fetchMedicines();
+    } catch (error) {
+      console.error('Error deleting medicine:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete medicine"
+      });
+    }
+  };
+
   const handleRowClick = (medicine: Medicine) => {
     navigate(`/medicines/${medicine.id}`);
+  };
+
+  const generatePDFReport = () => {
+    const printContent = `
+      <html>
+        <head>
+          <title>Medicine Inventory Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
+            .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 20px; }
+            .report-date { margin-bottom: 20px; font-weight: bold; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; font-weight: bold; }
+            .low-stock { color: #d32f2f; font-weight: bold; }
+            .medium-stock { color: #ff9800; font-weight: bold; }
+            .good-stock { color: #4caf50; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>MEDICX CLINIC</h1>
+            <h2>Medicine Inventory Report</h2>
+          </div>
+          <div class="report-date">
+            Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Serial No.</th>
+                <th>Medicine Name</th>
+                <th>Category</th>
+                <th>Quantity in Stock</th>
+                <th>Expiry Date</th>
+                <th>Last Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredMedicines.map(medicine => `
+                <tr>
+                  <td>${medicine.serial_number}</td>
+                  <td>${medicine.name}</td>
+                  <td style="text-transform: capitalize;">${medicine.category}</td>
+                  <td class="${
+                    medicine.total_quantity < 10 ? 'low-stock' : 
+                    medicine.total_quantity < 50 ? 'medium-stock' : 
+                    'good-stock'
+                  }">${medicine.total_quantity}</td>
+                  <td>${medicine.expiry_date ? new Date(medicine.expiry_date).toLocaleDateString() : 'N/A'}</td>
+                  <td>${new Date(medicine.last_updated).toLocaleDateString()}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div style="margin-top: 30px; font-size: 12px; color: #666;">
+            <p><strong>Stock Status Legend:</strong></p>
+            <p style="color: #d32f2f;">• Red: Low Stock (< 10 units)</p>
+            <p style="color: #ff9800;">• Orange: Medium Stock (10-49 units)</p>
+            <p style="color: #4caf50;">• Green: Good Stock (≥ 50 units)</p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.print();
+    }
   };
 
   const filteredMedicines = medicines.filter(medicine => {
@@ -134,10 +242,8 @@ const MedicineStockPage = () => {
       medicine.name.toLowerCase().includes(searchFilters.name.toLowerCase());
     const matchesCategory = searchFilters.category === 'all' || 
       medicine.category === searchFilters.category;
-    const matchesExpiryDate = searchFilters.expiry_date === '' || 
-      medicine.expiry_date === searchFilters.expiry_date;
     
-    return matchesName && matchesCategory && matchesExpiryDate;
+    return matchesName && matchesCategory;
   });
 
   const getCategoryDisplayName = (category: string) => {
@@ -152,70 +258,81 @@ const MedicineStockPage = () => {
           <p className="text-gray-600">Manage and track medicine inventory</p>
         </div>
         
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center space-x-2">
-              <Plus className="h-4 w-4" />
-              <span>Add Medicine</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add New Medicine</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAddMedicine} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="medicine-name">Medicine Name</Label>
-                <Input
-                  id="medicine-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tablet">Tablet</SelectItem>
-                    <SelectItem value="syrup">Syrup</SelectItem>
-                    <SelectItem value="injection">Injection</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  value={formData.quantity}
-                  onChange={(e) => setFormData({...formData, quantity: e.target.value})}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="expiry-date">Expiry Date</Label>
-                <Input
-                  id="expiry-date"
-                  type="date"
-                  value={formData.expiry_date}
-                  onChange={(e) => setFormData({...formData, expiry_date: e.target.value})}
-                  required
-                />
-              </div>
-              
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? 'Adding...' : 'Add Medicine'}
+        <div className="flex space-x-2">
+          <Button
+            onClick={generatePDFReport}
+            variant="outline"
+            className="flex items-center space-x-2"
+          >
+            <Download className="h-4 w-4" />
+            <span>Download PDF</span>
+          </Button>
+          
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="flex items-center space-x-2">
+                <Plus className="h-4 w-4" />
+                <span>Add Medicine</span>
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add New Medicine</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddMedicine} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="medicine-name">Medicine Name</Label>
+                  <Input
+                    id="medicine-name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tablet">Tablet</SelectItem>
+                      <SelectItem value="syrup">Syrup</SelectItem>
+                      <SelectItem value="injection">Injection</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Quantity</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    value={formData.quantity}
+                    onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="expiry-date">Expiry Date</Label>
+                  <Input
+                    id="expiry-date"
+                    type="date"
+                    value={formData.expiry_date}
+                    onChange={(e) => setFormData({...formData, expiry_date: e.target.value})}
+                    required
+                  />
+                </div>
+                
+                <Button type="submit" disabled={loading} className="w-full">
+                  {loading ? 'Adding...' : 'Add Medicine'}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Card>
@@ -228,7 +345,7 @@ const MedicineStockPage = () => {
         <CardContent>
           <div className="space-y-4">
             {/* Search Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Search by Name</Label>
                 <Input
@@ -251,14 +368,6 @@ const MedicineStockPage = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Filter by Expiry Date</Label>
-                <Input
-                  type="date"
-                  value={searchFilters.expiry_date}
-                  onChange={(e) => setSearchFilters({...searchFilters, expiry_date: e.target.value})}
-                />
-              </div>
             </div>
 
             {/* Medicine Table */}
@@ -272,7 +381,7 @@ const MedicineStockPage = () => {
                     <TableHead>Quantity in Stock</TableHead>
                     <TableHead>Expiry Date</TableHead>
                     <TableHead>Last Updated</TableHead>
-                    <TableHead>Action</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -316,16 +425,31 @@ const MedicineStockPage = () => {
                           {new Date(medicine.last_updated).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRowClick(medicine);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                          <div className="flex space-x-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRowClick(medicine);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            {user?.role === 'admin' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteMedicine(medicine.id, medicine.name);
+                                }}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))

@@ -13,6 +13,7 @@ interface PrescribedMedicine {
   medicine: Medicine;
   quantity: number;
   morning: boolean;
+  afternoon?: boolean;
   evening: boolean;
   night: boolean;
 }
@@ -27,6 +28,7 @@ const ReportMedicineTable: React.FC<ReportMedicineTableProps> = ({
   const getDosageText = (medicine: PrescribedMedicine) => {
     const times = [];
     if (medicine.morning) times.push('Morning');
+    if (medicine.afternoon) times.push('Afternoon');
     if (medicine.evening) times.push('Evening');
     if (medicine.night) times.push('Night');
     return times.length > 0 ? times.join(', ') : 'Not Specified';
@@ -45,7 +47,7 @@ const ReportMedicineTable: React.FC<ReportMedicineTableProps> = ({
           </tr>
         </thead>
         <tbody>
-          {prescribedMedicines.slice(0, 6).map((medicine, index) => (
+          {prescribedMedicines.slice(0, 8).map((medicine, index) => (
             <tr key={index}>
               <td>{medicine.medicine.name}</td>
               <td className="capitalize">{medicine.medicine.category}</td>
@@ -59,7 +61,7 @@ const ReportMedicineTable: React.FC<ReportMedicineTableProps> = ({
             </tr>
           )}
           {/* Fill empty rows to maintain consistent spacing */}
-          {Array.from({ length: Math.max(0, 6 - prescribedMedicines.length) }).map((_, index) => (
+          {Array.from({ length: Math.max(0, 8 - prescribedMedicines.length) }).map((_, index) => (
             <tr key={`empty-${index}`}>
               <td>--</td>
               <td>--</td>

@@ -9,6 +9,7 @@ import LoginPage from "./components/LoginPage";
 import Layout from "./components/Layout";
 import HomePage from "./pages/HomePage";
 import AddPatientPage from "./pages/AddPatientPage";
+import PatientsPage from "./pages/PatientsPage";
 import MedicineStockPage from "./pages/MedicineStockPage";
 import MedicineDetailPage from "./pages/MedicineDetailPage";
 import PatientReportPage from "./pages/PatientReportPage";
@@ -89,6 +90,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AddPatientPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/all-patients" 
+              element={
+                <ProtectedRoute>
+                  <PatientsPage />
                 </ProtectedRoute>
               } 
             />

@@ -2,7 +2,7 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, Home, UserPlus, Pill, Stethoscope, FileText, History, BarChart3 } from 'lucide-react';
+import { LogOut, Home, UserPlus, Pill, Stethoscope, FileText, History, BarChart3, Users } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const Navbar = () => {
@@ -20,6 +20,7 @@ const Navbar = () => {
         return [
           ...baseItems,
           { path: '/patients', label: 'Add Patient', icon: UserPlus },
+          { path: '/all-patients', label: 'Patients', icon: Users },
           { path: '/patient-reports', label: 'Patient Reports', icon: FileText },
           { path: '/reports', label: 'Reports', icon: BarChart3 },
           { path: '/medicine-usage', label: 'Medicine Usage', icon: History },
@@ -28,12 +29,14 @@ const Navbar = () => {
       case 'reception':
         return [
           ...baseItems,
-          { path: '/patients', label: 'Add Patient', icon: UserPlus }
+          { path: '/patients', label: 'Add Patient', icon: UserPlus },
+          { path: '/all-patients', label: 'Patients', icon: Users }
         ];
       case 'doctor':
         return [
           ...baseItems,
-          { path: '/patients', label: 'Patients', icon: UserPlus },
+          { path: '/patients', label: 'Add Patient', icon: UserPlus },
+          { path: '/all-patients', label: 'Patients', icon: Users },
           { path: '/patient-reports', label: 'Patient Reports', icon: FileText },
           { path: '/reports', label: 'Reports', icon: BarChart3 },
           { path: '/medicine-usage', label: 'Medicine Usage', icon: History }

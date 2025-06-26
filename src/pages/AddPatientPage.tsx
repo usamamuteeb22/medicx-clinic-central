@@ -262,24 +262,26 @@ const AddPatientPage = () => {
                     <TableHead>Age</TableHead>
                     <TableHead>Gender</TableHead>
                     <TableHead>Phone Number</TableHead>
+                    <TableHead>Address</TableHead>
                     <TableHead>Registration Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredPatients.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-4">
+                      <TableCell colSpan={7} className="text-center py-4">
                         No patients found
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredPatients.map((patient) => (
                       <TableRow key={patient.id}>
-                        <TableCell>#{1000 + patient.patient_id}</TableCell>
+                        <TableCell>{patient.patient_id}</TableCell>
                         <TableCell className="font-medium">{patient.name}</TableCell>
                         <TableCell>{patient.age}</TableCell>
                         <TableCell>{patient.gender}</TableCell>
                         <TableCell>{patient.phone_number || 'N/A'}</TableCell>
+                        <TableCell>{patient.address || 'N/A'}</TableCell>
                         <TableCell>
                           {new Date(patient.registration_date).toLocaleDateString()}
                         </TableCell>

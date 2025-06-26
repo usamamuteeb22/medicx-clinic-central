@@ -104,9 +104,9 @@ const ReportPrintStyles: React.FC = () => {
           line-height: 1.1;
         }
         
-        /* Patient Information - Fixed 18mm height */
+        /* Patient Information - Fixed 21mm height */
         .patient-section {
-          height: 18mm;
+          height: 21mm;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
@@ -127,9 +127,9 @@ const ReportPrintStyles: React.FC = () => {
           margin-bottom: 0.5mm;
         }
         
-        /* Medical Vitals - Fixed 18mm height */
+        /* Medical Vitals - Fixed 21mm height */
         .vitals-section {
-          height: 18mm;
+          height: 21mm;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
@@ -166,9 +166,9 @@ const ReportPrintStyles: React.FC = () => {
           text-align: justify;
         }
         
-        /* Medicine Table - Dynamic height up to 60mm */
+        /* Medicine Table - Dynamic height up to 81mm (9 rows) */
         .medicine-section {
-          max-height: 60mm;
+          max-height: 81mm;
           overflow: hidden;
         }
         .medicine-table {
@@ -184,14 +184,14 @@ const ReportPrintStyles: React.FC = () => {
           padding: 2mm;
           border: 0.5px solid #ccc;
           text-align: left;
-          height: 8mm;
+          height: 9mm;
         }
         .medicine-table td {
           padding: 2mm;
           border: 0.5px solid #ccc;
           text-align: left;
           vertical-align: top;
-          height: 8mm;
+          height: 9mm;
         }
         
         /* Medical History - Dynamic height up to 60mm */
