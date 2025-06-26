@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       medicine_prescriptions: {
         Row: {
+          afternoon: boolean | null
           created_at: string | null
           evening: boolean | null
           id: string
@@ -21,6 +22,7 @@ export type Database = {
           quantity: number
         }
         Insert: {
+          afternoon?: boolean | null
           created_at?: string | null
           evening?: boolean | null
           id?: string
@@ -31,6 +33,7 @@ export type Database = {
           quantity: number
         }
         Update: {
+          afternoon?: boolean | null
           created_at?: string | null
           evening?: boolean | null
           id?: string

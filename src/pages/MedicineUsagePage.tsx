@@ -35,6 +35,8 @@ const MedicineUsagePage = () => {
   const { data: usageRecords = [], isLoading } = useQuery({
     queryKey: ['medicine-usage-records'],
     queryFn: async () => {
+      console.log('Fetching medicine usage records...');
+      
       // Fetch patient reports with their prescribed medicines
       const { data: reports, error } = await supabase
         .from('patient_reports')
@@ -59,25 +61,31 @@ const MedicineUsagePage = () => {
         `)
         .order('report_date', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching reports:', error);
+        throw error;
+      }
+
+      console.log('Raw reports data:', reports);
 
       // Transform the data to group by individual reports
-      const records: MedicineUsageRecord[] = reports.map(report => ({
+      const records: MedicineUsageRecord[] = reports?.map(report => ({
         id: report.id,
         patient_id: report.patient_id,
-        patient_name: report.patients.name,
-        patient_number: report.patients.patient_id,
-        report_date: report.report_date,
-        medicines: report.medicine_prescriptions.map(prescription => ({
-          name: prescription.medicines.name,
-          quantity: prescription.quantity,
-          morning: prescription.morning,
-          afternoon: prescription.afternoon,
-          evening: prescription.evening,
-          night: prescription.night
-        }))
-      }));
+        patient_name: report.patients?.name || 'Unknown Patient',
+        patient_number: report.patients?.patient_id || 0,
+        report_date: report.report_date || new Date().toISOString(),
+        medicines: report.medicine_prescriptions?.map(prescription => ({
+          name: prescription.medicines?.name || 'Unknown Medicine',
+          quantity: prescription.quantity || 0,
+          morning: prescription.morning || false,
+          afternoon: prescription.afternoon || false,
+          evening: prescription.evening || false,
+          night: prescription.night || false
+        })) || []
+      })) || [];
 
+      console.log('Transformed records:', records);
       return records;
     }
   });
