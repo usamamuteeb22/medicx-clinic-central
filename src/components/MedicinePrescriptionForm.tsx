@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Trash2, Pill } from 'lucide-react';
+import { Plus, Trash2, Pill, Search } from 'lucide-react';
 
 interface Medicine {
   id: string;
@@ -38,6 +38,8 @@ const MedicinePrescriptionForm: React.FC<MedicinePrescriptionFormProps> = ({
   onPrescribedMedicinesChange
 }) => {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [filteredMedicines, setFilteredMedicines] = useState<Medicine[]>([]);
+  const [medicineSearchTerm, setMedicineSearchTerm] = useState('');
   const [selectedMedicineId, setSelectedMedicineId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [dosageTiming, setDosageTiming] = useState({
@@ -51,6 +53,15 @@ const MedicinePrescriptionForm: React.FC<MedicinePrescriptionFormProps> = ({
     fetchMedicines();
   }, []);
 
+  useEffect(() => {
+    // Filter medicines based on search term
+    const filtered = medicines.filter(medicine =>
+      medicine.name.toLowerCase().includes(medicineSearchTerm.toLowerCase()) ||
+      medicine.category.toLowerCase().includes(medicineSearchTerm.toLowerCase())
+    );
+    setFilteredMedicines(filtered);
+  }, [medicines, medicineSearchTerm]);
+
   const fetchMedicines = async () => {
     try {
       const { data, error } = await supabase
@@ -61,6 +72,7 @@ const MedicinePrescriptionForm: React.FC<MedicinePrescriptionFormProps> = ({
 
       if (error) throw error;
       setMedicines(data || []);
+      setFilteredMedicines(data || []);
     } catch (error) {
       console.error('Error fetching medicines:', error);
       toast({
@@ -118,6 +130,7 @@ const MedicinePrescriptionForm: React.FC<MedicinePrescriptionFormProps> = ({
     // Reset form
     setSelectedMedicineId('');
     setQuantity('');
+    setMedicineSearchTerm('');
     setDosageTiming({
       morning: false,
       afternoon: false,
@@ -150,6 +163,20 @@ const MedicinePrescriptionForm: React.FC<MedicinePrescriptionFormProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Medicine Search Field */}
+          <div className="space-y-2">
+            <Label>Search Medicines</Label>
+            <div className="flex items-center space-x-2">
+              <Search className="h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search medicines by name or category..."
+                value={medicineSearchTerm}
+                onChange={(e) => setMedicineSearchTerm(e.target.value)}
+                className="flex-1"
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Select Medicine</Label>
@@ -158,13 +185,16 @@ const MedicinePrescriptionForm: React.FC<MedicinePrescriptionFormProps> = ({
                   <SelectValue placeholder="Choose medicine" />
                 </SelectTrigger>
                 <SelectContent>
-                  {medicines.map((medicine) => (
+                  {filteredMedicines.map((medicine) => (
                     <SelectItem key={medicine.id} value={medicine.id}>
                       {medicine.name} - Stock: {medicine.total_quantity}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {filteredMedicines.length === 0 && medicineSearchTerm && (
+                <p className="text-sm text-gray-500">No medicines found matching your search.</p>
+              )}
             </div>
 
             <div className="space-y-2">

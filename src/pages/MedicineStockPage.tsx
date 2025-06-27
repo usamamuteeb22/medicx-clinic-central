@@ -6,10 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Download, Trash2 } from 'lucide-react';
+import { Search, Plus, Download, Trash2, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +36,10 @@ interface Medicine {
 
 const MedicineStockPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMedicineId, setSelectedMedicineId] = useState('');
+  const [stockType, setStockType] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -77,32 +83,127 @@ const MedicineStockPage = () => {
     }
   });
 
+  const stockMutation = useMutation({
+    mutationFn: async ({ medicineId, stockType, quantity, expiryDate }: {
+      medicineId: string;
+      stockType: string;
+      quantity: number;
+      expiryDate?: string;
+    }) => {
+      const { error } = await supabase
+        .from('medicine_stock_history')
+        .insert({
+          medicine_id: medicineId,
+          stock_type: stockType,
+          quantity: quantity,
+          expiry_date: expiryDate || null,
+          created_by: user?.id
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Stock Updated",
+        description: "Medicine stock has been updated successfully."
+      });
+      queryClient.invalidateQueries({ queryKey: ['medicines'] });
+      // Reset form
+      setSelectedMedicineId('');
+      setStockType('');
+      setQuantity('');
+      setExpiryDate('');
+    },
+    onError: (error) => {
+      console.error('Error updating stock:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update stock. Please try again."
+      });
+    }
+  });
+
   const handleDeleteMedicine = (medicineId: string) => {
     deleteMedicineMutation.mutate(medicineId);
   };
 
+  const handleStockUpdate = () => {
+    if (!selectedMedicineId || !stockType || !quantity) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please fill all required fields"
+      });
+      return;
+    }
+
+    stockMutation.mutate({
+      medicineId: selectedMedicineId,
+      stockType: stockType,
+      quantity: parseInt(quantity),
+      expiryDate: expiryDate || undefined
+    });
+  };
+
   const downloadPDF = () => {
-    const pdfContent = `
-Medicine Stock Inventory Report
-Generated on: ${new Date().toLocaleDateString()}
-
-${filteredMedicines.map((medicine, index) => `
-${index + 1}. ${medicine.name}
-   Serial No: ${medicine.serial_number}
-   Category: ${medicine.category}
-   Quantity in Stock: ${medicine.total_quantity}
-   Expiry Date: ${medicine.expiry_date ? new Date(medicine.expiry_date).toLocaleDateString() : 'N/A'}
-   Last Updated: ${new Date(medicine.last_updated).toLocaleDateString()}
-`).join('\n')}
-
-Total Medicines: ${filteredMedicines.length}
+    // Create HTML content for PDF
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Medicine Stock Inventory Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #333; text-align: center; margin-bottom: 30px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #f2f2f2; font-weight: bold; }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+            .summary { margin-top: 20px; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <h1>Medicine Stock Inventory Report</h1>
+          <p><strong>Generated on:</strong> ${new Date().toLocaleDateString()}</p>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Serial No.</th>
+                <th>Medicine Name</th>
+                <th>Category</th>
+                <th>Quantity in Stock</th>
+                <th>Expiry Date</th>
+                <th>Last Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredMedicines.map((medicine) => `
+                <tr>
+                  <td>${medicine.serial_number}</td>
+                  <td>${medicine.name}</td>
+                  <td>${medicine.category}</td>
+                  <td>${medicine.total_quantity}</td>
+                  <td>${medicine.expiry_date ? new Date(medicine.expiry_date).toLocaleDateString() : 'N/A'}</td>
+                  <td>${new Date(medicine.last_updated).toLocaleDateString()}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="summary">
+            <p>Total Medicines: ${filteredMedicines.length}</p>
+          </div>
+        </body>
+      </html>
     `;
 
-    const blob = new Blob([pdfContent], { type: 'text/plain' });
+    const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `medicine-stock-report-${new Date().toISOString().split('T')[0]}.txt`;
+    a.download = `medicine-stock-report-${new Date().toISOString().split('T')[0]}.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -138,6 +239,74 @@ Total Medicines: ${filteredMedicines.length}
           </Button>
         </div>
       </div>
+
+      {/* Stock Management Section - Visible for Admin and Pharmacy */}
+      {(user?.role === 'admin' || user?.role === 'pharmacy') && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Package className="h-5 w-5" />
+              <span>Stock Management</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Select Medicine</Label>
+                <Select value={selectedMedicineId} onValueChange={setSelectedMedicineId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose medicine" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {medicines.map((medicine) => (
+                      <SelectItem key={medicine.id} value={medicine.id}>
+                        {medicine.name} - Current Stock: {medicine.total_quantity}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Stock Action</Label>
+                <Select value={stockType} onValueChange={setStockType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose action" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="add">Add Stock</SelectItem>
+                    <SelectItem value="remove">Remove Stock</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Quantity</Label>
+                <Input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  placeholder="Enter quantity"
+                  min="1"
+                />
+              </div>
+              {stockType === 'add' && (
+                <div className="space-y-2">
+                  <Label>Expiry Date (Optional)</Label>
+                  <Input
+                    type="date"
+                    value={expiryDate}
+                    onChange={(e) => setExpiryDate(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+            <Button onClick={handleStockUpdate} disabled={stockMutation.isPending}>
+              {stockMutation.isPending ? 'Updating...' : 'Update Stock'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

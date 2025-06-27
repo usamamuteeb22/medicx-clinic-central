@@ -43,15 +43,16 @@ const HomePage = () => {
     }
   });
 
-  // Fetch low stock medicines
+  // Fetch low stock medicines (less than 30 units)
   const { data: lowStockMedicines = [] } = useQuery({
     queryKey: ['low-stock-medicines'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('medicines')
         .select('name, total_quantity')
+        .lt('total_quantity', 30)
         .order('total_quantity', { ascending: true })
-        .limit(10);
+        .limit(30);
 
       if (error) throw error;
 
@@ -150,16 +151,16 @@ const HomePage = () => {
       {/* Low Stock Medicines Chart */}
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Low Stock Medicines (Lowest to Highest)</CardTitle>
-          <CardDescription>Current medicine inventory levels</CardDescription>
+          <CardTitle>Low Stock Medicines (Below 30 Units)</CardTitle>
+          <CardDescription>Medicines with stock less than 30 units - Lowest to Highest</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-80 w-full">
+          <div className="h-96 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={lowStockMedicines} layout="horizontal">
+              <BarChart data={lowStockMedicines} layout="horizontal" margin={{ left: 80 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={100} />
+                <YAxis dataKey="name" type="category" width={100} fontSize={12} />
                 <Tooltip />
                 <Bar dataKey="stock" fill="#ef4444" />
               </BarChart>
