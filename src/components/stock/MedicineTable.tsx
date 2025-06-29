@@ -42,6 +42,46 @@ const MedicineTable = ({ medicines }: MedicineTableProps) => {
 
   const deleteMedicineMutation = useMutation({
     mutationFn: async (medicineId: string) => {
+      // First check if medicine is referenced in medicine_usage
+      const { data: usageData, error: usageError } = await supabase
+        .from('medicine_usage')
+        .select('id')
+        .eq('medicine_id', medicineId)
+        .limit(1);
+
+      if (usageError) throw usageError;
+
+      if (usageData && usageData.length > 0) {
+        throw new Error('Cannot delete medicine that has been used in patient treatments. Please remove usage records first.');
+      }
+
+      // Check if medicine is referenced in medicine_prescriptions
+      const { data: prescriptionData, error: prescriptionError } = await supabase
+        .from('medicine_prescriptions')
+        .select('id')
+        .eq('medicine_id', medicineId)
+        .limit(1);
+
+      if (prescriptionError) throw prescriptionError;
+
+      if (prescriptionData && prescriptionData.length > 0) {
+        throw new Error('Cannot delete medicine that is prescribed in patient reports. Please remove prescriptions first.');
+      }
+
+      // Check if medicine is referenced in medicine_stock_history
+      const { data: stockData, error: stockError } = await supabase
+        .from('medicine_stock_history')
+        .select('id')
+        .eq('medicine_id', medicineId)
+        .limit(1);
+
+      if (stockError) throw stockError;
+
+      if (stockData && stockData.length > 0) {
+        throw new Error('Cannot delete medicine that has stock history. Please remove stock history first.');
+      }
+
+      // If no references found, proceed with deletion
       const { error } = await supabase
         .from('medicines')
         .delete()
@@ -60,8 +100,8 @@ const MedicineTable = ({ medicines }: MedicineTableProps) => {
       console.error('Error deleting medicine:', error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to delete medicine. Please try again."
+        title: "Cannot Delete Medicine",
+        description: error.message || "Failed to delete medicine. Please try again."
       });
     }
   });
@@ -126,7 +166,7 @@ const MedicineTable = ({ medicines }: MedicineTableProps) => {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Medicine</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to delete {medicine.name}? This action cannot be undone.
+                              Are you sure you want to delete {medicine.name}? This action cannot be undone and will only work if the medicine is not referenced in any patient records or usage history.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

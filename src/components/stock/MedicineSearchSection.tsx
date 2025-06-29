@@ -11,16 +11,16 @@ interface MedicineSearchSectionProps {
 
 const MedicineSearchSection = ({ searchTerm, onSearchChange }: MedicineSearchSectionProps) => {
   return (
-    <Card>
+    <Card className="bg-gradient-to-r from-cyan-50 to-blue-50 border-cyan-200">
       <CardHeader>
-        <CardTitle>Search Medicines</CardTitle>
+        <CardTitle className="text-cyan-700">Search Medicines</CardTitle>
         <div className="flex items-center space-x-2">
           <Search className="h-4 w-4 text-gray-400" />
           <Input
             placeholder="Search by name, category, or serial number..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="max-w-md"
+            className="max-w-md border-cyan-200 focus:border-cyan-400"
           />
         </div>
       </CardHeader>

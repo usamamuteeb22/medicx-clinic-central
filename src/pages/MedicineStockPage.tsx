@@ -60,11 +60,11 @@ const MedicineStockPage = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Medicine Stock</h1>
         <div className="flex space-x-2">
-          <Button onClick={handleDownloadPDF} variant="outline">
+          <Button onClick={handleDownloadPDF} variant="outline" className="bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700">
             <Download className="h-4 w-4 mr-2" />
             Download PDF
           </Button>
-          <Button onClick={() => navigate('/medicines/new')}>
+          <Button onClick={() => navigate('/medicines/new')} className="bg-indigo-600 hover:bg-indigo-700">
             <Plus className="h-4 w-4 mr-2" />
             Add Medicine
           </Button>

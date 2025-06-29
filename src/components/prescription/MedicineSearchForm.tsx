@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Search } from 'lucide-react';
@@ -39,7 +38,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [filteredMedicines, setFilteredMedicines] = useState<Medicine[]>([]);
   const [medicineSearchTerm, setMedicineSearchTerm] = useState('');
-  const [selectedMedicineId, setSelectedMedicineId] = useState('');
+  const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
   const [quantity, setQuantity] = useState('');
   const [dosageTiming, setDosageTiming] = useState({
     morning: false,
@@ -82,8 +81,13 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
     }
   };
 
+  const handleMedicineSelect = (medicine: Medicine) => {
+    setSelectedMedicine(medicine);
+    setMedicineSearchTerm(medicine.name);
+  };
+
   const handleAddMedicine = () => {
-    if (!selectedMedicineId || !quantity) {
+    if (!selectedMedicine || !quantity) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -91,9 +95,6 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
       });
       return;
     }
-
-    const selectedMedicine = medicines.find(m => m.id === selectedMedicineId);
-    if (!selectedMedicine) return;
 
     if (parseInt(quantity) > selectedMedicine.total_quantity) {
       toast({
@@ -105,7 +106,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
     }
 
     // Check if medicine already prescribed
-    if (prescribedMedicines.some(pm => pm.medicine.id === selectedMedicineId)) {
+    if (prescribedMedicines.some(pm => pm.medicine.id === selectedMedicine.id)) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -127,7 +128,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
     onAddMedicine(newPrescription);
 
     // Reset form
-    setSelectedMedicineId('');
+    setSelectedMedicine(null);
     setQuantity('');
     setMedicineSearchTerm('');
     setDosageTiming({
@@ -139,9 +140,9 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
   };
 
   return (
-    <Card>
+    <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
+        <CardTitle className="flex items-center space-x-2 text-emerald-700">
           <Plus className="h-4 w-4" />
           <span>Add Medicine Prescription</span>
         </CardTitle>
@@ -149,52 +150,79 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
       <CardContent className="space-y-4">
         {/* Medicine Search Field */}
         <div className="space-y-2">
-          <Label>Search Medicines</Label>
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search medicines by name or category..."
-              value={medicineSearchTerm}
-              onChange={(e) => setMedicineSearchTerm(e.target.value)}
-              className="flex-1"
-            />
+          <Label className="text-emerald-700">Search Medicines</Label>
+          <div className="relative">
+            <div className="flex items-center space-x-2">
+              <Search className="h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search medicines by name or category..."
+                value={medicineSearchTerm}
+                onChange={(e) => {
+                  setMedicineSearchTerm(e.target.value);
+                  setSelectedMedicine(null);
+                }}
+                className="flex-1 border-green-200 focus:border-green-400"
+              />
+            </div>
+            
+            {/* Search Results Dropdown */}
+            {medicineSearchTerm && !selectedMedicine && filteredMedicines.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-green-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                {filteredMedicines.slice(0, 10).map((medicine) => (
+                  <div
+                    key={medicine.id}
+                    onClick={() => handleMedicineSelect(medicine)}
+                    className="p-3 hover:bg-green-50 cursor-pointer border-b last:border-b-0"
+                  >
+                    <div className="font-medium text-gray-900">{medicine.name}</div>
+                    <div className="text-sm text-gray-500">
+                      Category: {medicine.category} | Stock: {medicine.total_quantity}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {medicineSearchTerm && filteredMedicines.length === 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-green-200 rounded-md shadow-lg p-3">
+                <p className="text-sm text-gray-500">No medicines found matching your search.</p>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Select Medicine</Label>
-            <Select value={selectedMedicineId} onValueChange={setSelectedMedicineId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose medicine" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredMedicines.map((medicine) => (
-                  <SelectItem key={medicine.id} value={medicine.id}>
-                    {medicine.name} - Stock: {medicine.total_quantity}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {filteredMedicines.length === 0 && medicineSearchTerm && (
-              <p className="text-sm text-gray-500">No medicines found matching your search.</p>
-            )}
+            <Label className="text-emerald-700">Selected Medicine</Label>
+            <div className="p-3 bg-white border border-green-200 rounded-md">
+              {selectedMedicine ? (
+                <div>
+                  <div className="font-medium">{selectedMedicine.name}</div>
+                  <div className="text-sm text-gray-500">
+                    Category: {selectedMedicine.category} | Available: {selectedMedicine.total_quantity}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-gray-500">Search and select a medicine above</div>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Quantity</Label>
+            <Label className="text-emerald-700">Quantity</Label>
             <Input
               type="number"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
               placeholder="Enter quantity"
               min="1"
+              className="border-green-200 focus:border-green-400"
             />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label>Dosage Timing</Label>
+          <Label className="text-emerald-700">Dosage Timing</Label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -239,7 +267,11 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
           </div>
         </div>
 
-        <Button onClick={handleAddMedicine} className="w-full">
+        <Button 
+          onClick={handleAddMedicine} 
+          className="w-full bg-emerald-600 hover:bg-emerald-700"
+          disabled={!selectedMedicine || !quantity}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add Medicine
         </Button>
