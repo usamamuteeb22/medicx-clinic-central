@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import MedicineUsageFilters from '@/components/usage/MedicineUsageFilters';
 import MedicineUsageCard from '@/components/usage/MedicineUsageCard';
-import { generateMedicineUsagePDF } from '@/utils/medicineUsagePdfUtils';
+import { generateMedicineUsageExcel } from '@/utils/medicineUsageExcelUtils';
 
 interface MedicineUsageRecord {
   id: string;
@@ -126,8 +125,8 @@ const MedicineUsagePage = () => {
     return matchesSearch && matchesDateRange;
   });
 
-  const handleGeneratePDF = async () => {
-    generateMedicineUsagePDF(filteredRecords);
+  const handleGenerateExcel = async () => {
+    generateMedicineUsageExcel(filteredRecords);
   };
 
   if (isLoading) {
@@ -142,9 +141,9 @@ const MedicineUsagePage = () => {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Medicine Usage Records</h1>
-        <Button onClick={handleGeneratePDF} className="flex items-center space-x-2">
+        <Button onClick={handleGenerateExcel} className="flex items-center space-x-2 bg-green-600 hover:bg-green-700">
           <Download className="h-4 w-4" />
-          <span>Download PDF Summary</span>
+          <span>Download Excel Summary</span>
         </Button>
       </div>
 

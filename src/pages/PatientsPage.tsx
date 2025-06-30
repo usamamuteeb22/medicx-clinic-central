@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +9,7 @@ import { Search, Edit, Trash2, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { generatePatientsPDF } from '@/utils/patientsPdfUtils';
+import { generatePatientsExcel } from '@/utils/patientsExcelUtils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,8 +83,8 @@ const PatientsPage = () => {
     }
   };
 
-  const handleDownloadPDF = () => {
-    generatePatientsPDF(filteredPatients);
+  const handleDownloadExcel = () => {
+    generatePatientsExcel(filteredPatients);
   };
 
   const filteredPatients = patients.filter(patient =>
@@ -106,9 +105,9 @@ const PatientsPage = () => {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">All Patients</h1>
-        <Button onClick={handleDownloadPDF} variant="outline" className="bg-emerald-50 hover:bg-emerald-100 border-emerald-200">
+        <Button onClick={handleDownloadExcel} variant="outline" className="bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700">
           <Download className="h-4 w-4 mr-2" />
-          Download PDF
+          Download Excel
         </Button>
       </div>
 

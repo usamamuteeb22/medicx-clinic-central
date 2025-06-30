@@ -7,7 +7,7 @@ import { Download, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import MedicineSearchSection from '@/components/stock/MedicineSearchSection';
 import MedicineTable from '@/components/stock/MedicineTable';
-import { generateMedicineStockPDF } from '@/utils/medicineStockPdfUtils';
+import { generateMedicineStockExcel } from '@/utils/medicineStockExcelUtils';
 import AddMedicineModal from '@/components/stock/AddMedicineModal';
 
 interface Medicine {
@@ -44,8 +44,8 @@ const MedicineStockPage = () => {
     medicine.serial_number.toString().includes(searchTerm)
   );
 
-  const handleDownloadPDF = () => {
-    generateMedicineStockPDF(filteredMedicines);
+  const handleDownloadExcel = () => {
+    generateMedicineStockExcel(filteredMedicines);
   };
 
   if (isLoading) {
@@ -61,9 +61,9 @@ const MedicineStockPage = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Medicine Stock</h1>
         <div className="flex space-x-2">
-          <Button onClick={handleDownloadPDF} variant="outline" className="bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700">
+          <Button onClick={handleDownloadExcel} variant="outline" className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700">
             <Download className="h-4 w-4 mr-2" />
-            Download PDF
+            Download Excel
           </Button>
           <Button onClick={() => setShowAddModal(true)} className="bg-indigo-600 hover:bg-indigo-700">
             <Plus className="h-4 w-4 mr-2" />
