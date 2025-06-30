@@ -15,9 +15,11 @@ interface AddMedicineModalProps {
   onClose: () => void;
 }
 
+type MedicineCategory = "tablet" | "capsule" | "syrup" | "injection" | "cream" | "drops" | "powder" | "other";
+
 const AddMedicineModal = ({ isOpen, onClose }: AddMedicineModalProps) => {
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState<MedicineCategory | ''>('');
   const [quantity, setQuantity] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const { user } = useAuth();
@@ -26,7 +28,7 @@ const AddMedicineModal = ({ isOpen, onClose }: AddMedicineModalProps) => {
   const addMedicineMutation = useMutation({
     mutationFn: async (medicineData: {
       name: string;
-      category: string;
+      category: MedicineCategory;
       total_quantity: number;
       expiry_date?: string;
     }) => {
@@ -86,7 +88,7 @@ const AddMedicineModal = ({ isOpen, onClose }: AddMedicineModalProps) => {
 
     addMedicineMutation.mutate({
       name,
-      category,
+      category: category as MedicineCategory,
       total_quantity: parseInt(quantity) || 0,
       expiry_date: expiryDate || undefined
     });
@@ -94,7 +96,7 @@ const AddMedicineModal = ({ isOpen, onClose }: AddMedicineModalProps) => {
 
   const handleClose = () => {
     setName('');
-    setcategory('');
+    setCategory('');
     setQuantity('');
     setExpiryDate('');
     onClose();
@@ -120,7 +122,7 @@ const AddMedicineModal = ({ isOpen, onClose }: AddMedicineModalProps) => {
           
           <div className="space-y-2">
             <Label htmlFor="category">Category *</Label>
-            <Select value={category} onValueChange={setCategory} required>
+            <Select value={category} onValueChange={(value) => setCategory(value as MedicineCategory)} required>
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
