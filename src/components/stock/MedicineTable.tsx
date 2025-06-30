@@ -1,13 +1,13 @@
 
 import React from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Edit, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -40,150 +40,153 @@ const MedicineTable = ({ medicines }: MedicineTableProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const deleteMedicineMutation = useMutation({
-    mutationFn: async (medicineId: string) => {
-      // First check if medicine is referenced in medicine_usage
-      const { data: usageData, error: usageError } = await supabase
-        .from('medicine_usage')
-        .select('id')
-        .eq('medicine_id', medicineId)
-        .limit(1);
-
-      if (usageError) throw usageError;
-
-      if (usageData && usageData.length > 0) {
-        throw new Error('Cannot delete medicine that has been used in patient treatments. Please remove usage records first.');
-      }
-
-      // Check if medicine is referenced in medicine_prescriptions
-      const { data: prescriptionData, error: prescriptionError } = await supabase
-        .from('medicine_prescriptions')
-        .select('id')
-        .eq('medicine_id', medicineId)
-        .limit(1);
-
-      if (prescriptionError) throw prescriptionError;
-
-      if (prescriptionData && prescriptionData.length > 0) {
-        throw new Error('Cannot delete medicine that is prescribed in patient reports. Please remove prescriptions first.');
-      }
-
-      // Check if medicine is referenced in medicine_stock_history
-      const { data: stockData, error: stockError } = await supabase
-        .from('medicine_stock_history')
-        .select('id')
-        .eq('medicine_id', medicineId)
-        .limit(1);
-
-      if (stockError) throw stockError;
-
-      if (stockData && stockData.length > 0) {
-        throw new Error('Cannot delete medicine that has stock history. Please remove stock history first.');
-      }
-
-      // If no references found, proceed with deletion
+  const handleDeleteMedicine = async (medicineId: string, medicineName: string) => {
+    try {
+      console.log('Attempting to delete medicine:', medicineId, medicineName);
+      
       const { error } = await supabase
         .from('medicines')
         .delete()
         .eq('id', medicineId);
 
-      if (error) throw error;
-    },
-    onSuccess: () => {
+      if (error) {
+        console.error('Error deleting medicine:', error);
+        throw error;
+      }
+
       toast({
         title: "Medicine Deleted",
-        description: "Medicine has been successfully deleted."
+        description: `${medicineName} has been successfully deleted.`
       });
+
+      // Refresh the medicines list
       queryClient.invalidateQueries({ queryKey: ['medicines'] });
-    },
-    onError: (error) => {
+    } catch (error) {
       console.error('Error deleting medicine:', error);
       toast({
         variant: "destructive",
-        title: "Cannot Delete Medicine",
-        description: error.message || "Failed to delete medicine. Please try again."
+        title: "Error",
+        description: "Failed to delete medicine. Please try again."
       });
     }
-  });
+  };
 
-  const handleDeleteMedicine = (medicineId: string) => {
-    deleteMedicineMutation.mutate(medicineId);
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'tablet':
+        return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'syrup':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'injection':
+        return 'bg-red-100 text-red-800 border-red-300';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  const getStockStatus = (quantity: number) => {
+    if (quantity === 0) {
+      return { color: 'bg-red-100 text-red-800 border-red-300', text: 'Out of Stock' };
+    } else if (quantity < 10) {
+      return { color: 'bg-yellow-100 text-yellow-800 border-yellow-300', text: 'Low Stock' };
+    } else {
+      return { color: 'bg-green-100 text-green-800 border-green-300', text: 'In Stock' };
+    }
   };
 
   return (
-    <Card>
+    <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+      <CardHeader>
+        <CardTitle className="text-purple-700">Medicine Inventory</CardTitle>
+      </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="border-b">
-                <th className="text-left p-2 font-medium">Serial No.</th>
-                <th className="text-left p-2 font-medium">Medicine Name</th>
-                <th className="text-left p-2 font-medium">Category</th>
-                <th className="text-left p-2 font-medium">Quantity in Stock</th>
-                <th className="text-left p-2 font-medium">Expiry Date</th>
-                <th className="text-left p-2 font-medium">Last Updated</th>
-                <th className="text-left p-2 font-medium">Actions</th>
+              <tr className="border-b border-purple-200">
+                <th className="text-left p-3 font-medium text-purple-700">Serial No.</th>
+                <th className="text-left p-3 font-medium text-purple-700">Medicine Name</th>
+                <th className="text-left p-3 font-medium text-purple-700">Category</th>
+                <th className="text-left p-3 font-medium text-purple-700">Stock Qty</th>
+                <th className="text-left p-3 font-medium text-purple-700">Status</th>
+                <th className="text-left p-3 font-medium text-purple-700">Expiry Date</th>
+                <th className="text-left p-3 font-medium text-purple-700">Last Updated</th>
+                <th className="text-left p-3 font-medium text-purple-700">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {medicines.map((medicine) => (
-                <tr key={medicine.id} className="border-b hover:bg-gray-50">
-                  <td className="p-2">
-                    <Badge variant="outline">{medicine.serial_number}</Badge>
-                  </td>
-                  <td className="p-2 font-medium">
-                    <button
-                      onClick={() => navigate(`/medicines/${medicine.id}`)}
-                      className="text-blue-600 hover:underline"
-                    >
-                      {medicine.name}
-                    </button>
-                  </td>
-                  <td className="p-2">
-                    <Badge variant="secondary">{medicine.category}</Badge>
-                  </td>
-                  <td className="p-2">
-                    <Badge variant={medicine.total_quantity < 10 ? "destructive" : "default"}>
-                      {medicine.total_quantity}
-                    </Badge>
-                  </td>
-                  <td className="p-2">
-                    {medicine.expiry_date ? new Date(medicine.expiry_date).toLocaleDateString() : 'N/A'}
-                  </td>
-                  <td className="p-2">
-                    {new Date(medicine.last_updated).toLocaleDateString()}
-                  </td>
-                  <td className="p-2">
-                    {user?.role === 'admin' && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="sm" variant="destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Medicine</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete {medicine.name}? This action cannot be undone and will only work if the medicine is not referenced in any patient records or usage history.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteMedicine(medicine.id)}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {medicines.map((medicine) => {
+                const stockStatus = getStockStatus(medicine.total_quantity);
+                return (
+                  <tr key={medicine.id} className="border-b hover:bg-purple-50 transition-colors">
+                    <td className="p-3">
+                      <Badge variant="outline" className="border-purple-300 text-purple-700">
+                        {medicine.serial_number}
+                      </Badge>
+                    </td>
+                    <td className="p-3 font-medium">{medicine.name}</td>
+                    <td className="p-3">
+                      <Badge variant="outline" className={getCategoryColor(medicine.category)}>
+                        {medicine.category}
+                      </Badge>
+                    </td>
+                    <td className="p-3 font-semibold">{medicine.total_quantity}</td>
+                    <td className="p-3">
+                      <Badge variant="outline" className={stockStatus.color}>
+                        {stockStatus.text}
+                      </Badge>
+                    </td>
+                    <td className="p-3">
+                      {medicine.expiry_date ? new Date(medicine.expiry_date).toLocaleDateString() : 'N/A'}
+                    </td>
+                    <td className="p-3">
+                      {new Date(medicine.last_updated).toLocaleDateString()}
+                    </td>
+                    <td className="p-3">
+                      <div className="flex space-x-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/medicines/${medicine.id}`)}
+                          className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        {(user?.role === 'admin' || user?.role === 'pharmacy') && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                size="sm" 
+                                variant="destructive" 
+                                className="bg-red-50 hover:bg-red-100 border-red-200 text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Medicine</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete {medicine.name}? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteMedicine(medicine.id, medicine.name)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -45,13 +45,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "medicine_prescriptions_medicine_id_fkey"
-            columns: ["medicine_id"]
-            isOneToOne: false
-            referencedRelation: "medicines"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "medicine_prescriptions_patient_report_id_fkey"
             columns: ["patient_report_id"]
             isOneToOne: false
@@ -99,13 +92,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "medicine_stock_history_medicine_id_fkey"
-            columns: ["medicine_id"]
-            isOneToOne: false
-            referencedRelation: "medicines"
-            referencedColumns: ["id"]
-          },
         ]
       }
       medicine_usage: {
@@ -139,20 +125,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "medicine_usage_medicine_id_fkey"
-            columns: ["medicine_id"]
-            isOneToOne: false
-            referencedRelation: "medicines"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "medicine_usage_patient_id_fkey"
-            columns: ["patient_id"]
-            isOneToOne: false
-            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
@@ -248,13 +220,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "patient_reports_patient_id_fkey"
-            columns: ["patient_id"]
-            isOneToOne: false
-            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]

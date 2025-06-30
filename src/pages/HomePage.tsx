@@ -4,62 +4,42 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { format, subDays, startOfDay } from 'date-fns';
-import { Users, Pill, FileText, Activity } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { Users, Pill, FileText } from 'lucide-react';
 
 const HomePage = () => {
   const { user } = useAuth();
 
-  // Fetch daily patient counts for the last 7 days
+  // Fetch daily patient counts for the current month
   const { data: dailyPatients = [] } = useQuery({
-    queryKey: ['daily-patients'],
+    queryKey: ['daily-patients-month'],
     queryFn: async () => {
-      const last7Days = Array.from({ length: 7 }, (_, i) => {
-        const date = startOfDay(subDays(new Date(), i));
-        return {
-          date,
-          formattedDate: format(date, 'MMM dd'),
-          sqlDate: format(date, 'yyyy-MM-dd')
-        };
-      }).reverse();
+      const now = new Date();
+      const monthStart = startOfMonth(now);
+      const monthEnd = endOfMonth(now);
+      
+      const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
       const results = await Promise.all(
-        last7Days.map(async ({ date, formattedDate, sqlDate }) => {
+        daysInMonth.map(async (date) => {
+          const sqlDate = format(date, 'yyyy-MM-dd');
+          const nextDay = format(new Date(date.getTime() + 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
+          
           const { count } = await supabase
             .from('patients')
             .select('*', { count: 'exact', head: true })
             .gte('registration_date', sqlDate)
-            .lt('registration_date', format(new Date(date.getTime() + 24 * 60 * 60 * 1000), 'yyyy-MM-dd'));
+            .lt('registration_date', nextDay);
           
           return {
-            date: formattedDate,
+            date: format(date, 'MMM dd'),
             patients: count || 0
           };
         })
       );
 
       return results;
-    }
-  });
-
-  // Fetch low stock medicines (less than 30 units)
-  const { data: lowStockMedicines = [] } = useQuery({
-    queryKey: ['low-stock-medicines'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('medicines')
-        .select('name, total_quantity')
-        .lt('total_quantity', 30)
-        .order('total_quantity', { ascending: true })
-        .limit(30);
-
-      if (error) throw error;
-
-      return data.map(medicine => ({
-        name: medicine.name.length > 15 ? medicine.name.substring(0, 15) + '...' : medicine.name,
-        stock: medicine.total_quantity || 0
-      }));
     }
   });
 
@@ -121,11 +101,11 @@ const HomePage = () => {
         </Card>
       </div>
 
-      {/* Daily Patients Chart */}
+      {/* Daily Patients Chart - Updated to show whole month */}
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Daily Patients Count (Last 7 Days)</CardTitle>
-          <CardDescription>Number of patients registered each day</CardDescription>
+          <CardTitle>Daily Patients Count (Current Month)</CardTitle>
+          <CardDescription>Number of patients registered each day this month</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-80 w-full">
@@ -148,30 +128,9 @@ const HomePage = () => {
         </CardContent>
       </Card>
 
-      {/* Low Stock Medicines Chart */}
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Low Stock Medicines (Below 30 Units)</CardTitle>
-          <CardDescription>Medicines with stock less than 30 units - Lowest to Highest</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-96 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={lowStockMedicines} layout="horizontal" margin={{ left: 80 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={100} fontSize={12} />
-                <Tooltip />
-                <Bar dataKey="stock" fill="#ef4444" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Footer - Only on Home Page */}
+      {/* Footer - Updated with red text color */}
       <footer className="mt-12 py-6 border-t border-gray-200">
-        <div className="text-center text-sm text-gray-600">
+        <div className="text-center text-sm text-red-600">
           This Website is Developed by Usama Muteeb
         </div>
       </footer>

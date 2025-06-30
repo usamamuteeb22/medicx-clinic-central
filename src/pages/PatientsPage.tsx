@@ -54,18 +54,23 @@ const PatientsPage = () => {
     }
   });
 
-  const handleDeletePatient = async (patientId: string) => {
+  const handleDeletePatient = async (patientId: string, patientName: string) => {
     try {
+      console.log('Attempting to delete patient:', patientId, patientName);
+      
       const { error } = await supabase
         .from('patients')
         .delete()
         .eq('id', patientId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting patient:', error);
+        throw error;
+      }
 
       toast({
         title: "Patient Deleted",
-        description: "Patient has been successfully deleted."
+        description: `${patientName} has been successfully deleted.`
       });
 
       queryClient.invalidateQueries({ queryKey: ['patients'] });
@@ -180,7 +185,7 @@ const PatientsPage = () => {
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => handleDeletePatient(patient.id)}
+                                  onClick={() => handleDeletePatient(patient.id, patient.name)}
                                   className="bg-red-600 hover:bg-red-700"
                                 >
                                   Delete
