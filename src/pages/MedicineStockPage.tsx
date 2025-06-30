@@ -5,10 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Download, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import StockManagementSection from '@/components/stock/StockManagementSection';
 import MedicineSearchSection from '@/components/stock/MedicineSearchSection';
 import MedicineTable from '@/components/stock/MedicineTable';
 import { generateMedicineStockPDF } from '@/utils/medicineStockPdfUtils';
+import AddMedicineModal from '@/components/stock/AddMedicineModal';
 
 interface Medicine {
   id: string;
@@ -22,6 +22,7 @@ interface Medicine {
 
 const MedicineStockPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
   const navigate = useNavigate();
 
   const { data: medicines = [], isLoading } = useQuery({
@@ -64,16 +65,20 @@ const MedicineStockPage = () => {
             <Download className="h-4 w-4 mr-2" />
             Download PDF
           </Button>
-          <Button onClick={() => navigate('/medicines/new')} className="bg-indigo-600 hover:bg-indigo-700">
+          <Button onClick={() => setShowAddModal(true)} className="bg-indigo-600 hover:bg-indigo-700">
             <Plus className="h-4 w-4 mr-2" />
             Add Medicine
           </Button>
         </div>
       </div>
 
-      <StockManagementSection medicines={medicines} />
       <MedicineSearchSection searchTerm={searchTerm} onSearchChange={setSearchTerm} />
       <MedicineTable medicines={filteredMedicines} />
+      
+      <AddMedicineModal 
+        isOpen={showAddModal} 
+        onClose={() => setShowAddModal(false)} 
+      />
     </div>
   );
 };

@@ -115,7 +115,7 @@ const MedicineDetailPage = () => {
           quantity,
           expiry_date: expiry || null,
           created_by: user?.id,
-          user_type: 'pharmacy'
+          user_type: user?.role
         });
 
       if (error) throw error;
@@ -149,7 +149,7 @@ const MedicineDetailPage = () => {
           stock_type: 'remove',
           quantity,
           created_by: user?.id,
-          user_type: 'pharmacy'
+          user_type: user?.role
         });
 
       if (error) throw error;
@@ -216,6 +216,8 @@ const MedicineDetailPage = () => {
   const getUserDisplayName = (record: StockHistory) => {
     if (record.user_type === 'pharmacy') {
       return 'Pharmacy';
+    } else if (record.user_type === 'admin') {
+      return 'Admin';
     } else if (record.user_type === 'patient_usage' && record.patient_name) {
       return record.patient_name;
     } else if (record.user_type === null && record.patient_name) {
@@ -289,8 +291,8 @@ const MedicineDetailPage = () => {
           </CardContent>
         </Card>
 
-        {/* Stock Management */}
-        {user?.role === 'pharmacy' && (
+        {/* Stock Management - now available for both pharmacy and admin */}
+        {(user?.role === 'pharmacy' || user?.role === 'admin') && (
           <Card>
             <CardHeader>
               <CardTitle>Stock Management</CardTitle>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -65,8 +64,8 @@ const ReportsPage = () => {
   const [loading, setLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<Patient[]>([]);
 
-  // Check user permissions
-  const canAccessPage = user?.role === 'admin' || user?.role === 'doctor';
+  // Check user permissions - now includes reception
+  const canAccessPage = user?.role === 'admin' || user?.role === 'doctor' || user?.role === 'reception';
 
   if (!canAccessPage) {
     return (
@@ -74,7 +73,7 @@ const ReportsPage = () => {
         <Card>
           <CardContent className="text-center py-8">
             <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
-            <p className="text-gray-600">Only Admin and Doctor users can access this page.</p>
+            <p className="text-gray-600">Only Admin, Doctor, and Reception users can access this page.</p>
           </CardContent>
         </Card>
       </div>
