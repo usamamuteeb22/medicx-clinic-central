@@ -63,10 +63,7 @@ const MedicineDetailPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('medicine_stock_history')
-        .select(`
-          *,
-          users(full_name)
-        `)
+        .select('*')
         .eq('medicine_id', id)
         .order('created_at', { ascending: false });
 
@@ -79,17 +76,22 @@ const MedicineDetailPage = () => {
             // This might be from patient usage, try to find the patient name
             const { data: usageData } = await supabase
               .from('medicine_usage')
-              .select(`
-                patients(name)
-              `)
+              .select('patient_id')
               .eq('medicine_id', id)
               .eq('quantity_used', record.quantity)
               .limit(1);
 
             if (usageData && usageData.length > 0) {
+              // Fetch patient name separately
+              const { data: patientData } = await supabase
+                .from('patients')
+                .select('name')
+                .eq('id', usageData[0].patient_id)
+                .single();
+
               return {
                 ...record,
-                patient_name: usageData[0].patients?.name,
+                patient_name: patientData?.name || 'Unknown Patient',
                 user_type: 'patient_usage'
               };
             }

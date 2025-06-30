@@ -41,21 +41,7 @@ const MedicineUsagePage = () => {
         .select(`
           id,
           patient_id,
-          report_date,
-          patients!inner(
-            name,
-            patient_id
-          ),
-          medicine_prescriptions(
-            quantity,
-            morning,
-            afternoon,
-            evening,
-            night,
-            medicines(
-              name
-            )
-          )
+          report_date
         `)
         .order('report_date', { ascending: false });
 
@@ -67,21 +53,51 @@ const MedicineUsagePage = () => {
       console.log('Raw reports data:', reports);
 
       // Transform the data to group by individual reports
-      const records: MedicineUsageRecord[] = reports?.map(report => ({
-        id: report.id,
-        patient_id: report.patient_id,
-        patient_name: report.patients?.name || 'Unknown Patient',
-        patient_number: report.patients?.patient_id || 0,
-        report_date: report.report_date || new Date().toISOString(),
-        medicines: report.medicine_prescriptions?.map(prescription => ({
-          name: prescription.medicines?.name || 'Unknown Medicine',
-          quantity: prescription.quantity || 0,
-          morning: prescription.morning || false,
-          afternoon: prescription.afternoon || false,
-          evening: prescription.evening || false,
-          night: prescription.night || false
-        })) || []
-      })) || [];
+      const records: MedicineUsageRecord[] = await Promise.all(
+        reports?.map(async (report) => {
+          // Fetch patient data separately
+          const { data: patientData } = await supabase
+            .from('patients')
+            .select('name, patient_id')
+            .eq('id', report.patient_id)
+            .single();
+
+          // Fetch medicine prescriptions for this report
+          const { data: prescriptions } = await supabase
+            .from('medicine_prescriptions')
+            .select('quantity, morning, afternoon, evening, night, medicine_id')
+            .eq('patient_report_id', report.id);
+
+          // Fetch medicine details for each prescription
+          const medicines = await Promise.all(
+            prescriptions?.map(async (prescription) => {
+              const { data: medicineData } = await supabase
+                .from('medicines')
+                .select('name')
+                .eq('id', prescription.medicine_id)
+                .single();
+
+              return {
+                name: medicineData?.name || 'Unknown Medicine',
+                quantity: prescription.quantity || 0,
+                morning: prescription.morning || false,
+                afternoon: prescription.afternoon || false,
+                evening: prescription.evening || false,
+                night: prescription.night || false
+              };
+            }) || []
+          );
+
+          return {
+            id: report.id,
+            patient_id: report.patient_id,
+            patient_name: patientData?.name || 'Unknown Patient',
+            patient_number: patientData?.patient_id || 0,
+            report_date: report.report_date || new Date().toISOString(),
+            medicines
+          };
+        }) || []
+      );
 
       console.log('Transformed records:', records);
       return records;

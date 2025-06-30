@@ -124,17 +124,21 @@ const ReportsPage = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data: reportsData, error } = await supabase
         .from('patient_reports')
-        .select(`
-          *,
-          patient:patients(*)
-        `)
+        .select('*')
         .eq('patient_id', selectedPatient.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPatientReports(data || []);
+
+      // Transform the data to include patient info
+      const reportsWithPatient = reportsData?.map(report => ({
+        ...report,
+        patient: selectedPatient
+      })) || [];
+
+      setPatientReports(reportsWithPatient);
     } catch (error) {
       console.error('Error fetching patient reports:', error);
       toast({
@@ -149,16 +153,37 @@ const ReportsPage = () => {
 
   const fetchAllLatestReports = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: reportsData, error } = await supabase
         .from('patient_reports')
-        .select(`
-          *,
-          patient:patients(*)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setAllLatestReports(data || []);
+
+      // Fetch patient data for each report
+      const reportsWithPatients = await Promise.all(
+        reportsData?.map(async (report) => {
+          const { data: patientData } = await supabase
+            .from('patients')
+            .select('*')
+            .eq('id', report.patient_id)
+            .single();
+
+          return {
+            ...report,
+            patient: patientData || {
+              id: report.patient_id,
+              patient_id: 0,
+              name: 'Unknown Patient',
+              age: 0,
+              gender: 'unknown',
+              phone_number: ''
+            }
+          };
+        }) || []
+      );
+
+      setAllLatestReports(reportsWithPatients);
     } catch (error) {
       console.error('Error fetching latest reports:', error);
     }
@@ -169,16 +194,35 @@ const ReportsPage = () => {
     
     // Fetch prescribed medicines for this report
     try {
-      const { data, error } = await supabase
+      const { data: prescriptionsData, error } = await supabase
         .from('medicine_prescriptions')
-        .select(`
-          *,
-          medicine:medicines(*)
-        `)
+        .select('*')
         .eq('patient_report_id', report.id);
 
       if (error) throw error;
-      setPrescribedMedicines(data || []);
+
+      // Fetch medicine details for each prescription
+      const medicinesWithDetails = await Promise.all(
+        prescriptionsData?.map(async (prescription) => {
+          const { data: medicineData } = await supabase
+            .from('medicines')
+            .select('*')
+            .eq('id', prescription.medicine_id)
+            .single();
+
+          return {
+            ...prescription,
+            medicine: medicineData || {
+              id: prescription.medicine_id || '',
+              name: 'Unknown Medicine',
+              category: 'unknown',
+              total_quantity: 0
+            }
+          };
+        }) || []
+      );
+
+      setPrescribedMedicines(medicinesWithDetails);
       setShowPDFPreview(true);
     } catch (error) {
       console.error('Error fetching prescribed medicines:', error);
