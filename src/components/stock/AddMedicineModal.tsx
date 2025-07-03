@@ -29,29 +29,37 @@ const AddMedicineModal = ({ isOpen, onClose }: AddMedicineModalProps) => {
     mutationFn: async (medicineData: {
       name: string;
       category: MedicineCategory;
-      total_quantity: number;
+      quantity: number;
       expiry_date?: string;
     }) => {
+      // First create the medicine with zero quantity - the trigger will update it
       const { data, error } = await supabase
         .from('medicines')
-        .insert(medicineData)
+        .insert({
+          name: medicineData.name,
+          category: medicineData.category,
+          total_quantity: 0, // Start with 0, let the stock history trigger update it
+          expiry_date: medicineData.expiry_date || null
+        })
         .select()
         .single();
 
       if (error) throw error;
 
-      // Add initial stock entry
-      if (medicineData.total_quantity > 0) {
-        await supabase
+      // Add initial stock entry if quantity > 0 - this will trigger the stock update
+      if (medicineData.quantity > 0) {
+        const { error: stockError } = await supabase
           .from('medicine_stock_history')
           .insert({
             medicine_id: data.id,
             stock_type: 'add',
-            quantity: medicineData.total_quantity,
+            quantity: medicineData.quantity,
             expiry_date: medicineData.expiry_date || null,
             created_by: user?.id,
             user_type: user?.role
           });
+
+        if (stockError) throw stockError;
       }
 
       return data;
@@ -89,7 +97,7 @@ const AddMedicineModal = ({ isOpen, onClose }: AddMedicineModalProps) => {
     addMedicineMutation.mutate({
       name,
       category: category as MedicineCategory,
-      total_quantity: parseInt(quantity) || 0,
+      quantity: parseInt(quantity) || 0,
       expiry_date: expiryDate || undefined
     });
   };
