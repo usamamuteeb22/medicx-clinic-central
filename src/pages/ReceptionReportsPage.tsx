@@ -26,13 +26,13 @@ interface Patient {
 interface PatientReport {
   id: string;
   patient_id: string;
-  hemoglobin: number;
-  wbc: number;
-  platelets: number;
-  blood_pressure: string;
-  temperature: number;
-  weight: number;
-  clinical_complaint: string;
+  hemoglobin?: number;
+  wbc?: number;
+  platelets?: number;
+  blood_pressure?: string;
+  temperature?: number;
+  weight?: number;
+  clinical_complaint?: string;
   created_at: string;
   status: string;
   patients: Patient;
@@ -62,8 +62,18 @@ const ReceptionReportsPage = () => {
       let query = supabase
         .from('patient_reports')
         .select(`
-          *,
-          patients (
+          id,
+          patient_id,
+          hemoglobin,
+          wbc,
+          platelets,
+          blood_pressure,
+          temperature,
+          weight,
+          clinical_complaint,
+          created_at,
+          status,
+          patients!inner (
             id,
             patient_id,
             name,
@@ -79,8 +89,11 @@ const ReceptionReportsPage = () => {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
-      return data as PatientReport[];
+      if (error) {
+        console.error('Error fetching reports:', error);
+        throw error;
+      }
+      return data || [];
     }
   });
 
