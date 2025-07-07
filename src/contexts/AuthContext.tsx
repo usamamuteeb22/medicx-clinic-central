@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
 
 interface User {
   id: string;

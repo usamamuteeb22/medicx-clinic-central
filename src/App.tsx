@@ -4,69 +4,71 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { useAuth } from "@/contexts/AuthContext";
-import Layout from "@/components/Layout";
-import LoginPage from "@/components/LoginPage";
-import Index from "./pages/Index";
-import PatientsPage from "./pages/PatientsPage";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import LoginPage from "./components/LoginPage";
+import Layout from "./components/Layout";
+import HomePage from "./pages/HomePage";
 import AddPatientPage from "./pages/AddPatientPage";
+import PatientsPage from "./pages/PatientsPage";
 import PatientEditPage from "./pages/PatientEditPage";
-import PatientReportPage from "./pages/PatientReportPage";
-import ReceptionReportsPage from "./pages/ReceptionReportsPage";
 import MedicineStockPage from "./pages/MedicineStockPage";
 import MedicineDetailPage from "./pages/MedicineDetailPage";
-import MedicineUsagePage from "./pages/MedicineUsagePage";
+import PatientReportPage from "./pages/PatientReportPage";
 import ReportsPage from "./pages/ReportsPage";
+import MedicineUsagePage from "./pages/MedicineUsagePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-
+  
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
-
+  
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-
-  return <>{children}</>;
+  
+  return <Layout>{children}</Layout>;
 };
 
-// Public Route component (for login page)
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-
+  
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
-
+  
   if (user) {
     return <Navigate to="/" replace />;
   }
-
+  
   return <>{children}</>;
 };
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
+        <BrowserRouter>
           <Routes>
             <Route 
               path="/login" 
@@ -76,32 +78,83 @@ const App = () => (
                 </PublicRoute>
               } 
             />
-            <Route
-              path="/*"
+            <Route 
+              path="/" 
               element={
                 <ProtectedRoute>
-                  <Layout>
-                    <Routes>
-                      <Route index element={<Index />} />
-                      <Route path="patients" element={<PatientsPage />} />
-                      <Route path="add-patient" element={<AddPatientPage />} />
-                      <Route path="patients/:id/edit" element={<PatientEditPage />} />
-                      <Route path="patient-reports" element={<PatientReportPage />} />
-                      <Route path="reception-reports" element={<ReceptionReportsPage />} />
-                      <Route path="reports" element={<ReportsPage />} />
-                      <Route path="medicine-stock" element={<MedicineStockPage />} />
-                      <Route path="medicine-stock/:id" element={<MedicineDetailPage />} />
-                      <Route path="medicine-usage" element={<MedicineUsagePage />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Layout>
+                  <HomePage />
                 </ProtectedRoute>
-              }
+              } 
             />
+            <Route 
+              path="/patients" 
+              element={
+                <ProtectedRoute>
+                  <AddPatientPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/all-patients" 
+              element={
+                <ProtectedRoute>
+                  <PatientsPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/patient/:id/edit" 
+              element={
+                <ProtectedRoute>
+                  <PatientEditPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/patient-reports" 
+              element={
+                <ProtectedRoute>
+                  <PatientReportPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reports" 
+              element={
+                <ProtectedRoute>
+                  <ReportsPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/medicine-usage" 
+              element={
+                <ProtectedRoute>
+                  <MedicineUsagePage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/medicines" 
+              element={
+                <ProtectedRoute>
+                  <MedicineStockPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/medicines/:id" 
+              element={
+                <ProtectedRoute>
+                  <MedicineDetailPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="*" element={<NotFound />} />
           </Routes>
-        </TooltipProvider>
+        </BrowserRouter>
       </AuthProvider>
-    </BrowserRouter>
+    </TooltipProvider>
   </QueryClientProvider>
 );
 

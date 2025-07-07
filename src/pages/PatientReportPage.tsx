@@ -1,19 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, FileText } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from '@/hooks/use-toast';
+import { FileText, Plus, Trash2, User, Stethoscope, Pill, Printer } from 'lucide-react';
+import PatientSelector from '@/components/PatientSelector';
 import MedicinePrescriptionForm from '@/components/MedicinePrescriptionForm';
 import ReportPDFGenerator from '@/components/ReportPDFGenerator';
-import { format } from 'date-fns';
 
 interface Patient {
   id: string;
@@ -31,472 +31,372 @@ interface Medicine {
   total_quantity: number;
 }
 
-interface DoctorPrescribedMedicine {
+interface PrescribedMedicine {
   id: string;
   medicine: Medicine;
   quantity: number;
   morning: boolean;
-  afternoon?: boolean;
+  afternoon: boolean;
   evening: boolean;
   night: boolean;
 }
 
-interface PatientReport {
-  id: string;
-  patient_id: string;
-  hemoglobin?: number;
-  wbc?: number;
-  platelets?: number;
-  blood_pressure?: string;
-  temperature?: number;
-  weight?: number;
-  clinical_complaint?: string;
-  medical_history?: string;
-  observations?: string;
-  recommendations?: string;
-  created_at: string;
-  status: string;
-  patients: Patient;
-}
-
 const PatientReportPage = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedReport, setSelectedReport] = useState<PatientReport | null>(null);
-  const [showReportForm, setShowReportForm] = useState(false);
-  const [showPDFGenerator, setShowPDFGenerator] = useState(false);
-  const [prescribedMedicines, setPrescribedMedicines] = useState<DoctorPrescribedMedicine[]>([]);
-  
-  // Form state for doctor sections
-  const [medicalHistory, setMedicalHistory] = useState('');
-  const [observations, setObservations] = useState('');
-  const [recommendations, setRecommendations] = useState('');
-
   const { user } = useAuth();
-  const queryClient = useQueryClient();
-
-  // Fetch reports with search functionality
-  const { data: reports, isLoading } = useQuery({
-    queryKey: ['doctor-reports', searchQuery],
-    queryFn: async () => {
-      // First get the reports
-      let reportsQuery = supabase
-        .from('patient_reports')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (searchQuery) {
-        const isReportId = searchQuery.length >= 8;
-        if (isReportId) {
-          reportsQuery = reportsQuery.ilike('id', `${searchQuery}%`);
-        }
-      }
-
-      const { data: reportsData, error: reportsError } = await reportsQuery;
-      if (reportsError) {
-        console.error('Error fetching reports:', reportsError);
-        throw reportsError;
-      }
-
-      if (!reportsData || reportsData.length === 0) return [];
-
-      // Get patient IDs from reports
-      const patientIds = reportsData.map(report => report.patient_id);
-
-      // Fetch patients separately
-      const { data: patientsData, error: patientsError } = await supabase
-        .from('patients')
-        .select('id, patient_id, name, age, gender, phone_number')
-        .in('id', patientIds);
-
-      if (patientsError) {
-        console.error('Error fetching patients:', patientsError);
-        throw patientsError;
-      }
-
-      // Combine reports with patient data
-      const combinedData = reportsData.map(report => {
-        const patient = patientsData?.find(p => p.id === report.patient_id);
-        return {
-          ...report,
-          patients: patient || {
-            id: '',
-            patient_id: 0,
-            name: 'Unknown',
-            age: 0,
-            gender: 'Unknown',
-            phone_number: ''
-          }
-        };
-      });
-
-      // Apply patient search filter if needed
-      if (searchQuery && searchQuery.length < 8) {
-        return combinedData.filter(report => 
-          report.patients.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          report.patients.patient_id.toString().includes(searchQuery)
-        );
-      }
-
-      return combinedData;
-    }
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [formData, setFormData] = useState({
+    hemoglobin: '',
+    wbc: '',
+    platelets: '',
+    blood_pressure: '',
+    temperature: '',
+    weight: '',
+    clinical_complaint: '',
+    medical_history: '',
+    observations: '',
+    recommendations: ''
   });
+  const [prescribedMedicines, setPrescribedMedicines] = useState<PrescribedMedicine[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showPDFPreview, setShowPDFPreview] = useState(false);
+  const [savedReportId, setSavedReportId] = useState<string | null>(null);
 
-  // Fetch prescribed medicines for selected report
-  const { data: reportPrescriptions } = useQuery({
-    queryKey: ['report-prescriptions', selectedReport?.id],
-    queryFn: async () => {
-      if (!selectedReport?.id) return [];
-      
-      const { data, error } = await supabase
-        .from('medicine_prescriptions')
-        .select(`
-          id,
-          quantity,
-          morning,
-          afternoon,
-          evening,
-          night,
-          medicine_id
-        `)
-        .eq('patient_report_id', selectedReport.id);
+  // Check user permissions
+  const canAccessPage = user?.role === 'admin' || user?.role === 'doctor';
 
-      if (error) {
-        console.error('Error fetching prescriptions:', error);
-        throw error;
-      }
+  if (!canAccessPage) {
+    return (
+      <div className="max-w-7xl mx-auto p-6">
+        <Card>
+          <CardContent className="text-center py-8">
+            <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
+            <p className="text-gray-600">Only Admin and Doctor users can access this page.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-      // Fetch medicine details separately
-      if (!data || data.length === 0) return [];
-
-      const medicineIds = data.map(item => item.medicine_id).filter(Boolean);
-      if (medicineIds.length === 0) return [];
-
-      const { data: medicines, error: medicineError } = await supabase
-        .from('medicines')
-        .select('id, name, category, total_quantity')
-        .in('id', medicineIds);
-
-      if (medicineError) {
-        console.error('Error fetching medicines:', medicineError);
-        throw medicineError;
-      }
-
-      // Combine prescription data with medicine details
-      return data.map(prescription => {
-        const medicine = medicines?.find(m => m.id === prescription.medicine_id);
-        return {
-          id: prescription.id,
-          medicine: medicine || { id: '', name: 'Unknown', category: '', total_quantity: 0 },
-          quantity: prescription.quantity,
-          morning: prescription.morning,
-          afternoon: prescription.afternoon,
-          evening: prescription.evening,
-          night: prescription.night
-        };
-      }) as DoctorPrescribedMedicine[];
-    },
-    enabled: !!selectedReport?.id
-  });
-
-  useEffect(() => {
-    if (reportPrescriptions) {
-      setPrescribedMedicines(reportPrescriptions);
-    }
-  }, [reportPrescriptions]);
-
-  useEffect(() => {
-    if (selectedReport) {
-      setMedicalHistory(selectedReport.medical_history || '');
-      setObservations(selectedReport.observations || '');
-      setRecommendations(selectedReport.recommendations || '');
-    }
-  }, [selectedReport]);
-
-  const updateReportMutation = useMutation({
-    mutationFn: async (reportData: {
-      medical_history?: string;
-      observations?: string;
-      recommendations?: string;
-    }) => {
-      if (!selectedReport) throw new Error('No report selected');
-
-      const { data, error } = await supabase
-        .from('patient_reports')
-        .update({
-          ...reportData,
-          status: 'completed',
-          doctor_completed_at: new Date().toISOString()
-        })
-        .eq('id', selectedReport.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Report Completed",
-        description: "Patient report has been completed successfully."
-      });
-      queryClient.invalidateQueries({ queryKey: ['doctor-reports'] });
-      setShowReportForm(false);
-      setSelectedReport(null);
-    },
-    onError: (error) => {
-      console.error('Error updating report:', error);
+  const handleSaveReport = async () => {
+    if (!selectedPatient) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to complete report. Please try again."
+        description: "Please select a patient first"
       });
+      return;
     }
-  });
 
-  const handleCompleteReport = (e: React.FormEvent) => {
-    e.preventDefault();
+    if (prescribedMedicines.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please add at least one medicine prescription"
+      });
+      return;
+    }
 
-    updateReportMutation.mutate({
-      medical_history: medicalHistory,
-      observations: observations,
-      recommendations: recommendations
+    setLoading(true);
+    try {
+      // Create patient report
+      const { data: reportResult, error: reportError } = await supabase
+        .from('patient_reports')
+        .insert({
+          patient_id: selectedPatient.id,
+          hemoglobin: formData.hemoglobin ? parseFloat(formData.hemoglobin) : null,
+          wbc: formData.wbc ? parseInt(formData.wbc) : null,
+          platelets: formData.platelets ? parseInt(formData.platelets) : null,
+          blood_pressure: formData.blood_pressure || null,
+          temperature: formData.temperature ? parseFloat(formData.temperature) : null,
+          weight: formData.weight ? parseFloat(formData.weight) : null,
+          clinical_complaint: formData.clinical_complaint || null,
+          medical_history: formData.medical_history || null,
+          observations: formData.observations || null,
+          recommendations: formData.recommendations || null,
+          created_by: user?.id
+        })
+        .select()
+        .single();
+
+      if (reportError) throw reportError;
+
+      // Create medicine prescriptions
+      const prescriptionPromises = prescribedMedicines.map(med => 
+        supabase
+          .from('medicine_prescriptions')
+          .insert({
+            patient_report_id: reportResult.id,
+            medicine_id: med.medicine.id,
+            quantity: med.quantity,
+            morning: med.morning,
+            evening: med.evening,
+            night: med.night
+          })
+      );
+
+      await Promise.all(prescriptionPromises);
+
+      setSavedReportId(reportResult.id);
+      toast({
+        title: "Success",
+        description: "Patient report saved successfully!"
+      });
+
+      // Show PDF preview
+      setShowPDFPreview(true);
+
+    } catch (error) {
+      console.error('Error saving report:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to save patient report"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setSelectedPatient(null);
+    setFormData({
+      hemoglobin: '',
+      wbc: '',
+      platelets: '',
+      blood_pressure: '',
+      temperature: '',
+      weight: '',
+      clinical_complaint: '',
+      medical_history: '',
+      observations: '',
+      recommendations: ''
     });
-  };
-
-  const handleSelectReport = (report: PatientReport) => {
-    setSelectedReport(report);
-    setShowReportForm(true);
-  };
-
-  const handleGeneratePDF = () => {
-    if (selectedReport && prescribedMedicines) {
-      setShowPDFGenerator(true);
-    }
+    setPrescribedMedicines([]);
+    setSavedReportId(null);
+    setShowPDFPreview(false);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Patient Reports</h1>
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Patient Report & Prescription</h1>
+          <p className="text-gray-600">Create medical reports and prescribe medicines</p>
         </div>
+        <Button 
+          onClick={resetForm}
+          variant="outline"
+          className="flex items-center space-x-2"
+        >
+          <Plus className="h-4 w-4" />
+          <span>New Report</span>
+        </Button>
+      </div>
 
-        {/* Search Bar */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search by Report ID, Patient Name, or Patient ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Patient Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <User className="h-5 w-5" />
+            <span>Select Patient</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PatientSelector 
+            selectedPatient={selectedPatient}
+            onPatientSelect={setSelectedPatient}
+          />
+        </CardContent>
+      </Card>
 
-        {/* Report Completion Form */}
-        {showReportForm && selectedReport && (
-          <Card className="mb-6">
+      {selectedPatient && (
+        <>
+          {/* Medical Vitals */}
+          <Card>
             <CardHeader>
-              <CardTitle>Complete Patient Report</CardTitle>
+              <CardTitle className="flex items-center space-x-2">
+                <Stethoscope className="h-5 w-5" />
+                <span>Medical Vitals & Clinical Details</span>
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              {/* Patient Info (Read-only) */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-semibold mb-3">Patient Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div><strong>Name:</strong> {selectedReport.patients.name}</div>
-                  <div><strong>ID:</strong> {selectedReport.patients.patient_id}</div>
-                  <div><strong>Age:</strong> {selectedReport.patients.age}</div>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hemoglobin">Hemoglobin (HB)</Label>
+                  <Input
+                    id="hemoglobin"
+                    type="number"
+                    step="0.1"
+                    placeholder="e.g., 12.5"
+                    value={formData.hemoglobin}
+                    onChange={(e) => setFormData({...formData, hemoglobin: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="wbc">WBC Count</Label>
+                  <Input
+                    id="wbc"
+                    type="number"
+                    placeholder="e.g., 7000"
+                    value={formData.wbc}
+                    onChange={(e) => setFormData({...formData, wbc: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="platelets">Platelets</Label>
+                  <Input
+                    id="platelets"
+                    type="number"
+                    placeholder="e.g., 250000"
+                    value={formData.platelets}
+                    onChange={(e) => setFormData({...formData, platelets: e.target.value})}
+                  />
                 </div>
               </div>
 
-              {/* Medical Vitals (Read-only) */}
-              <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-                <h3 className="font-semibold mb-3">Medical Vitals (Reception Input)</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  {selectedReport.hemoglobin && <div><strong>Hemoglobin:</strong> {selectedReport.hemoglobin} g/dL</div>}
-                  {selectedReport.wbc && <div><strong>WBC:</strong> {selectedReport.wbc}</div>}
-                  {selectedReport.platelets && <div><strong>Platelets:</strong> {selectedReport.platelets}</div>}
-                  {selectedReport.blood_pressure && <div><strong>BP:</strong> {selectedReport.blood_pressure} mmHg</div>}
-                  {selectedReport.temperature && <div><strong>Temperature:</strong> {selectedReport.temperature}°F</div>}
-                  {selectedReport.weight && <div><strong>Weight:</strong> {selectedReport.weight} kg</div>}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="blood_pressure">Blood Pressure</Label>
+                  <Input
+                    id="blood_pressure"
+                    placeholder="e.g., 120/80"
+                    value={formData.blood_pressure}
+                    onChange={(e) => setFormData({...formData, blood_pressure: e.target.value})}
+                  />
                 </div>
-                {selectedReport.clinical_complaint && (
-                  <div className="mt-3">
-                    <strong>Clinical Complaint:</strong>
-                    <p className="mt-1">{selectedReport.clinical_complaint}</p>
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label htmlFor="temperature">Temperature (°F)</Label>
+                  <Input
+                    id="temperature"
+                    type="number"
+                    step="0.1"
+                    placeholder="e.g., 98.6"
+                    value={formData.temperature}
+                    onChange={(e) => setFormData({...formData, temperature: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="weight">Weight (kg)</Label>
+                  <Input
+                    id="weight"
+                    type="number"
+                    step="0.1"
+                    placeholder="e.g., 70.5"
+                    value={formData.weight}
+                    onChange={(e) => setFormData({...formData, weight: e.target.value})}
+                  />
+                </div>
               </div>
 
-              {/* Medicine Prescription Form */}
-              <div className="mb-6">
-                <MedicinePrescriptionForm
-                  reportId={selectedReport.id}
-                  prescribedMedicines={prescribedMedicines}
-                  onPrescribedMedicinesChange={setPrescribedMedicines}
+              <div className="space-y-2">
+                <Label htmlFor="clinical_complaint">Clinical Complaint</Label>
+                <Textarea
+                  id="clinical_complaint"
+                  placeholder="Describe the patient's complaints and symptoms..."
+                  value={formData.clinical_complaint}
+                  onChange={(e) => setFormData({...formData, clinical_complaint: e.target.value})}
+                  rows={3}
                 />
               </div>
-
-              {/* Doctor's Sections */}
-              <form onSubmit={handleCompleteReport} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="medicalHistory">Medical History</Label>
-                  <textarea
-                    id="medicalHistory"
-                    value={medicalHistory}
-                    onChange={(e) => setMedicalHistory(e.target.value)}
-                    placeholder="Enter patient's medical history..."
-                    className="w-full min-h-[100px] p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="observations">Clinical Observations</Label>
-                  <textarea
-                    id="observations"
-                    value={observations}
-                    onChange={(e) => setObservations(e.target.value)}
-                    placeholder="Enter your clinical observations..."
-                    className="w-full min-h-[100px] p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="recommendations">Recommendations</Label>
-                  <textarea
-                    id="recommendations"
-                    value={recommendations}
-                    onChange={(e) => setRecommendations(e.target.value)}
-                    placeholder="Enter your recommendations..."
-                    className="w-full min-h-[100px] p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical"
-                  />
-                </div>
-
-                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => {
-                      setShowReportForm(false);
-                      setSelectedReport(null);
-                    }}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={handleGeneratePDF}
-                    className="flex-1"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Preview Report
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={updateReportMutation.isPending}
-                    className="flex-1"
-                  >
-                    {updateReportMutation.isPending ? 'Completing...' : 'Complete Report'}
-                  </Button>
-                </div>
-              </form>
             </CardContent>
           </Card>
-        )}
 
-        {/* Reports Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Available Reports</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-4">Loading reports...</div>
-            ) : reports && reports.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Report ID</TableHead>
-                      <TableHead>Patient</TableHead>
-                      <TableHead>Date/Time</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reports.map((report) => (
-                      <TableRow key={report.id}>
-                        <TableCell className="font-mono text-xs sm:text-sm">
-                          {report.id.slice(0, 8)}...
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{report.patients.name}</div>
-                            <div className="text-sm text-gray-500">
-                              ID: {report.patients.patient_id}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(report.created_at), 'MMM dd, yyyy HH:mm')}
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={report.status === 'completed' ? 'default' : 'secondary'}
-                          >
-                            {report.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            onClick={() => handleSelectReport(report)}
-                          >
-                            {report.status === 'completed' ? 'View' : 'Complete'}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                No reports found. {searchQuery ? 'Try a different search term.' : 'No reports available.'}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          {/* Medicine Prescription */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Pill className="h-5 w-5" />
+                <span>Medicine Prescription</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MedicinePrescriptionForm
+                prescribedMedicines={prescribedMedicines}
+                onPrescribedMedicinesChange={setPrescribedMedicines}
+              />
+            </CardContent>
+          </Card>
 
-        {/* PDF Generator */}
-        {showPDFGenerator && selectedReport && (
-          <ReportPDFGenerator
-            reportId={selectedReport.id}
-            patient={selectedReport.patients}
-            reportData={{
-              hemoglobin: selectedReport.hemoglobin?.toString() || '',
-              wbc: selectedReport.wbc?.toString() || '',
-              platelets: selectedReport.platelets?.toString() || '',
-              blood_pressure: selectedReport.blood_pressure || '',
-              temperature: selectedReport.temperature?.toString() || '',
-              weight: selectedReport.weight?.toString() || '',
-              clinical_complaint: selectedReport.clinical_complaint || '',
-              medical_history: selectedReport.medical_history || '',
-              observations: selectedReport.observations || '',
-              recommendations: selectedReport.recommendations || ''
-            }}
-            prescribedMedicines={prescribedMedicines}
-            onClose={() => setShowPDFGenerator(false)}
-          />
-        )}
-      </div>
+          {/* Medical History & Notes */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <FileText className="h-5 w-5" />
+                <span>Medical History & Notes</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="medical_history">Medical History</Label>
+                <Textarea
+                  id="medical_history"
+                  placeholder="Previous medical conditions, surgeries, allergies..."
+                  value={formData.medical_history}
+                  onChange={(e) => setFormData({...formData, medical_history: e.target.value})}
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="observations">Clinical Observations</Label>
+                <Textarea
+                  id="observations"
+                  placeholder="Doctor's observations and findings..."
+                  value={formData.observations}
+                  onChange={(e) => setFormData({...formData, observations: e.target.value})}
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="recommendations">Recommendations</Label>
+                <Textarea
+                  id="recommendations"
+                  placeholder="Treatment recommendations and follow-up instructions..."
+                  value={formData.recommendations}
+                  onChange={(e) => setFormData({...formData, recommendations: e.target.value})}
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Action Buttons */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex justify-end space-x-4">
+                <Button
+                  onClick={handleSaveReport}
+                  disabled={loading}
+                  className="flex items-center space-x-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>{loading ? 'Saving...' : 'Save & Generate Report'}</span>
+                </Button>
+                {savedReportId && (
+                  <Button
+                    onClick={() => setShowPDFPreview(true)}
+                    variant="outline"
+                    className="flex items-center space-x-2"
+                  >
+                    <Printer className="h-4 w-4" />
+                    <span>View PDF Report</span>
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {/* PDF Preview Modal */}
+      {showPDFPreview && savedReportId && selectedPatient && (
+        <ReportPDFGenerator
+          reportId={savedReportId}
+          patient={selectedPatient}
+          reportData={formData}
+          prescribedMedicines={prescribedMedicines}
+          onClose={() => setShowPDFPreview(false)}
+        />
+      )}
     </div>
   );
 };

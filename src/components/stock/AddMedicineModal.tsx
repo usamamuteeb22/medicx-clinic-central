@@ -15,7 +15,7 @@ interface AddMedicineModalProps {
   onClose: () => void;
 }
 
-type MedicineCategory = "tablet" | "syrup" | "injection" | "sachet" | "drops" | "lotion" | "cream" | "ointment" | "suspension" | "gel" | "infusion" | "transfusion";
+type MedicineCategory = "tablet" | "syrup" | "injection";
 
 const AddMedicineModal = ({ isOpen, onClose }: AddMedicineModalProps) => {
   const [name, setName] = useState('');
@@ -138,15 +138,6 @@ const AddMedicineModal = ({ isOpen, onClose }: AddMedicineModalProps) => {
                 <SelectItem value="tablet">Tablet</SelectItem>
                 <SelectItem value="syrup">Syrup</SelectItem>
                 <SelectItem value="injection">Injection</SelectItem>
-                <SelectItem value="sachet">Sachet</SelectItem>
-                <SelectItem value="drops">Drops</SelectItem>
-                <SelectItem value="lotion">Lotion</SelectItem>
-                <SelectItem value="cream">Cream</SelectItem>
-                <SelectItem value="ointment">Ointment</SelectItem>
-                <SelectItem value="suspension">Suspension</SelectItem>
-                <SelectItem value="gel">Gel</SelectItem>
-                <SelectItem value="infusion">Infusion</SelectItem>
-                <SelectItem value="transfusion">Transfusion</SelectItem>
               </SelectContent>
             </Select>
           </div>

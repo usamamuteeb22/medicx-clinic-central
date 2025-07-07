@@ -1,17 +1,26 @@
-
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Edit, Download, User } from 'lucide-react';
-import { generatePatientsExcel } from '@/utils/patientsExcelUtils';
+import { Search, Edit, Trash2, Download } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { generatePatientsExcel } from '@/utils/patientsExcelUtils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface Patient {
   id: string;
@@ -19,7 +28,6 @@ interface Patient {
   name: string;
   age: number;
   gender: string;
-  category: string;
   phone_number: string;
   address: string;
   registration_date: string;
@@ -27,282 +35,173 @@ interface Patient {
 }
 
 const PatientsPage = () => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const { data: patients, isLoading, error } = useQuery({
-    queryKey: ['patients', searchQuery],
+  const { data: patients = [], isLoading } = useQuery({
+    queryKey: ['patients'],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('patients')
         .select('*')
-        .order('patient_id', { ascending: false });
+        .order('registration_date', { ascending: false });
 
-      if (searchQuery) {
-        query = query.or(`name.ilike.%${searchQuery}%,patient_id.eq.${searchQuery},phone_number.ilike.%${searchQuery}%`);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return data as Patient[];
     }
   });
 
-  const handleExcelDownload = async () => {
-    if (!patients || patients.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "No Data",
-        description: "No patients data available to export."
-      });
-      return;
-    }
-
+  const handleDeletePatient = async (patientId: string, patientName: string) => {
     try {
-      generatePatientsExcel(patients);
+      console.log('Attempting to delete patient:', patientId, patientName);
+      
+      const { error } = await supabase
+        .from('patients')
+        .delete()
+        .eq('id', patientId);
+
+      if (error) {
+        console.error('Error deleting patient:', error);
+        throw error;
+      }
+
       toast({
-        title: "Excel Generated",
-        description: "Patients report has been downloaded successfully."
+        title: "Patient Deleted",
+        description: `${patientName} has been successfully deleted.`
       });
+
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
     } catch (error) {
-      console.error('Error generating Excel:', error);
+      console.error('Error deleting patient:', error);
       toast({
         variant: "destructive",
-        title: "Export Failed",
-        description: "Failed to generate Excel file. Please try again."
+        title: "Error",
+        description: "Failed to delete patient. Please try again."
       });
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'PAID':
-        return 'bg-green-100 text-green-800';
-      case 'FREE':
-        return 'bg-blue-100 text-blue-800';
-      case 'THALASSEMIC':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const handleDownloadExcel = () => {
+    generatePatientsExcel(filteredPatients);
   };
 
-  if (error) {
+  const filteredPatients = patients.filter(patient =>
+    patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    patient.patient_id.toString().includes(searchTerm) ||
+    patient.phone_number?.includes(searchTerm)
+  );
+
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-4 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-8">
-            <p className="text-red-600">Error loading patients: {error.message}</p>
-          </div>
-        </div>
+      <div className="container mx-auto p-6">
+        <div className="text-center">Loading patients...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Patients Management</h1>
-          <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
-            <Button 
-              onClick={handleExcelDownload}
-              variant="outline"
-              disabled={!patients || patients.length === 0}
-              className="w-full sm:w-auto"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Excel Report
-            </Button>
-            <Link to="/add-patient">
-              <Button className="w-full sm:w-auto">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Patient
-              </Button>
-            </Link>
-          </div>
-        </div>
-
-        {/* Search Bar */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search by name, patient ID, or phone number..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-full">
-                  <User className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Patients</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {patients?.length || 0}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-full">
-                  <User className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Paid</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {patients?.filter(p => p.category === 'PAID').length || 0}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-full">
-                  <User className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Free</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {patients?.filter(p => p.category === 'FREE').length || 0}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-red-100 rounded-full">
-                  <User className="h-6 w-6 text-red-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Thalassemic</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {patients?.filter(p => p.category === 'THALASSEMIC').length || 0}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Patients Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>All Patients</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <p className="mt-2 text-gray-600">Loading patients...</p>
-              </div>
-            ) : patients && patients.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead className="hidden sm:table-cell">Age</TableHead>
-                      <TableHead className="hidden sm:table-cell">Gender</TableHead>
-                      <TableHead className="hidden md:table-cell">Category</TableHead>
-                      <TableHead className="hidden lg:table-cell">Phone</TableHead>
-                      <TableHead className="hidden xl:table-cell">Registration</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {patients.map((patient) => (
-                      <TableRow key={patient.id}>
-                        <TableCell className="font-medium">{patient.patient_id}</TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{patient.name}</div>
-                            <div className="sm:hidden text-sm text-gray-500">
-                              {patient.age}y, {patient.gender}
-                              {patient.category && (
-                                <Badge className={`ml-2 ${getCategoryColor(patient.category)}`}>
-                                  {patient.category}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">{patient.age}</TableCell>
-                        <TableCell className="hidden sm:table-cell">{patient.gender}</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {patient.category ? (
-                            <Badge className={getCategoryColor(patient.category)}>
-                              {patient.category}
-                            </Badge>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          {patient.phone_number || '-'}
-                        </TableCell>
-                        <TableCell className="hidden xl:table-cell">
-                          {patient.registration_date 
-                            ? format(new Date(patient.registration_date), 'MMM dd, yyyy')
-                            : '-'
-                          }
-                        </TableCell>
-                        <TableCell>
-                          <Link to={`/patients/${patient.id}/edit`}>
-                            <Button size="sm" variant="outline">
-                              <Edit className="h-4 w-4" />
-                              <span className="hidden sm:ml-2 sm:inline">Edit</span>
-                            </Button>
-                          </Link>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                {searchQuery ? (
-                  <div>
-                    <p className="text-lg mb-2">No patients found</p>
-                    <p>Try adjusting your search criteria</p>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-lg mb-2">No patients registered yet</p>
-                    <Link to="/add-patient">
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add First Patient
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900">All Patients</h1>
+        <Button onClick={handleDownloadExcel} variant="outline" className="bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700">
+          <Download className="h-4 w-4 mr-2" />
+          Download Excel
+        </Button>
       </div>
+
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <CardHeader>
+          <CardTitle className="text-indigo-700">Search Patients</CardTitle>
+          <div className="flex items-center space-x-2">
+            <Search className="h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search by name, patient ID, or phone number..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-md border-blue-200 focus:border-blue-400"
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-blue-200">
+                  <th className="text-left p-2 font-medium text-indigo-700">Patient ID</th>
+                  <th className="text-left p-2 font-medium text-indigo-700">Name</th>
+                  <th className="text-left p-2 font-medium text-indigo-700">Age</th>
+                  <th className="text-left p-2 font-medium text-indigo-700">Gender</th>
+                  <th className="text-left p-2 font-medium text-indigo-700">Phone</th>
+                  <th className="text-left p-2 font-medium text-indigo-700">Address</th>
+                  <th className="text-left p-2 font-medium text-indigo-700">Registration Date</th>
+                  <th className="text-left p-2 font-medium text-indigo-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPatients.map((patient) => (
+                  <tr key={patient.id} className="border-b hover:bg-blue-50">
+                    <td className="p-2">
+                      <Badge variant="outline" className="border-blue-300 text-blue-700">{patient.patient_id}</Badge>
+                    </td>
+                    <td className="p-2 font-medium">{patient.name}</td>
+                    <td className="p-2">{patient.age}</td>
+                    <td className="p-2">
+                      <Badge variant={patient.gender === 'Male' ? 'default' : 'secondary'} className={patient.gender === 'Male' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'}>
+                        {patient.gender}
+                      </Badge>
+                    </td>
+                    <td className="p-2">{patient.phone_number}</td>
+                    <td className="p-2">{patient.address}</td>
+                    <td className="p-2">
+                      {new Date(patient.registration_date).toLocaleDateString()}
+                    </td>
+                    <td className="p-2">
+                      <div className="flex space-x-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/patient/${patient.id}/edit`)}
+                          className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        {user?.role === 'admin' && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="destructive" className="bg-red-50 hover:bg-red-100 border-red-200 text-red-700">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Patient</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete {patient.name}? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeletePatient(patient.id, patient.name)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
