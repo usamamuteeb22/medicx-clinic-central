@@ -10,26 +10,28 @@ interface Medicine {
   total_quantity: number;
 }
 
-interface PrescribedMedicine {
+interface DoctorPrescribedMedicine {
   id: string;
   medicine: Medicine;
   quantity: number;
   morning: boolean;
-  afternoon: boolean;
+  afternoon?: boolean;
   evening: boolean;
   night: boolean;
 }
 
 interface MedicinePrescriptionFormProps {
-  prescribedMedicines: PrescribedMedicine[];
-  onPrescribedMedicinesChange: (medicines: PrescribedMedicine[]) => void;
+  reportId?: string;
+  prescribedMedicines: DoctorPrescribedMedicine[];
+  onPrescribedMedicinesChange: (medicines: DoctorPrescribedMedicine[]) => void;
 }
 
 const MedicinePrescriptionForm: React.FC<MedicinePrescriptionFormProps> = ({
+  reportId,
   prescribedMedicines,
   onPrescribedMedicinesChange
 }) => {
-  const handleAddMedicine = (medicine: PrescribedMedicine) => {
+  const handleAddMedicine = (medicine: DoctorPrescribedMedicine) => {
     onPrescribedMedicinesChange([...prescribedMedicines, medicine]);
   };
 
@@ -40,6 +42,7 @@ const MedicinePrescriptionForm: React.FC<MedicinePrescriptionFormProps> = ({
   return (
     <div className="space-y-6">
       <MedicineSearchForm
+        reportId={reportId}
         prescribedMedicines={prescribedMedicines}
         onAddMedicine={handleAddMedicine}
       />
