@@ -6,10 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, Package } from 'lucide-react';
 
 interface Medicine {
   id: string;
@@ -28,13 +27,13 @@ interface DoctorPrescribedMedicine {
   night: boolean;
 }
 
-interface MedicineSearchFormProps {
+interface ModernMedicineSearchProps {
   reportId?: string;
   prescribedMedicines: DoctorPrescribedMedicine[];
   onAddMedicine: (medicine: DoctorPrescribedMedicine) => void;
 }
 
-const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
+const ModernMedicineSearch: React.FC<ModernMedicineSearchProps> = ({
   reportId,
   prescribedMedicines,
   onAddMedicine
@@ -46,26 +45,39 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
   const [afternoon, setAfternoon] = useState(false);
   const [evening, setEvening] = useState(false);
   const [night, setNight] = useState(false);
+  const [showResults, setShowResults] = useState(false);
 
   // Fetch medicines based on search query
   const { data: medicines, isLoading } = useQuery({
     queryKey: ['medicines-search', searchQuery],
     queryFn: async () => {
-      let query = supabase
+      if (!searchQuery) return [];
+      
+      const { data, error } = await supabase
         .from('medicines')
         .select('id, name, category, total_quantity')
         .gt('total_quantity', 0)
-        .order('name');
+        .ilike('name', `%${searchQuery}%`)
+        .order('name')
+        .limit(10);
 
-      if (searchQuery) {
-        query = query.ilike('name', `%${searchQuery}%`);
-      }
-
-      const { data, error } = await query.limit(10);
       if (error) throw error;
       return data || [];
-    }
+    },
+    enabled: !!searchQuery
   });
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setSelectedMedicine(null);
+    setShowResults(value.length > 0);
+  };
+
+  const handleMedicineSelect = (medicine: Medicine) => {
+    setSelectedMedicine(medicine);
+    setSearchQuery(medicine.name);
+    setShowResults(false);
+  };
 
   const handleAddMedicine = () => {
     if (!selectedMedicine) {
@@ -129,62 +141,85 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
     setEvening(false);
     setNight(false);
     setSearchQuery('');
+    setShowResults(false);
   };
 
   return (
-    <Card>
+    <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
       <CardHeader>
-        <CardTitle>Add Medicine Prescription</CardTitle>
+        <CardTitle className="flex items-center space-x-2 text-blue-700">
+          <Package className="h-5 w-5" />
+          <span>Add Medicine Prescription</span>
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         {/* Medicine Search */}
         <div className="space-y-2">
-          <Label htmlFor="medicineSearch">Search Medicine</Label>
+          <Label htmlFor="medicineSearch" className="text-blue-700 font-medium">
+            Search Medicine
+          </Label>
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
               id="medicineSearch"
-              placeholder="Type medicine name..."
+              placeholder="Type medicine name to search..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-10 border-blue-200 focus:border-blue-400"
             />
+            
+            {/* Search Results Dropdown */}
+            {showResults && medicines && medicines.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-blue-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                {medicines.map((medicine) => (
+                  <div
+                    key={medicine.id}
+                    onClick={() => handleMedicineSelect(medicine)}
+                    className="p-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 transition-colors"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="font-medium text-gray-900">{medicine.name}</div>
+                        <div className="text-sm text-gray-500">{medicine.category}</div>
+                      </div>
+                      <div className="text-sm text-blue-600 font-medium">
+                        Stock: {medicine.total_quantity}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {showResults && searchQuery && medicines && medicines.length === 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-blue-200 rounded-md shadow-lg p-3">
+                <p className="text-sm text-gray-500">No medicines found matching your search.</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Medicine Selection */}
-        {medicines && medicines.length > 0 && (
-          <div className="space-y-2">
-            <Label>Select Medicine</Label>
-            <Select
-              value={selectedMedicine?.id || ''}
-              onValueChange={(value) => {
-                const medicine = medicines.find(m => m.id === value);
-                setSelectedMedicine(medicine || null);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a medicine" />
-              </SelectTrigger>
-              <SelectContent>
-                {medicines.map((medicine) => (
-                  <SelectItem key={medicine.id} value={medicine.id}>
-                    <div className="flex justify-between items-center w-full">
-                      <span>{medicine.name}</span>
-                      <span className="text-sm text-gray-500 ml-2">
-                        Stock: {medicine.total_quantity}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* Selected Medicine Display */}
+        {selectedMedicine && (
+          <div className="p-4 bg-white border border-blue-200 rounded-md">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="font-medium text-lg text-gray-900">{selectedMedicine.name}</div>
+                <div className="text-sm text-gray-500 mb-2">{selectedMedicine.category}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-gray-500">Available Stock</div>
+                <div className="text-lg font-bold text-blue-600">{selectedMedicine.total_quantity}</div>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Quantity */}
+        {/* Quantity Input */}
         <div className="space-y-2">
-          <Label htmlFor="quantity">Quantity</Label>
+          <Label htmlFor="quantity" className="text-blue-700 font-medium">
+            Quantity to Prescribe
+          </Label>
           <Input
             id="quantity"
             type="number"
@@ -192,44 +227,46 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
             min="1"
+            max={selectedMedicine?.total_quantity}
+            className="border-blue-200 focus:border-blue-400"
           />
         </div>
 
-        {/* Timing */}
-        <div className="space-y-2">
-          <Label>When to take</Label>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
+        {/* Timing Selection */}
+        <div className="space-y-3">
+          <Label className="text-blue-700 font-medium">When to take medication</Label>
+          <div className="grid grid-cols-2 gap-4 p-4 bg-white rounded-md border border-blue-200">
+            <div className="flex items-center space-x-3">
               <Checkbox
                 id="morning"
                 checked={morning}
                 onCheckedChange={(checked) => setMorning(checked === true)}
               />
-              <Label htmlFor="morning">Morning</Label>
+              <Label htmlFor="morning" className="font-medium">🌅 Morning</Label>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <Checkbox
                 id="afternoon"
                 checked={afternoon}
                 onCheckedChange={(checked) => setAfternoon(checked === true)}
               />
-              <Label htmlFor="afternoon">Afternoon</Label>
+              <Label htmlFor="afternoon" className="font-medium">☀️ Afternoon</Label>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <Checkbox
                 id="evening"
                 checked={evening}
                 onCheckedChange={(checked) => setEvening(checked === true)}
               />
-              <Label htmlFor="evening">Evening</Label>
+              <Label htmlFor="evening" className="font-medium">🌆 Evening</Label>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <Checkbox
                 id="night"
                 checked={night}
                 onCheckedChange={(checked) => setNight(checked === true)}
               />
-              <Label htmlFor="night">Night</Label>
+              <Label htmlFor="night" className="font-medium">🌙 Night</Label>
             </div>
           </div>
         </div>
@@ -237,15 +274,15 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
         {/* Add Button */}
         <Button 
           onClick={handleAddMedicine}
-          className="w-full"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
           disabled={!selectedMedicine || !quantity}
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Medicine
+          Add Medicine to Prescription
         </Button>
       </CardContent>
     </Card>
   );
 };
 
-export default MedicineSearchForm;
+export default ModernMedicineSearch;

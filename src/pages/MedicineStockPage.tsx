@@ -4,11 +4,12 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Download, Plus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import MedicineSearchSection from '@/components/stock/MedicineSearchSection';
 import MedicineTable from '@/components/stock/MedicineTable';
+import StockManagementSection from '@/components/stock/StockManagementSection';
 import { generateMedicineStockExcel } from '@/utils/medicineStockExcelUtils';
 import AddMedicineModal from '@/components/stock/AddMedicineModal';
+import { toast } from '@/hooks/use-toast';
 
 interface Medicine {
   id: string;
@@ -23,9 +24,8 @@ interface Medicine {
 const MedicineStockPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const navigate = useNavigate();
 
-  const { data: medicines = [], isLoading } = useQuery({
+  const { data: medicines = [], isLoading, error } = useQuery({
     queryKey: ['medicines'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -33,7 +33,10 @@ const MedicineStockPage = () => {
         .select('*')
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching medicines:', error);
+        throw error;
+      }
       return data as Medicine[];
     }
   });
@@ -45,13 +48,37 @@ const MedicineStockPage = () => {
   );
 
   const handleDownloadExcel = () => {
-    generateMedicineStockExcel(filteredMedicines);
+    if (!filteredMedicines || filteredMedicines.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No Data",
+        description: "No medicines data available to export."
+      });
+      return;
+    }
+
+    try {
+      generateMedicineStockExcel(filteredMedicines);
+      toast({
+        title: "Excel Generated",
+        description: "Medicine stock report has been downloaded successfully."
+      });
+    } catch (error) {
+      console.error('Error generating Excel:', error);
+      toast({
+        variant: "destructive",
+        title: "Export Failed",
+        description: "Failed to generate Excel file. Please try again."
+      });
+    }
   };
 
-  if (isLoading) {
+  if (error) {
     return (
       <div className="container mx-auto p-6">
-        <div className="text-center">Loading medicines...</div>
+        <div className="text-center py-8">
+          <p className="text-red-600">Error loading medicines: {error.message}</p>
+        </div>
       </div>
     );
   }
@@ -59,13 +86,21 @@ const MedicineStockPage = () => {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Medicine Stock</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Medicine Stock Management</h1>
         <div className="flex space-x-2">
-          <Button onClick={handleDownloadExcel} variant="outline" className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700">
+          <Button 
+            onClick={handleDownloadExcel} 
+            variant="outline" 
+            className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
+            disabled={isLoading || filteredMedicines.length === 0}
+          >
             <Download className="h-4 w-4 mr-2" />
             Download Excel
           </Button>
-          <Button onClick={() => setShowAddModal(true)} className="bg-indigo-600 hover:bg-indigo-700">
+          <Button 
+            onClick={() => setShowAddModal(true)} 
+            className="bg-indigo-600 hover:bg-indigo-700"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Add Medicine
           </Button>
@@ -73,7 +108,17 @@ const MedicineStockPage = () => {
       </div>
 
       <MedicineSearchSection searchTerm={searchTerm} onSearchChange={setSearchTerm} />
-      <MedicineTable medicines={filteredMedicines} />
+      
+      <StockManagementSection medicines={medicines} />
+      
+      {isLoading ? (
+        <div className="text-center py-8">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="mt-2 text-gray-600">Loading medicines...</p>
+        </div>
+      ) : (
+        <MedicineTable medicines={filteredMedicines} />
+      )}
       
       <AddMedicineModal 
         isOpen={showAddModal} 
