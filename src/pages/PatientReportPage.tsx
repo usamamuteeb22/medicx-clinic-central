@@ -31,7 +31,7 @@ interface Medicine {
   total_quantity: number;
 }
 
-interface DoctorPrescribedMedicine {
+interface PrescribedMedicine {
   id: string;
   medicine: Medicine;
   quantity: number;
@@ -44,16 +44,16 @@ interface DoctorPrescribedMedicine {
 interface PatientReport {
   id: string;
   patient_id: string;
-  hemoglobin?: number;
-  wbc?: number;
-  platelets?: number;
-  blood_pressure?: string;
-  temperature?: number;
-  weight?: number;
-  clinical_complaint?: string;
-  medical_history?: string;
-  observations?: string;
-  recommendations?: string;
+  hemoglobin: number;
+  wbc: number;
+  platelets: number;
+  blood_pressure: string;
+  temperature: number;
+  weight: number;
+  clinical_complaint: string;
+  medical_history: string;
+  observations: string;
+  recommendations: string;
   created_at: string;
   status: string;
   patients: Patient;
@@ -64,7 +64,7 @@ const PatientReportPage = () => {
   const [selectedReport, setSelectedReport] = useState<PatientReport | null>(null);
   const [showReportForm, setShowReportForm] = useState(false);
   const [showPDFGenerator, setShowPDFGenerator] = useState(false);
-  const [prescribedMedicines, setPrescribedMedicines] = useState<DoctorPrescribedMedicine[]>([]);
+  const [prescribedMedicines, setPrescribedMedicines] = useState<PrescribedMedicine[]>([]);
   
   // Form state for doctor sections
   const [medicalHistory, setMedicalHistory] = useState('');
@@ -78,66 +78,34 @@ const PatientReportPage = () => {
   const { data: reports, isLoading } = useQuery({
     queryKey: ['doctor-reports', searchQuery],
     queryFn: async () => {
-      // First get the reports
-      let reportsQuery = supabase
+      let query = supabase
         .from('patient_reports')
-        .select('*')
+        .select(`
+          *,
+          patients (
+            id,
+            patient_id,
+            name,
+            age,
+            gender,
+            phone_number
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (searchQuery) {
-        const isReportId = searchQuery.length >= 8;
+        // Search by report ID or patient name/ID
+        const isReportId = searchQuery.length >= 8; // Assuming report IDs are at least 8 characters
         if (isReportId) {
-          reportsQuery = reportsQuery.ilike('id', `${searchQuery}%`);
+          query = query.ilike('id', `${searchQuery}%`);
+        } else {
+          query = query.or(`patients.name.ilike.%${searchQuery}%,patients.patient_id.eq.${searchQuery}`);
         }
       }
 
-      const { data: reportsData, error: reportsError } = await reportsQuery;
-      if (reportsError) {
-        console.error('Error fetching reports:', reportsError);
-        throw reportsError;
-      }
-
-      if (!reportsData || reportsData.length === 0) return [];
-
-      // Get patient IDs from reports
-      const patientIds = reportsData.map(report => report.patient_id);
-
-      // Fetch patients separately
-      const { data: patientsData, error: patientsError } = await supabase
-        .from('patients')
-        .select('id, patient_id, name, age, gender, phone_number')
-        .in('id', patientIds);
-
-      if (patientsError) {
-        console.error('Error fetching patients:', patientsError);
-        throw patientsError;
-      }
-
-      // Combine reports with patient data
-      const combinedData = reportsData.map(report => {
-        const patient = patientsData?.find(p => p.id === report.patient_id);
-        return {
-          ...report,
-          patients: patient || {
-            id: '',
-            patient_id: 0,
-            name: 'Unknown',
-            age: 0,
-            gender: 'Unknown',
-            phone_number: ''
-          }
-        };
-      });
-
-      // Apply patient search filter if needed
-      if (searchQuery && searchQuery.length < 8) {
-        return combinedData.filter(report => 
-          report.patients.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          report.patients.patient_id.toString().includes(searchQuery)
-        );
-      }
-
-      return combinedData;
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as PatientReport[];
     }
   });
 
@@ -150,50 +118,26 @@ const PatientReportPage = () => {
       const { data, error } = await supabase
         .from('medicine_prescriptions')
         .select(`
-          id,
-          quantity,
-          morning,
-          afternoon,
-          evening,
-          night,
-          medicine_id
+          *,
+          medicines (
+            id,
+            name,
+            category,
+            total_quantity
+          )
         `)
         .eq('patient_report_id', selectedReport.id);
 
-      if (error) {
-        console.error('Error fetching prescriptions:', error);
-        throw error;
-      }
-
-      // Fetch medicine details separately
-      if (!data || data.length === 0) return [];
-
-      const medicineIds = data.map(item => item.medicine_id).filter(Boolean);
-      if (medicineIds.length === 0) return [];
-
-      const { data: medicines, error: medicineError } = await supabase
-        .from('medicines')
-        .select('id, name, category, total_quantity')
-        .in('id', medicineIds);
-
-      if (medicineError) {
-        console.error('Error fetching medicines:', medicineError);
-        throw medicineError;
-      }
-
-      // Combine prescription data with medicine details
-      return data.map(prescription => {
-        const medicine = medicines?.find(m => m.id === prescription.medicine_id);
-        return {
-          id: prescription.id,
-          medicine: medicine || { id: '', name: 'Unknown', category: '', total_quantity: 0 },
-          quantity: prescription.quantity,
-          morning: prescription.morning,
-          afternoon: prescription.afternoon,
-          evening: prescription.evening,
-          night: prescription.night
-        };
-      }) as DoctorPrescribedMedicine[];
+      if (error) throw error;
+      return data.map(item => ({
+        id: item.id,
+        medicine: item.medicines,
+        quantity: item.quantity,
+        morning: item.morning,
+        afternoon: item.afternoon,
+        evening: item.evening,
+        night: item.night
+      })) as PrescribedMedicine[];
     },
     enabled: !!selectedReport?.id
   });

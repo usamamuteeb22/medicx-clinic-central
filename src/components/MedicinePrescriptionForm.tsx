@@ -1,6 +1,6 @@
 
 import React from 'react';
-import ModernMedicineSearch from './prescription/ModernMedicineSearch';
+import MedicineSearchForm from './prescription/MedicineSearchForm';
 import PrescribedMedicinesList from './prescription/PrescribedMedicinesList';
 
 interface Medicine {
@@ -10,28 +10,26 @@ interface Medicine {
   total_quantity: number;
 }
 
-interface DoctorPrescribedMedicine {
+interface PrescribedMedicine {
   id: string;
   medicine: Medicine;
   quantity: number;
   morning: boolean;
-  afternoon?: boolean;
+  afternoon: boolean;
   evening: boolean;
   night: boolean;
 }
 
 interface MedicinePrescriptionFormProps {
-  reportId?: string;
-  prescribedMedicines: DoctorPrescribedMedicine[];
-  onPrescribedMedicinesChange: (medicines: DoctorPrescribedMedicine[]) => void;
+  prescribedMedicines: PrescribedMedicine[];
+  onPrescribedMedicinesChange: (medicines: PrescribedMedicine[]) => void;
 }
 
 const MedicinePrescriptionForm: React.FC<MedicinePrescriptionFormProps> = ({
-  reportId,
   prescribedMedicines,
   onPrescribedMedicinesChange
 }) => {
-  const handleAddMedicine = (medicine: DoctorPrescribedMedicine) => {
+  const handleAddMedicine = (medicine: PrescribedMedicine) => {
     onPrescribedMedicinesChange([...prescribedMedicines, medicine]);
   };
 
@@ -41,8 +39,7 @@ const MedicinePrescriptionForm: React.FC<MedicinePrescriptionFormProps> = ({
 
   return (
     <div className="space-y-6">
-      <ModernMedicineSearch
-        reportId={reportId}
+      <MedicineSearchForm
         prescribedMedicines={prescribedMedicines}
         onAddMedicine={handleAddMedicine}
       />
