@@ -1,13 +1,15 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Search } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 
 interface Medicine {
   id: string;
@@ -16,113 +18,105 @@ interface Medicine {
   total_quantity: number;
 }
 
-interface PrescribedMedicine {
+interface DoctorPrescribedMedicine {
   id: string;
   medicine: Medicine;
   quantity: number;
   morning: boolean;
-  afternoon: boolean;
+  afternoon?: boolean;
   evening: boolean;
   night: boolean;
 }
 
 interface MedicineSearchFormProps {
-  prescribedMedicines: PrescribedMedicine[];
-  onAddMedicine: (medicine: PrescribedMedicine) => void;
+  reportId?: string;
+  prescribedMedicines: DoctorPrescribedMedicine[];
+  onAddMedicine: (medicine: DoctorPrescribedMedicine) => void;
 }
 
 const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
+  reportId,
   prescribedMedicines,
   onAddMedicine
 }) => {
-  const [medicines, setMedicines] = useState<Medicine[]>([]);
-  const [filteredMedicines, setFilteredMedicines] = useState<Medicine[]>([]);
-  const [medicineSearchTerm, setMedicineSearchTerm] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
   const [quantity, setQuantity] = useState('');
-  const [dosageTiming, setDosageTiming] = useState({
-    morning: false,
-    afternoon: false,
-    evening: false,
-    night: false
-  });
+  const [morning, setMorning] = useState(false);
+  const [afternoon, setAfternoon] = useState(false);
+  const [evening, setEvening] = useState(false);
+  const [night, setNight] = useState(false);
 
-  useEffect(() => {
-    fetchMedicines();
-  }, []);
-
-  useEffect(() => {
-    // Filter medicines based on search term
-    const filtered = medicines.filter(medicine =>
-      medicine.name.toLowerCase().includes(medicineSearchTerm.toLowerCase()) ||
-      medicine.category.toLowerCase().includes(medicineSearchTerm.toLowerCase())
-    );
-    setFilteredMedicines(filtered);
-  }, [medicines, medicineSearchTerm]);
-
-  const fetchMedicines = async () => {
-    try {
-      const { data, error } = await supabase
+  // Fetch medicines based on search query
+  const { data: medicines, isLoading } = useQuery({
+    queryKey: ['medicines-search', searchQuery],
+    queryFn: async () => {
+      let query = supabase
         .from('medicines')
-        .select('*')
+        .select('id, name, category, total_quantity')
         .gt('total_quantity', 0)
         .order('name');
 
-      if (error) throw error;
-      setMedicines(data || []);
-      setFilteredMedicines(data || []);
-    } catch (error) {
-      console.error('Error fetching medicines:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch medicines"
-      });
-    }
-  };
+      if (searchQuery) {
+        query = query.ilike('name', `%${searchQuery}%`);
+      }
 
-  const handleMedicineSelect = (medicine: Medicine) => {
-    setSelectedMedicine(medicine);
-    setMedicineSearchTerm(medicine.name);
-  };
+      const { data, error } = await query.limit(10);
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
   const handleAddMedicine = () => {
-    if (!selectedMedicine || !quantity) {
+    if (!selectedMedicine) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Please select a medicine and enter quantity"
+        description: "Please select a medicine"
       });
       return;
     }
 
-    if (parseInt(quantity) > selectedMedicine.total_quantity) {
+    if (!quantity || parseInt(quantity) <= 0) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: `Insufficient stock. Available: ${selectedMedicine.total_quantity}`
+        description: "Please enter a valid quantity"
       });
       return;
     }
 
-    // Check if medicine already prescribed
-    if (prescribedMedicines.some(pm => pm.medicine.id === selectedMedicine.id)) {
+    if (!morning && !afternoon && !evening && !night) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Medicine already prescribed"
+        description: "Please select at least one time for medication"
       });
       return;
     }
 
-    const newPrescription: PrescribedMedicine = {
-      id: crypto.randomUUID(),
+    // Check if medicine is already prescribed
+    const alreadyPrescribed = prescribedMedicines.some(
+      pm => pm.medicine.id === selectedMedicine.id
+    );
+
+    if (alreadyPrescribed) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "This medicine is already prescribed"
+      });
+      return;
+    }
+
+    const newPrescription: DoctorPrescribedMedicine = {
+      id: `temp-${Date.now()}`,
       medicine: selectedMedicine,
       quantity: parseInt(quantity),
-      morning: dosageTiming.morning,
-      afternoon: dosageTiming.afternoon,
-      evening: dosageTiming.evening,
-      night: dosageTiming.night
+      morning,
+      afternoon,
+      evening,
+      night
     };
 
     onAddMedicine(newPrescription);
@@ -130,146 +124,120 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
     // Reset form
     setSelectedMedicine(null);
     setQuantity('');
-    setMedicineSearchTerm('');
-    setDosageTiming({
-      morning: false,
-      afternoon: false,
-      evening: false,
-      night: false
-    });
+    setMorning(false);
+    setAfternoon(false);
+    setEvening(false);
+    setNight(false);
+    setSearchQuery('');
   };
 
   return (
-    <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+    <Card>
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2 text-emerald-700">
-          <Plus className="h-4 w-4" />
-          <span>Add Medicine Prescription</span>
-        </CardTitle>
+        <CardTitle>Add Medicine Prescription</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Medicine Search Field */}
+        {/* Medicine Search */}
         <div className="space-y-2">
-          <Label className="text-emerald-700">Search Medicines</Label>
+          <Label htmlFor="medicineSearch">Search Medicine</Label>
           <div className="relative">
-            <div className="flex items-center space-x-2">
-              <Search className="h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search medicines by name or category..."
-                value={medicineSearchTerm}
-                onChange={(e) => {
-                  setMedicineSearchTerm(e.target.value);
-                  setSelectedMedicine(null);
-                }}
-                className="flex-1 border-green-200 focus:border-green-400"
-              />
-            </div>
-            
-            {/* Search Results Dropdown */}
-            {medicineSearchTerm && !selectedMedicine && filteredMedicines.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-green-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                {filteredMedicines.slice(0, 10).map((medicine) => (
-                  <div
-                    key={medicine.id}
-                    onClick={() => handleMedicineSelect(medicine)}
-                    className="p-3 hover:bg-green-50 cursor-pointer border-b last:border-b-0"
-                  >
-                    <div className="font-medium text-gray-900">{medicine.name}</div>
-                    <div className="text-sm text-gray-500">
-                      Category: {medicine.category} | Stock: {medicine.total_quantity}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {medicineSearchTerm && filteredMedicines.length === 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-green-200 rounded-md shadow-lg p-3">
-                <p className="text-sm text-gray-500">No medicines found matching your search.</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="text-emerald-700">Selected Medicine</Label>
-            <div className="p-3 bg-white border border-green-200 rounded-md">
-              {selectedMedicine ? (
-                <div>
-                  <div className="font-medium">{selectedMedicine.name}</div>
-                  <div className="text-sm text-gray-500">
-                    Category: {selectedMedicine.category} | Available: {selectedMedicine.total_quantity}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-gray-500">Search and select a medicine above</div>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-emerald-700">Quantity</Label>
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
-              type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="Enter quantity"
-              min="1"
-              className="border-green-200 focus:border-green-400"
+              id="medicineSearch"
+              placeholder="Type medicine name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
             />
           </div>
         </div>
 
+        {/* Medicine Selection */}
+        {medicines && medicines.length > 0 && (
+          <div className="space-y-2">
+            <Label>Select Medicine</Label>
+            <Select
+              value={selectedMedicine?.id || ''}
+              onValueChange={(value) => {
+                const medicine = medicines.find(m => m.id === value);
+                setSelectedMedicine(medicine || null);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a medicine" />
+              </SelectTrigger>
+              <SelectContent>
+                {medicines.map((medicine) => (
+                  <SelectItem key={medicine.id} value={medicine.id}>
+                    <div className="flex justify-between items-center w-full">
+                      <span>{medicine.name}</span>
+                      <span className="text-sm text-gray-500 ml-2">
+                        Stock: {medicine.total_quantity}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Quantity */}
         <div className="space-y-2">
-          <Label className="text-emerald-700">Dosage Timing</Label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Label htmlFor="quantity">Quantity</Label>
+          <Input
+            id="quantity"
+            type="number"
+            placeholder="Enter quantity"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            min="1"
+          />
+        </div>
+
+        {/* Timing */}
+        <div className="space-y-2">
+          <Label>When to take</Label>
+          <div className="grid grid-cols-2 gap-4">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="morning"
-                checked={dosageTiming.morning}
-                onCheckedChange={(checked) => 
-                  setDosageTiming({...dosageTiming, morning: !!checked})
-                }
+                checked={morning}
+                onCheckedChange={setMorning}
               />
               <Label htmlFor="morning">Morning</Label>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="afternoon"
-                checked={dosageTiming.afternoon}
-                onCheckedChange={(checked) => 
-                  setDosageTiming({...dosageTiming, afternoon: !!checked})
-                }
+                checked={afternoon}
+                onCheckedChange={setAfternoon}
               />
               <Label htmlFor="afternoon">Afternoon</Label>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="evening"
-                checked={dosageTiming.evening}
-                onCheckedChange={(checked) => 
-                  setDosageTiming({...dosageTiming, evening: !!checked})
-                }
+                checked={evening}
+                onCheckedChange={setEvening}
               />
               <Label htmlFor="evening">Evening</Label>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="night"
-                checked={dosageTiming.night}
-                onCheckedChange={(checked) => 
-                  setDosageTiming({...dosageTiming, night: !!checked})
-                }
+                checked={night}
+                onCheckedChange={setNight}
               />
               <Label htmlFor="night">Night</Label>
             </div>
           </div>
         </div>
 
+        {/* Add Button */}
         <Button 
-          onClick={handleAddMedicine} 
-          className="w-full bg-emerald-600 hover:bg-emerald-700"
+          onClick={handleAddMedicine}
+          className="w-full"
           disabled={!selectedMedicine || !quantity}
         >
           <Plus className="h-4 w-4 mr-2" />

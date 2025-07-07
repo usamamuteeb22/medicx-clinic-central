@@ -2,8 +2,8 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Pill, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Trash2 } from 'lucide-react';
 
 interface Medicine {
   id: string;
@@ -12,18 +12,18 @@ interface Medicine {
   total_quantity: number;
 }
 
-interface PrescribedMedicine {
+interface DoctorPrescribedMedicine {
   id: string;
   medicine: Medicine;
   quantity: number;
   morning: boolean;
-  afternoon: boolean;
+  afternoon?: boolean;
   evening: boolean;
   night: boolean;
 }
 
 interface PrescribedMedicinesListProps {
-  prescribedMedicines: PrescribedMedicine[];
+  prescribedMedicines: DoctorPrescribedMedicine[];
   onRemoveMedicine: (id: string) => void;
 }
 
@@ -31,60 +31,73 @@ const PrescribedMedicinesList: React.FC<PrescribedMedicinesListProps> = ({
   prescribedMedicines,
   onRemoveMedicine
 }) => {
-  const getDosageText = (medicine: PrescribedMedicine) => {
-    const times = [];
-    if (medicine.morning) times.push('Morning');
-    if (medicine.afternoon) times.push('Afternoon');
-    if (medicine.evening) times.push('Evening');
-    if (medicine.night) times.push('Night');
-    return times.length > 0 ? times.join(', ') : 'Not specified';
+  const getTimingBadges = (medicine: DoctorPrescribedMedicine) => {
+    const timings = [];
+    if (medicine.morning) timings.push('Morning');
+    if (medicine.afternoon) timings.push('Afternoon');
+    if (medicine.evening) timings.push('Evening');
+    if (medicine.night) timings.push('Night');
+    return timings;
   };
+
+  if (prescribedMedicines.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Prescribed Medicines</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center text-gray-500 py-8">
+            No medicines prescribed yet. Add some medicines above.
+          </div>
+        </CardContent>
+      </Card>
+    );  
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Pill className="h-4 w-4" />
-          <span>Prescribed Medicines ({prescribedMedicines.length})</span>
-        </CardTitle>
+        <CardTitle>Prescribed Medicines ({prescribedMedicines.length})</CardTitle>
       </CardHeader>
       <CardContent>
-        {prescribedMedicines.length === 0 ? (
-          <p className="text-center text-gray-500 py-4">No medicines prescribed yet</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Medicine</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>Dosage Timing</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {prescribedMedicines.map((medicine) => (
-                  <TableRow key={medicine.id}>
-                    <TableCell className="font-medium">{medicine.medicine.name}</TableCell>
-                    <TableCell className="capitalize">{medicine.medicine.category}</TableCell>
-                    <TableCell>{medicine.quantity}</TableCell>
-                    <TableCell>{getDosageText(medicine)}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => onRemoveMedicine(medicine.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+        <div className="space-y-4">
+          {prescribedMedicines.map((prescribedMedicine) => (
+            <div
+              key={prescribedMedicine.id}
+              className="flex items-center justify-between p-4 border rounded-lg"
+            >
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h4 className="font-medium">{prescribedMedicine.medicine.name}</h4>
+                  <Badge variant="outline">
+                    {prescribedMedicine.medicine.category}
+                  </Badge>
+                </div>
+                
+                <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <span>Qty: {prescribedMedicine.quantity}</span>
+                  <div className="flex gap-1">
+                    {getTimingBadges(prescribedMedicine).map((timing) => (
+                      <Badge key={timing} variant="secondary" className="text-xs">
+                        {timing}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onRemoveMedicine(prescribedMedicine.id)}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
