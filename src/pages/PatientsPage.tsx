@@ -38,7 +38,16 @@ const PatientsPage = () => {
         .order('patient_id', { ascending: false });
 
       if (searchQuery) {
-        query = query.or(`name.ilike.%${searchQuery}%,patient_id.eq.${searchQuery},phone_number.ilike.%${searchQuery}%`);
+        // Check if search query is numeric (for patient ID search)
+        const isNumeric = /^\d+$/.test(searchQuery);
+        
+        if (isNumeric) {
+          // Search by patient ID
+          query = query.eq('patient_id', parseInt(searchQuery));
+        } else {
+          // Search by name, category, or phone number
+          query = query.or(`name.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%,phone_number.ilike.%${searchQuery}%`);
+        }
       }
 
       const { data, error } = await query;
@@ -128,7 +137,7 @@ const PatientsPage = () => {
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search by name, patient ID, or phone number..."
+                placeholder="Search by patient ID, name, category, or phone number..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"

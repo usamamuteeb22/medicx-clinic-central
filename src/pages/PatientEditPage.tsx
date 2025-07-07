@@ -81,7 +81,7 @@ const PatientEditPage = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       queryClient.invalidateQueries({ queryKey: ['patient', id] });
-      navigate('/all-patients');
+      navigate('/patients');
     },
     onError: (error) => {
       console.error('Error updating patient:', error);
@@ -109,6 +109,10 @@ const PatientEditPage = () => {
     updatePatientMutation.mutate(updatedData);
   };
 
+  const handleBack = () => {
+    navigate('/patients');
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -130,7 +134,7 @@ const PatientEditPage = () => {
       <div className="flex items-center space-x-4">
         <Button
           variant="outline"
-          onClick={() => navigate('/all-patients')}
+          onClick={handleBack}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Patients
@@ -212,7 +216,7 @@ const PatientEditPage = () => {
             </div>
 
             <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => navigate('/all-patients')}>
+              <Button type="button" variant="outline" onClick={handleBack}>
                 Cancel
               </Button>
               <Button type="submit" disabled={updatePatientMutation.isPending}>

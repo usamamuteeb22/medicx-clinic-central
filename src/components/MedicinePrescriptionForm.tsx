@@ -1,6 +1,6 @@
 
 import React from 'react';
-import MedicineSearchForm from './prescription/MedicineSearchForm';
+import ModernMedicineSearch from './prescription/ModernMedicineSearch';
 import PrescribedMedicinesList from './prescription/PrescribedMedicinesList';
 
 interface Medicine {
@@ -41,7 +41,7 @@ const MedicinePrescriptionForm: React.FC<MedicinePrescriptionFormProps> = ({
 
   return (
     <div className="space-y-6">
-      <MedicineSearchForm
+      <ModernMedicineSearch
         reportId={reportId}
         prescribedMedicines={prescribedMedicines}
         onAddMedicine={handleAddMedicine}
