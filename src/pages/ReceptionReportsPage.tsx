@@ -59,41 +59,63 @@ const ReceptionReportsPage = () => {
   const { data: reports, isLoading } = useQuery({
     queryKey: ['reception-reports', searchQuery],
     queryFn: async () => {
-      let query = supabase
+      // First get the reports
+      let reportsQuery = supabase
         .from('patient_reports')
-        .select(`
-          id,
-          patient_id,
-          hemoglobin,
-          wbc,
-          platelets,
-          blood_pressure,
-          temperature,
-          weight,
-          clinical_complaint,
-          created_at,
-          status,
-          patients!inner (
-            id,
-            patient_id,
-            name,
-            age,
-            gender,
-            phone_number
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (searchQuery) {
-        query = query.or(`patients.name.ilike.%${searchQuery}%,patients.patient_id.eq.${searchQuery}`);
+        // For reception, we'll filter by patient after fetching
       }
 
-      const { data, error } = await query;
-      if (error) {
-        console.error('Error fetching reports:', error);
-        throw error;
+      const { data: reportsData, error: reportsError } = await reportsQuery;
+      if (reportsError) {
+        console.error('Error fetching reports:', reportsError);
+        throw reportsError;
       }
-      return data || [];
+
+      if (!reportsData || reportsData.length === 0) return [];
+
+      // Get patient IDs from reports
+      const patientIds = reportsData.map(report => report.patient_id);
+
+      // Fetch patients separately
+      const { data: patientsData, error: patientsError } = await supabase
+        .from('patients')
+        .select('id, patient_id, name, age, gender, phone_number')
+        .in('id', patientIds);
+
+      if (patientsError) {
+        console.error('Error fetching patients:', patientsError);
+        throw patientsError;
+      }
+
+      // Combine reports with patient data
+      const combinedData = reportsData.map(report => {
+        const patient = patientsData?.find(p => p.id === report.patient_id);
+        return {
+          ...report,
+          patients: patient || {
+            id: '',
+            patient_id: 0,
+            name: 'Unknown',
+            age: 0,
+            gender: 'Unknown',
+            phone_number: ''
+          }
+        };
+      });
+
+      // Apply search filter if needed
+      if (searchQuery) {
+        return combinedData.filter(report => 
+          report.patients.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          report.patients.patient_id.toString().includes(searchQuery)
+        );
+      }
+
+      return combinedData;
     }
   });
 

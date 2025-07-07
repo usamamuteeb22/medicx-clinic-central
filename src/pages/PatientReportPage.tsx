@@ -31,7 +31,7 @@ interface Medicine {
   total_quantity: number;
 }
 
-interface PrescribedMedicine {
+interface DoctorPrescribedMedicine {
   id: string;
   medicine: Medicine;
   quantity: number;
@@ -64,7 +64,7 @@ const PatientReportPage = () => {
   const [selectedReport, setSelectedReport] = useState<PatientReport | null>(null);
   const [showReportForm, setShowReportForm] = useState(false);
   const [showPDFGenerator, setShowPDFGenerator] = useState(false);
-  const [prescribedMedicines, setPrescribedMedicines] = useState<PrescribedMedicine[]>([]);
+  const [prescribedMedicines, setPrescribedMedicines] = useState<DoctorPrescribedMedicine[]>([]);
   
   // Form state for doctor sections
   const [medicalHistory, setMedicalHistory] = useState('');
@@ -78,50 +78,66 @@ const PatientReportPage = () => {
   const { data: reports, isLoading } = useQuery({
     queryKey: ['doctor-reports', searchQuery],
     queryFn: async () => {
-      let query = supabase
+      // First get the reports
+      let reportsQuery = supabase
         .from('patient_reports')
-        .select(`
-          id,
-          patient_id,
-          hemoglobin,
-          wbc,
-          platelets,
-          blood_pressure,
-          temperature,
-          weight,
-          clinical_complaint,
-          medical_history,
-          observations,
-          recommendations,
-          created_at,
-          status,
-          patients!inner (
-            id,
-            patient_id,
-            name,
-            age,
-            gender,
-            phone_number
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (searchQuery) {
-        // Search by report ID or patient name/ID
-        const isReportId = searchQuery.length >= 8; // Assuming report IDs are at least 8 characters
+        const isReportId = searchQuery.length >= 8;
         if (isReportId) {
-          query = query.ilike('id', `${searchQuery}%`);
-        } else {
-          query = query.or(`patients.name.ilike.%${searchQuery}%,patients.patient_id.eq.${searchQuery}`);
+          reportsQuery = reportsQuery.ilike('id', `${searchQuery}%`);
         }
       }
 
-      const { data, error } = await query;
-      if (error) {
-        console.error('Error fetching reports:', error);
-        throw error;
+      const { data: reportsData, error: reportsError } = await reportsQuery;
+      if (reportsError) {
+        console.error('Error fetching reports:', reportsError);
+        throw reportsError;
       }
-      return data || [];
+
+      if (!reportsData || reportsData.length === 0) return [];
+
+      // Get patient IDs from reports
+      const patientIds = reportsData.map(report => report.patient_id);
+
+      // Fetch patients separately
+      const { data: patientsData, error: patientsError } = await supabase
+        .from('patients')
+        .select('id, patient_id, name, age, gender, phone_number')
+        .in('id', patientIds);
+
+      if (patientsError) {
+        console.error('Error fetching patients:', patientsError);
+        throw patientsError;
+      }
+
+      // Combine reports with patient data
+      const combinedData = reportsData.map(report => {
+        const patient = patientsData?.find(p => p.id === report.patient_id);
+        return {
+          ...report,
+          patients: patient || {
+            id: '',
+            patient_id: 0,
+            name: 'Unknown',
+            age: 0,
+            gender: 'Unknown',
+            phone_number: ''
+          }
+        };
+      });
+
+      // Apply patient search filter if needed
+      if (searchQuery && searchQuery.length < 8) {
+        return combinedData.filter(report => 
+          report.patients.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          report.patients.patient_id.toString().includes(searchQuery)
+        );
+      }
+
+      return combinedData;
     }
   });
 
@@ -177,7 +193,7 @@ const PatientReportPage = () => {
           evening: prescription.evening,
           night: prescription.night
         };
-      }) as PrescribedMedicine[];
+      }) as DoctorPrescribedMedicine[];
     },
     enabled: !!selectedReport?.id
   });
