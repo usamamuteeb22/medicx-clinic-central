@@ -21,7 +21,8 @@ const Navbar = () => {
           ...baseItems,
           { path: '/patients', label: 'Add Patient', icon: UserPlus },
           { path: '/all-patients', label: 'Patients', icon: Users },
-          { path: '/patient-reports', label: 'Patient Reports', icon: FileText },
+          { path: '/reception-reports', label: 'Reception Reports', icon: FileText },
+          { path: '/patient-reports', label: 'Patient Reports', icon: Stethoscope },
           { path: '/reports', label: 'Reports', icon: BarChart3 },
           { path: '/medicine-usage', label: 'Medicine Usage', icon: History },
           { path: '/medicines', label: 'Medicine Stock', icon: Pill }
@@ -31,13 +32,14 @@ const Navbar = () => {
           ...baseItems,
           { path: '/patients', label: 'Add Patient', icon: UserPlus },
           { path: '/all-patients', label: 'Patients', icon: Users },
+          { path: '/reception-reports', label: 'Reception Reports', icon: FileText },
           { path: '/reports', label: 'Reports', icon: BarChart3 }
         ];
       case 'doctor':
         return [
           ...baseItems,
           { path: '/all-patients', label: 'Patients', icon: Users },
-          { path: '/patient-reports', label: 'Patient Reports', icon: FileText },
+          { path: '/patient-reports', label: 'Patient Reports', icon: Stethoscope },
           { path: '/reports', label: 'Reports', icon: BarChart3 },
           { path: '/medicine-usage', label: 'Medicine Usage', icon: History }
         ];

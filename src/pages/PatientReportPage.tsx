@@ -14,6 +14,7 @@ import { FileText, Plus, Trash2, User, Stethoscope, Pill, Printer } from 'lucide
 import PatientSelector from '@/components/PatientSelector';
 import MedicinePrescriptionForm from '@/components/MedicinePrescriptionForm';
 import ReportPDFGenerator from '@/components/ReportPDFGenerator';
+import PatientReportSearchBar from '@/components/reception/PatientReportSearchBar';
 
 interface Patient {
   id: string;
@@ -39,6 +40,14 @@ interface PrescribedMedicine {
   afternoon: boolean;
   evening: boolean;
   night: boolean;
+}
+
+interface ReceptionReport {
+  id: string;
+  report_id: number;
+  patient_id: string;
+  created_at: string;
+  patient: Patient;
 }
 
 const PatientReportPage = () => {
@@ -157,6 +166,47 @@ const PatientReportPage = () => {
     }
   };
 
+  const handleReceptionReportSelect = async (report: ReceptionReport) => {
+    try {
+      // Fetch the reception report details and pre-fill the form
+      const { data: receptionReportData, error } = await supabase
+        .from('patient_reports')
+        .select('*')
+        .eq('id', report.id)
+        .single();
+
+      if (error) throw error;
+
+      // Set the patient
+      setSelectedPatient(report.patient);
+
+      // Pre-fill the medical vitals from reception report
+      setFormData(prev => ({
+        ...prev,
+        hemoglobin: receptionReportData.hemoglobin?.toString() || '',
+        wbc: receptionReportData.wbc?.toString() || '',
+        platelets: receptionReportData.platelets?.toString() || '',
+        blood_pressure: receptionReportData.blood_pressure || '',
+        temperature: receptionReportData.temperature?.toString() || '',
+        weight: receptionReportData.weight?.toString() || '',
+        clinical_complaint: receptionReportData.clinical_complaint || ''
+      }));
+
+      toast({
+        title: "Reception Report Loaded",
+        description: "Medical vitals and clinical details have been pre-filled from the reception report."
+      });
+
+    } catch (error) {
+      console.error('Error loading reception report:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load reception report details"
+      });
+    }
+  };
+
   const resetForm = () => {
     setSelectedPatient(null);
     setFormData({
@@ -192,6 +242,9 @@ const PatientReportPage = () => {
           <span>New Report</span>
         </Button>
       </div>
+
+      {/* Enhanced Search for Reception Reports */}
+      <PatientReportSearchBar onReportSelect={handleReceptionReportSelect} />
 
       {/* Patient Selection */}
       <Card>

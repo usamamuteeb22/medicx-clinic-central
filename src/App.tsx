@@ -14,6 +14,7 @@ import PatientEditPage from "./pages/PatientEditPage";
 import MedicineStockPage from "./pages/MedicineStockPage";
 import MedicineDetailPage from "./pages/MedicineDetailPage";
 import PatientReportPage from "./pages/PatientReportPage";
+import ReceptionReportPage from "./pages/ReceptionReportPage";
 import ReportsPage from "./pages/ReportsPage";
 import MedicineUsagePage from "./pages/MedicineUsagePage";
 import NotFound from "./pages/NotFound";
@@ -107,6 +108,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <PatientEditPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reception-reports" 
+              element={
+                <ProtectedRoute>
+                  <ReceptionReportPage />
                 </ProtectedRoute>
               } 
             />
