@@ -52,15 +52,15 @@ const PatientSearchFilters: React.FC<PatientSearchFiltersProps> = ({
       </div>
       <div className="space-y-2">
         <Label>Search by Category</Label>
-        <Select value={searchFilters.category} onValueChange={(value) => updateFilter('category', value)}>
+        <Select value={searchFilters.category} onValueChange={(value) => updateFilter('category', value || '')}>
           <SelectTrigger>
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Categories</SelectItem>
-            <SelectItem value="Paid">Paid</SelectItem>
-            <SelectItem value="Free">Free</SelectItem>
-            <SelectItem value="Thalassemic">Thalassemic</SelectItem>
+            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="PAID">Paid</SelectItem>
+            <SelectItem value="FREE">Free</SelectItem>
+            <SelectItem value="THALASSEMIC">Thalassemic</SelectItem>
           </SelectContent>
         </Select>
       </div>
