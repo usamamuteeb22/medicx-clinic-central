@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
-import { FileText, Search, Printer, Download } from 'lucide-react';
+import { FileText, Search } from 'lucide-react';
 import ReportPDFGenerator from '@/components/ReportPDFGenerator';
 
 interface Patient {
@@ -65,25 +66,17 @@ const ReportsPage = () => {
   const [searchResults, setSearchResults] = useState<Patient[]>([]);
 
   // Check user permissions - now includes reception
-  const canAccessPage = user?.role === 'admin' || user?.role === 'doctor' || user?.role === 'reception';
-
-  if (!canAccessPage) {
-    return (
-      <div className="max-w-7xl mx-auto p-6">
-        <Card>
-          <CardContent className="text-center py-8">
-            <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
-            <p className="text-gray-600">Only Admin, Doctor, and Reception users can access this page.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const canAccessPage = useMemo(() => 
+    user?.role === 'admin' || user?.role === 'doctor' || user?.role === 'reception',
+    [user?.role]
+  );
 
   // Load all latest reports on component mount
   useEffect(() => {
-    fetchAllLatestReports();
-  }, []);
+    if (canAccessPage) {
+      fetchAllLatestReports();
+    }
+  }, [canAccessPage]);
 
   // Search patients as user types
   useEffect(() => {
@@ -103,7 +96,7 @@ const ReportsPage = () => {
     }
   }, [selectedPatient]);
 
-  const searchPatients = async () => {
+  const searchPatients = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('patients')
@@ -116,9 +109,9 @@ const ReportsPage = () => {
     } catch (error) {
       console.error('Error searching patients:', error);
     }
-  };
+  }, [searchTerm]);
 
-  const fetchPatientReports = async () => {
+  const fetchPatientReports = useCallback(async () => {
     if (!selectedPatient) return;
 
     setLoading(true);
@@ -138,7 +131,7 @@ const ReportsPage = () => {
       })) || [];
 
       setPatientReports(reportsWithPatient);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching patient reports:', error);
       toast({
         variant: "destructive",
@@ -148,14 +141,15 @@ const ReportsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPatient]);
 
-  const fetchAllLatestReports = async () => {
+  const fetchAllLatestReports = useCallback(async () => {
     try {
       const { data: reportsData, error } = await supabase
         .from('patient_reports')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50); // Limit for performance
 
       if (error) throw error;
 
@@ -183,12 +177,17 @@ const ReportsPage = () => {
       );
 
       setAllLatestReports(reportsWithPatients);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching latest reports:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch reports"
+      });
     }
-  };
+  }, []);
 
-  const handleReportClick = async (report: PatientReport) => {
+  const handleReportClick = useCallback(async (report: PatientReport) => {
     setSelectedReport(report);
     
     // Fetch prescribed medicines for this report
@@ -223,7 +222,7 @@ const ReportsPage = () => {
 
       setPrescribedMedicines(medicinesWithDetails);
       setShowPDFPreview(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching prescribed medicines:', error);
       toast({
         variant: "destructive",
@@ -231,23 +230,36 @@ const ReportsPage = () => {
         description: "Failed to load report details"
       });
     }
-  };
+  }, []);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
     });
-  };
+  }, []);
 
-  const formatTime = (dateString: string) => {
+  const formatTime = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true
     });
-  };
+  }, []);
+
+  if (!canAccessPage) {
+    return (
+      <div className="max-w-7xl mx-auto p-6">
+        <Card>
+          <CardContent className="text-center py-8">
+            <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
+            <p className="text-gray-600">Only Admin, Doctor, and Reception users can access this page.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -376,36 +388,44 @@ const ReportsPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allLatestReports.map((report) => (
-                  <TableRow 
-                    key={report.id}
-                    className="cursor-pointer hover:bg-gray-50"
-                    onClick={() => handleReportClick(report)}
-                  >
-                    <TableCell className="font-medium">{report.patient.patient_id}</TableCell>
-                    <TableCell>{report.patient.name}</TableCell>
-                    <TableCell className="capitalize">{report.patient.gender}</TableCell>
-                    <TableCell>{report.patient.phone_number || 'N/A'}</TableCell>
-                    <TableCell>
-                      <div>
-                        <div>{formatDate(report.created_at)}</div>
-                        <div className="text-sm text-gray-500">{formatTime(report.created_at)}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleReportClick(report);
-                        }}
-                      >
-                        View Report
-                      </Button>
+                {allLatestReports.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      No reports found
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  allLatestReports.map((report) => (
+                    <TableRow 
+                      key={report.id}
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleReportClick(report)}
+                    >
+                      <TableCell className="font-medium">{report.patient.patient_id}</TableCell>
+                      <TableCell>{report.patient.name}</TableCell>
+                      <TableCell className="capitalize">{report.patient.gender}</TableCell>
+                      <TableCell>{report.patient.phone_number || 'N/A'}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div>{formatDate(report.created_at)}</div>
+                          <div className="text-sm text-gray-500">{formatTime(report.created_at)}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReportClick(report);
+                          }}
+                        >
+                          View Report
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

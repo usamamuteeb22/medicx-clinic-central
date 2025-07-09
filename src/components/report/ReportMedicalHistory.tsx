@@ -1,48 +1,65 @@
 
 import React from 'react';
-
-interface ReportData {
-  hemoglobin: string;
-  wbc: string;
-  platelets: string;
-  blood_pressure: string;
-  temperature: string;
-  weight: string;
-  clinical_complaint: string;
-  medical_history: string;
-  observations: string;
-  recommendations: string;
-}
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { FileText } from 'lucide-react';
 
 interface ReportMedicalHistoryProps {
-  reportData: ReportData;
+  formData: {
+    medical_history: string;
+    observations: string;
+    recommendations: string;
+  };
+  onFormDataChange: (data: any) => void;
 }
 
-const ReportMedicalHistory: React.FC<ReportMedicalHistoryProps> = ({ 
-  reportData 
-}) => {
+const ReportMedicalHistory: React.FC<ReportMedicalHistoryProps> = ({ formData, onFormDataChange }) => {
+  const updateField = (field: string, value: string) => {
+    onFormDataChange({ ...formData, [field]: value });
+  };
+
   return (
-    <div className="section history-section">
-      <div className="section-title">Medical History & Notes</div>
-      {reportData.medical_history && (
-        <div className="history-item">
-          <h4>Medical History:</h4>
-          <p>{reportData.medical_history}</p>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center space-x-2">
+          <FileText className="h-5 w-5" />
+          <span>Medical History & Notes</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="medical_history">Medical History</Label>
+          <Textarea
+            id="medical_history"
+            placeholder="Previous medical conditions, surgeries, allergies..."
+            value={formData.medical_history}
+            onChange={(e) => updateField('medical_history', e.target.value)}
+            rows={3}
+          />
         </div>
-      )}
-      {reportData.observations && (
-        <div className="history-item">
-          <h4>Clinical Observations:</h4>
-          <p>{reportData.observations}</p>
+        <div className="space-y-2">
+          <Label htmlFor="observations">Clinical Observations</Label>
+          <Textarea
+            id="observations"
+            placeholder="Doctor's observations and findings..."
+            value={formData.observations}
+            onChange={(e) => updateField('observations', e.target.value)}
+            rows={3}
+          />
         </div>
-      )}
-      {reportData.recommendations && (
-        <div className="history-item">
-          <h4>Recommendations:</h4>
-          <p>{reportData.recommendations}</p>
+        <div className="space-y-2">
+          <Label htmlFor="recommendations">Recommendations</Label>
+          <Textarea
+            id="recommendations"
+            placeholder="Treatment recommendations and follow-up instructions..."
+            value={formData.recommendations}
+            onChange={(e) => updateField('recommendations', e.target.value)}
+            rows={3}
+          />
         </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

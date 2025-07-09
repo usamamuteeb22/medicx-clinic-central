@@ -1,20 +1,17 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { FileText, Plus, Trash2, User, Stethoscope, Pill, Printer } from 'lucide-react';
+import { FileText, Plus, User, Stethoscope, Pill, Printer } from 'lucide-react';
 import PatientSelector from '@/components/PatientSelector';
 import MedicinePrescriptionForm from '@/components/MedicinePrescriptionForm';
 import ReportPDFGenerator from '@/components/ReportPDFGenerator';
 import PatientReportSearchBar from '@/components/reception/PatientReportSearchBar';
+import ReportVitals from '@/components/report/ReportVitals';
+import ReportMedicalHistory from '@/components/report/ReportMedicalHistory';
 
 interface Patient {
   id: string;
@@ -71,22 +68,12 @@ const PatientReportPage = () => {
   const [savedReportId, setSavedReportId] = useState<string | null>(null);
 
   // Check user permissions
-  const canAccessPage = user?.role === 'admin' || user?.role === 'doctor';
+  const canAccessPage = useMemo(() => 
+    user?.role === 'admin' || user?.role === 'doctor', 
+    [user?.role]
+  );
 
-  if (!canAccessPage) {
-    return (
-      <div className="max-w-7xl mx-auto p-6">
-        <Card>
-          <CardContent className="text-center py-8">
-            <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
-            <p className="text-gray-600">Only Admin and Doctor users can access this page.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const handleSaveReport = async () => {
+  const handleSaveReport = useCallback(async () => {
     if (!selectedPatient) {
       toast({
         variant: "destructive",
@@ -138,6 +125,7 @@ const PatientReportPage = () => {
             medicine_id: med.medicine.id,
             quantity: med.quantity,
             morning: med.morning,
+            afternoon: med.afternoon,
             evening: med.evening,
             night: med.night
           })
@@ -154,7 +142,7 @@ const PatientReportPage = () => {
       // Show PDF preview
       setShowPDFPreview(true);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving report:', error);
       toast({
         variant: "destructive",
@@ -164,9 +152,9 @@ const PatientReportPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPatient, prescribedMedicines, formData, user?.id]);
 
-  const handleReceptionReportSelect = async (report: ReceptionReport) => {
+  const handleReceptionReportSelect = useCallback(async (report: ReceptionReport) => {
     try {
       // Fetch the reception report details and pre-fill the form
       const { data: receptionReportData, error } = await supabase
@@ -197,7 +185,7 @@ const PatientReportPage = () => {
         description: "Medical vitals and clinical details have been pre-filled from the reception report."
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading reception report:', error);
       toast({
         variant: "destructive",
@@ -205,9 +193,9 @@ const PatientReportPage = () => {
         description: "Failed to load reception report details"
       });
     }
-  };
+  }, []);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setSelectedPatient(null);
     setFormData({
       hemoglobin: '',
@@ -224,7 +212,20 @@ const PatientReportPage = () => {
     setPrescribedMedicines([]);
     setSavedReportId(null);
     setShowPDFPreview(false);
-  };
+  }, []);
+
+  if (!canAccessPage) {
+    return (
+      <div className="max-w-7xl mx-auto p-6">
+        <Card>
+          <CardContent className="text-center py-8">
+            <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
+            <p className="text-gray-600">Only Admin and Doctor users can access this page.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -265,94 +266,10 @@ const PatientReportPage = () => {
       {selectedPatient && (
         <>
           {/* Medical Vitals */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Stethoscope className="h-5 w-5" />
-                <span>Medical Vitals & Clinical Details</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="hemoglobin">Hemoglobin (HB)</Label>
-                  <Input
-                    id="hemoglobin"
-                    type="number"
-                    step="0.1"
-                    placeholder="e.g., 12.5"
-                    value={formData.hemoglobin}
-                    onChange={(e) => setFormData({...formData, hemoglobin: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="wbc">WBC Count</Label>
-                  <Input
-                    id="wbc"
-                    type="number"
-                    placeholder="e.g., 7000"
-                    value={formData.wbc}
-                    onChange={(e) => setFormData({...formData, wbc: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="platelets">Platelets</Label>
-                  <Input
-                    id="platelets"
-                    type="number"
-                    placeholder="e.g., 250000"
-                    value={formData.platelets}
-                    onChange={(e) => setFormData({...formData, platelets: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="blood_pressure">Blood Pressure</Label>
-                  <Input
-                    id="blood_pressure"
-                    placeholder="e.g., 120/80"
-                    value={formData.blood_pressure}
-                    onChange={(e) => setFormData({...formData, blood_pressure: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="temperature">Temperature (°F)</Label>
-                  <Input
-                    id="temperature"
-                    type="number"
-                    step="0.1"
-                    placeholder="e.g., 98.6"
-                    value={formData.temperature}
-                    onChange={(e) => setFormData({...formData, temperature: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="weight">Weight (kg)</Label>
-                  <Input
-                    id="weight"
-                    type="number"
-                    step="0.1"
-                    placeholder="e.g., 70.5"
-                    value={formData.weight}
-                    onChange={(e) => setFormData({...formData, weight: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="clinical_complaint">Clinical Complaint</Label>
-                <Textarea
-                  id="clinical_complaint"
-                  placeholder="Describe the patient's complaints and symptoms..."
-                  value={formData.clinical_complaint}
-                  onChange={(e) => setFormData({...formData, clinical_complaint: e.target.value})}
-                  rows={3}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <ReportVitals
+            formData={formData}
+            onFormDataChange={setFormData}
+          />
 
           {/* Medicine Prescription */}
           <Card>
@@ -371,46 +288,10 @@ const PatientReportPage = () => {
           </Card>
 
           {/* Medical History & Notes */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <FileText className="h-5 w-5" />
-                <span>Medical History & Notes</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="medical_history">Medical History</Label>
-                <Textarea
-                  id="medical_history"
-                  placeholder="Previous medical conditions, surgeries, allergies..."
-                  value={formData.medical_history}
-                  onChange={(e) => setFormData({...formData, medical_history: e.target.value})}
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="observations">Clinical Observations</Label>
-                <Textarea
-                  id="observations"
-                  placeholder="Doctor's observations and findings..."
-                  value={formData.observations}
-                  onChange={(e) => setFormData({...formData, observations: e.target.value})}
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="recommendations">Recommendations</Label>
-                <Textarea
-                  id="recommendations"
-                  placeholder="Treatment recommendations and follow-up instructions..."
-                  value={formData.recommendations}
-                  onChange={(e) => setFormData({...formData, recommendations: e.target.value})}
-                  rows={3}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <ReportMedicalHistory
+            formData={formData}
+            onFormDataChange={setFormData}
+          />
 
           {/* Action Buttons */}
           <Card>

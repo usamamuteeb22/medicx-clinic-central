@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import { Search, Download, Edit } from 'lucide-react';
+import { Search, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { generatePatientsExcel } from '@/utils/patientsExcelUtils';
 import { generatePatientsPDF } from '@/utils/patientsPdfUtils';
@@ -28,9 +28,10 @@ const PatientsPage = () => {
     id: '',
     name: '',
     phone: '',
-    category: ''
+    category: 'all'
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPatients();
@@ -39,7 +40,9 @@ const PatientsPage = () => {
   const fetchPatients = async () => {
     try {
       setLoading(true);
+      setError(null);
       console.log('Fetching patients...');
+      
       const { data, error } = await supabase
         .from('patients')
         .select('*')
@@ -50,14 +53,15 @@ const PatientsPage = () => {
         throw error;
       }
       
-      console.log('Patients fetched:', data);
+      console.log('Patients fetched successfully:', data?.length || 0, 'records');
       setPatients(data || []);
-    } catch (error) {
-      console.error('Error fetching patients:', error);
+    } catch (error: any) {
+      console.error('Error in fetchPatients:', error);
+      setError(error.message || 'Failed to fetch patients');
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to fetch patients"
+        description: error.message || "Failed to fetch patients"
       });
     } finally {
       setLoading(false);
@@ -65,25 +69,51 @@ const PatientsPage = () => {
   };
 
   const filteredPatients = patients.filter(patient => {
-    const matchesId = searchFilters.id === '' || 
-      patient.patient_id.toString().includes(searchFilters.id);
-    const matchesName = searchFilters.name === '' || 
-      patient.name.toLowerCase().includes(searchFilters.name.toLowerCase());
-    const matchesPhone = searchFilters.phone === '' || 
+    if (!patient) return false;
+    
+    const matchesId = !searchFilters.id || 
+      patient.patient_id?.toString().includes(searchFilters.id);
+    const matchesName = !searchFilters.name || 
+      patient.name?.toLowerCase().includes(searchFilters.name.toLowerCase());
+    const matchesPhone = !searchFilters.phone || 
       (patient.phone_number && patient.phone_number.includes(searchFilters.phone));
-    const matchesCategory = searchFilters.category === '' || 
+    const matchesCategory = !searchFilters.category || 
       searchFilters.category === 'all' ||
-      patient.category === searchFilters.category;
+      (patient.category && patient.category.toLowerCase() === searchFilters.category.toLowerCase());
     
     return matchesId && matchesName && matchesPhone && matchesCategory;
   });
 
   const handleDownloadExcel = () => {
-    generatePatientsExcel(filteredPatients);
+    try {
+      generatePatientsExcel(filteredPatients);
+      toast({
+        title: "Success",
+        description: "Excel file downloaded successfully"
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to generate Excel file"
+      });
+    }
   };
 
   const handleDownloadPDF = () => {
-    generatePatientsPDF(filteredPatients);
+    try {
+      generatePatientsPDF(filteredPatients);
+      toast({
+        title: "Success",
+        description: "PDF file downloaded successfully"
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to generate PDF file"
+      });
+    }
   };
 
   const handleEditPatient = (patientId: string) => {
@@ -101,16 +131,38 @@ const PatientsPage = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="text-center py-8">
+            <h2 className="text-xl font-semibold text-red-600 mb-2">Error Loading Patients</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button onClick={fetchPatients}>Try Again</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">All Patients</h1>
         <div className="flex space-x-2">
-          <Button onClick={handleDownloadExcel} variant="outline" className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700">
+          <Button 
+            onClick={handleDownloadExcel} 
+            variant="outline" 
+            className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
+          >
             <Download className="h-4 w-4 mr-2" />
             Download Excel
           </Button>
-          <Button onClick={handleDownloadPDF} variant="outline" className="bg-red-50 hover:bg-red-100 border-red-200 text-red-700">
+          <Button 
+            onClick={handleDownloadPDF} 
+            variant="outline" 
+            className="bg-red-50 hover:bg-red-100 border-red-200 text-red-700"
+          >
             <Download className="h-4 w-4 mr-2" />
             Download PDF
           </Button>
