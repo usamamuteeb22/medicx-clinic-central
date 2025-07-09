@@ -57,10 +57,10 @@ const PatientSearchFilters: React.FC<PatientSearchFiltersProps> = ({
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="PAID">Paid</SelectItem>
-            <SelectItem value="FREE">Free</SelectItem>
-            <SelectItem value="THALASSEMIC">Thalassemic</SelectItem>
+            <SelectItem value="">All Categories</SelectItem>
+            <SelectItem value="Paid">Paid</SelectItem>
+            <SelectItem value="Free">Free</SelectItem>
+            <SelectItem value="Thalassemic">Thalassemic</SelectItem>
           </SelectContent>
         </Select>
       </div>
