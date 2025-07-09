@@ -21,6 +21,7 @@ interface Patient {
   phone_number?: string;
   address?: string;
   description?: string;
+  category?: string;
   registration_date: string;
 }
 
@@ -32,13 +33,15 @@ const AddPatientPage = () => {
     gender: '',
     phone_number: '',
     address: '',
-    description: ''
+    description: '',
+    category: ''
   });
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchFilters, setSearchFilters] = useState({
     id: '',
     name: '',
-    phone: ''
+    phone: '',
+    category: ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -81,6 +84,7 @@ const AddPatientPage = () => {
             phone_number: formData.phone_number || null,
             address: formData.address || null,
             description: formData.description || null,
+            category: formData.category || null,
             created_by: user.id
           }
         ]);
@@ -99,7 +103,8 @@ const AddPatientPage = () => {
         gender: '',
         phone_number: '',
         address: '',
-        description: ''
+        description: '',
+        category: ''
       });
 
       // Refresh patients list
@@ -123,8 +128,10 @@ const AddPatientPage = () => {
       patient.name.toLowerCase().includes(searchFilters.name.toLowerCase());
     const matchesPhone = searchFilters.phone === '' || 
       (patient.phone_number && patient.phone_number.includes(searchFilters.phone));
+    const matchesCategory = searchFilters.category === '' || 
+      (patient.category && patient.category.toLowerCase().includes(searchFilters.category.toLowerCase()));
     
-    return matchesId && matchesName && matchesPhone;
+    return matchesId && matchesName && matchesPhone && matchesCategory;
   });
 
   return (
@@ -176,7 +183,21 @@ const AddPatientPage = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Paid">Paid</SelectItem>
+                    <SelectItem value="Free">Free</SelectItem>
+                    <SelectItem value="Thalassemic">Thalassemic</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
                 <Input
@@ -225,7 +246,7 @@ const AddPatientPage = () => {
         <CardContent>
           <div className="space-y-4">
             {/* Search Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>Search by ID</Label>
                 <Input
@@ -250,6 +271,20 @@ const AddPatientPage = () => {
                   onChange={(e) => setSearchFilters({...searchFilters, phone: e.target.value})}
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Search by Category</Label>
+                <Select value={searchFilters.category} onValueChange={(value) => setSearchFilters({...searchFilters, category: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="Paid">Paid</SelectItem>
+                    <SelectItem value="Free">Free</SelectItem>
+                    <SelectItem value="Thalassemic">Thalassemic</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Patients Table */}
@@ -261,6 +296,7 @@ const AddPatientPage = () => {
                     <TableHead>Name</TableHead>
                     <TableHead>Age</TableHead>
                     <TableHead>Gender</TableHead>
+                    <TableHead>Category</TableHead>
                     <TableHead>Phone Number</TableHead>
                     <TableHead>Address</TableHead>
                     <TableHead>Registration Date</TableHead>
@@ -269,7 +305,7 @@ const AddPatientPage = () => {
                 <TableBody>
                   {filteredPatients.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-4">
+                      <TableCell colSpan={8} className="text-center py-4">
                         No patients found
                       </TableCell>
                     </TableRow>
@@ -280,6 +316,7 @@ const AddPatientPage = () => {
                         <TableCell className="font-medium">{patient.name}</TableCell>
                         <TableCell>{patient.age}</TableCell>
                         <TableCell>{patient.gender}</TableCell>
+                        <TableCell>{patient.category || 'N/A'}</TableCell>
                         <TableCell>{patient.phone_number || 'N/A'}</TableCell>
                         <TableCell>{patient.address || 'N/A'}</TableCell>
                         <TableCell>

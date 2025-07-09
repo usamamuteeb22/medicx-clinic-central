@@ -1,26 +1,17 @@
-import React, { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Search, Edit, Trash2, Download } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
+import { Search, Download, Edit } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { generatePatientsExcel } from '@/utils/patientsExcelUtils';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+import { generatePatientsPDF } from '@/utils/patientsPdfUtils';
 
 interface Patient {
   id: string;
@@ -28,72 +19,82 @@ interface Patient {
   name: string;
   age: number;
   gender: string;
-  phone_number: string;
-  address: string;
+  phone_number?: string;
+  address?: string;
+  description?: string;
+  category?: string;
   registration_date: string;
-  description: string;
 }
 
 const PatientsPage = () => {
-  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [searchFilters, setSearchFilters] = useState({
+    id: '',
+    name: '',
+    phone: '',
+    category: ''
+  });
+  const [loading, setLoading] = useState(true);
 
-  const { data: patients = [], isLoading } = useQuery({
-    queryKey: ['patients'],
-    queryFn: async () => {
+  useEffect(() => {
+    fetchPatients();
+  }, []);
+
+  const fetchPatients = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching patients...');
       const { data, error } = await supabase
         .from('patients')
         .select('*')
-        .order('registration_date', { ascending: false });
-
-      if (error) throw error;
-      return data as Patient[];
-    }
-  });
-
-  const handleDeletePatient = async (patientId: string, patientName: string) => {
-    try {
-      console.log('Attempting to delete patient:', patientId, patientName);
-      
-      const { error } = await supabase
-        .from('patients')
-        .delete()
-        .eq('id', patientId);
+        .order('patient_id', { ascending: false });
 
       if (error) {
-        console.error('Error deleting patient:', error);
+        console.error('Error fetching patients:', error);
         throw error;
       }
-
-      toast({
-        title: "Patient Deleted",
-        description: `${patientName} has been successfully deleted.`
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      
+      console.log('Patients fetched:', data);
+      setPatients(data || []);
     } catch (error) {
-      console.error('Error deleting patient:', error);
+      console.error('Error fetching patients:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete patient. Please try again."
+        description: "Failed to fetch patients"
       });
+    } finally {
+      setLoading(false);
     }
   };
+
+  const filteredPatients = patients.filter(patient => {
+    const matchesId = searchFilters.id === '' || 
+      patient.patient_id.toString().includes(searchFilters.id);
+    const matchesName = searchFilters.name === '' || 
+      patient.name.toLowerCase().includes(searchFilters.name.toLowerCase());
+    const matchesPhone = searchFilters.phone === '' || 
+      (patient.phone_number && patient.phone_number.includes(searchFilters.phone));
+    const matchesCategory = searchFilters.category === '' || 
+      patient.category === searchFilters.category;
+    
+    return matchesId && matchesName && matchesPhone && matchesCategory;
+  });
 
   const handleDownloadExcel = () => {
     generatePatientsExcel(filteredPatients);
   };
 
-  const filteredPatients = patients.filter(patient =>
-    patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.patient_id.toString().includes(searchTerm) ||
-    patient.phone_number?.includes(searchTerm)
-  );
+  const handleDownloadPDF = () => {
+    generatePatientsPDF(filteredPatients);
+  };
 
-  if (isLoading) {
+  const handleEditPatient = (patientId: string) => {
+    navigate(`/patient/${patientId}/edit`);
+  };
+
+  if (loading) {
     return (
       <div className="container mx-auto p-6">
         <div className="text-center">Loading patients...</div>
@@ -105,100 +106,138 @@ const PatientsPage = () => {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">All Patients</h1>
-        <Button onClick={handleDownloadExcel} variant="outline" className="bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700">
-          <Download className="h-4 w-4 mr-2" />
-          Download Excel
-        </Button>
+        <div className="flex space-x-2">
+          <Button onClick={handleDownloadExcel} variant="outline" className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700">
+            <Download className="h-4 w-4 mr-2" />
+            Download Excel
+          </Button>
+          <Button onClick={handleDownloadPDF} variant="outline" className="bg-red-50 hover:bg-red-100 border-red-200 text-red-700">
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </Button>
+        </div>
       </div>
 
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-indigo-700">Search Patients</CardTitle>
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search by name, patient ID, or phone number..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md border-blue-200 focus:border-blue-400"
-            />
-          </div>
+          <CardTitle className="flex items-center space-x-2">
+            <Search className="h-5 w-5" />
+            <span>Search and Filter Patients</span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b border-blue-200">
-                  <th className="text-left p-2 font-medium text-indigo-700">Patient ID</th>
-                  <th className="text-left p-2 font-medium text-indigo-700">Name</th>
-                  <th className="text-left p-2 font-medium text-indigo-700">Age</th>
-                  <th className="text-left p-2 font-medium text-indigo-700">Gender</th>
-                  <th className="text-left p-2 font-medium text-indigo-700">Phone</th>
-                  <th className="text-left p-2 font-medium text-indigo-700">Address</th>
-                  <th className="text-left p-2 font-medium text-indigo-700">Registration Date</th>
-                  <th className="text-left p-2 font-medium text-indigo-700">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPatients.map((patient) => (
-                  <tr key={patient.id} className="border-b hover:bg-blue-50">
-                    <td className="p-2">
-                      <Badge variant="outline" className="border-blue-300 text-blue-700">{patient.patient_id}</Badge>
-                    </td>
-                    <td className="p-2 font-medium">{patient.name}</td>
-                    <td className="p-2">{patient.age}</td>
-                    <td className="p-2">
-                      <Badge variant={patient.gender === 'Male' ? 'default' : 'secondary'} className={patient.gender === 'Male' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'}>
-                        {patient.gender}
-                      </Badge>
-                    </td>
-                    <td className="p-2">{patient.phone_number}</td>
-                    <td className="p-2">{patient.address}</td>
-                    <td className="p-2">
-                      {new Date(patient.registration_date).toLocaleDateString()}
-                    </td>
-                    <td className="p-2">
-                      <div className="flex space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => navigate(`/patient/${patient.id}/edit`)}
-                          className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        {user?.role === 'admin' && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="destructive" className="bg-red-50 hover:bg-red-100 border-red-200 text-red-700">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Patient</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete {patient.name}? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeletePatient(patient.id, patient.name)}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-4">
+            {/* Search Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label>Search by ID</Label>
+                <Input
+                  placeholder="Patient ID"
+                  value={searchFilters.id}
+                  onChange={(e) => setSearchFilters({...searchFilters, id: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Search by Name</Label>
+                <Input
+                  placeholder="Patient Name"
+                  value={searchFilters.name}
+                  onChange={(e) => setSearchFilters({...searchFilters, name: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Search by Phone</Label>
+                <Input
+                  placeholder="Phone Number"
+                  value={searchFilters.phone}
+                  onChange={(e) => setSearchFilters({...searchFilters, phone: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Filter by Category</Label>
+                <Select value={searchFilters.category} onValueChange={(value) => setSearchFilters({...searchFilters, category: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="Paid">Paid</SelectItem>
+                    <SelectItem value="Free">Free</SelectItem>
+                    <SelectItem value="Thalassemic">Thalassemic</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Patients Table */}
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Age</TableHead>
+                    <TableHead>Gender</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Phone Number</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead>Registration Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPatients.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-4">
+                        No patients found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredPatients.map((patient) => (
+                      <TableRow key={patient.id}>
+                        <TableCell>{patient.patient_id}</TableCell>
+                        <TableCell className="font-medium">{patient.name}</TableCell>
+                        <TableCell>{patient.age}</TableCell>
+                        <TableCell>{patient.gender}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            patient.category === 'Paid' 
+                              ? 'bg-green-100 text-green-800'
+                              : patient.category === 'Free'
+                              ? 'bg-blue-100 text-blue-800'
+                              : patient.category === 'Thalassemic'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {patient.category || 'N/A'}
+                          </span>
+                        </TableCell>
+                        <TableCell>{patient.phone_number || 'N/A'}</TableCell>
+                        <TableCell>{patient.address || 'N/A'}</TableCell>
+                        <TableCell>
+                          {new Date(patient.registration_date).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditPatient(patient.id)}
+                            className="flex items-center space-x-1"
+                          >
+                            <Edit className="h-3 w-3" />
+                            <span>Edit</span>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="text-sm text-gray-500 mt-4">
+              Showing {filteredPatients.length} of {patients.length} patients
+            </div>
           </div>
         </CardContent>
       </Card>
