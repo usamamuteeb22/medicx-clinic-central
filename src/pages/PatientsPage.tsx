@@ -12,19 +12,9 @@ import { Search, Download, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { generatePatientsExcel } from '@/utils/patientsExcelUtils';
 import { generatePatientsPDF } from '@/utils/patientsPdfUtils';
+import { Tables } from '@/integrations/supabase/types';
 
-interface Patient {
-  id: string;
-  patient_id: number;
-  name: string;
-  age: number;
-  gender: string;
-  phone_number?: string;
-  address?: string;
-  description?: string;
-  category?: string;
-  registration_date: string;
-}
+type Patient = Tables<'patients'>;
 
 const PatientsPage = () => {
   const navigate = useNavigate();
@@ -215,7 +205,7 @@ const PatientsPage = () => {
                         <TableCell>{patient.phone_number || 'N/A'}</TableCell>
                         <TableCell>{patient.address || 'N/A'}</TableCell>
                         <TableCell>
-                          {new Date(patient.registration_date).toLocaleDateString()}
+                          {new Date(patient.registration_date || '').toLocaleDateString()}
                         </TableCell>
                         <TableCell>
                           <Button

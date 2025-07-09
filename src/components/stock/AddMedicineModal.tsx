@@ -15,12 +15,14 @@ interface AddMedicineModalProps {
   onClose: () => void;
 }
 
+type MedicineCategory = "tablet" | "syrup" | "injection" | "gel" | "ointment" | "cream" | "suspension" | "drops" | "sachet" | "infusion" | "transfusion" | "lotion";
+
 const AddMedicineModal: React.FC<AddMedicineModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     name: '',
-    category: '',
+    category: '' as MedicineCategory | '',
     quantity: '',
     expiry_date: ''
   });
@@ -28,21 +30,19 @@ const AddMedicineModal: React.FC<AddMedicineModalProps> = ({ isOpen, onClose }) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !formData.category) return;
 
     setLoading(true);
     try {
       // First, create the medicine
       const { data: medicine, error: medicineError } = await supabase
         .from('medicines')
-        .insert([
-          {
-            name: formData.name,
-            category: formData.category,
-            total_quantity: 0,
-            expiry_date: formData.expiry_date || null
-          }
-        ])
+        .insert({
+          name: formData.name,
+          category: formData.category as MedicineCategory,
+          total_quantity: 0,
+          expiry_date: formData.expiry_date || null
+        })
         .select()
         .single();
 
@@ -124,7 +124,7 @@ const AddMedicineModal: React.FC<AddMedicineModalProps> = ({ isOpen, onClose }) 
 
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
-            <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+            <Select value={formData.category} onValueChange={(value: MedicineCategory) => setFormData({...formData, category: value})}>
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
