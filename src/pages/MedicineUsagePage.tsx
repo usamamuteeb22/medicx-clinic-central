@@ -38,11 +38,20 @@ interface MedicineUsage {
   patient: Patient;
 }
 
-interface Filters {
-  dateFrom: string;
-  dateTo: string;
-  selectedMedicine: string;
-  selectedPatient: string;
+// Transform MedicineUsage to match MedicineUsageCard props
+interface MedicineUsageCardData {
+  id: string;
+  patientName: string;
+  patientNumber: number;
+  reportDate: string;
+  medicines: {
+    name: string;
+    quantity: number;
+    morning: boolean;
+    afternoon: boolean;
+    evening: boolean;
+    night: boolean;
+  }[];
 }
 
 const MedicineUsagePage = () => {
@@ -51,12 +60,9 @@ const MedicineUsagePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState<Filters>({
-    dateFrom: '',
-    dateTo: '',
-    selectedMedicine: '',
-    selectedPatient: ''
-  });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
 
   const itemsPerPage = 12;
 
@@ -66,7 +72,7 @@ const MedicineUsagePage = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [filters, usageData]);
+  }, [searchTerm, startDate, endDate, usageData]);
 
   const fetchUsageData = async () => {
     try {
@@ -148,30 +154,24 @@ const MedicineUsagePage = () => {
   const applyFilters = () => {
     let filtered = [...usageData];
 
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(item => 
+        item.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.patient.patient_id.toString().includes(searchTerm) ||
+        item.medicine.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
     // Apply date filters
-    if (filters.dateFrom) {
+    if (startDate) {
       filtered = filtered.filter(item => 
-        new Date(item.usage_date) >= new Date(filters.dateFrom)
+        new Date(item.usage_date) >= startDate
       );
     }
-    if (filters.dateTo) {
+    if (endDate) {
       filtered = filtered.filter(item => 
-        new Date(item.usage_date) <= new Date(filters.dateTo)
-      );
-    }
-
-    // Apply medicine filter
-    if (filters.selectedMedicine) {
-      filtered = filtered.filter(item => 
-        item.medicine.name.toLowerCase().includes(filters.selectedMedicine.toLowerCase())
-      );
-    }
-
-    // Apply patient filter
-    if (filters.selectedPatient) {
-      filtered = filtered.filter(item => 
-        item.patient.name.toLowerCase().includes(filters.selectedPatient.toLowerCase()) ||
-        item.patient.patient_id.toString().includes(filters.selectedPatient)
+        new Date(item.usage_date) <= endDate
       );
     }
 
@@ -179,9 +179,46 @@ const MedicineUsagePage = () => {
     setCurrentPage(1); // Reset to first page when filters change
   };
 
+  // Transform data for MedicineUsageCard
+  const transformDataForCard = (usage: MedicineUsage): MedicineUsageCardData => {
+    return {
+      id: usage.id,
+      patientName: usage.patient.name,
+      patientNumber: usage.patient.patient_id,
+      reportDate: usage.usage_date,
+      medicines: [{
+        name: usage.medicine.name,
+        quantity: usage.quantity_used,
+        morning: true, // Default values since we don't have this data
+        afternoon: false,
+        evening: false,
+        night: false
+      }]
+    };
+  };
+
+  // Transform data for Excel/PDF export
+  const transformDataForExport = (data: MedicineUsage[]) => {
+    return data.map(usage => ({
+      id: usage.id,
+      patient_name: usage.patient.name,
+      patient_number: usage.patient.patient_id,
+      report_date: usage.usage_date,
+      medicines: [{
+        name: usage.medicine.name,
+        quantity: usage.quantity_used,
+        morning: true,
+        afternoon: false,
+        evening: false,
+        night: false
+      }]
+    }));
+  };
+
   const handleDownloadExcel = () => {
     try {
-      generateMedicineUsageExcel(filteredData);
+      const exportData = transformDataForExport(filteredData);
+      generateMedicineUsageExcel(exportData);
       toast({
         title: "Success",
         description: "Excel file downloaded successfully"
@@ -197,7 +234,8 @@ const MedicineUsagePage = () => {
 
   const handleDownloadPDF = () => {
     try {
-      generateMedicineUsagePDF(filteredData);
+      const exportData = transformDataForExport(filteredData);
+      generateMedicineUsagePDF(exportData);
       toast({
         title: "Success",
         description: "PDF file downloaded successfully"
@@ -269,7 +307,14 @@ const MedicineUsagePage = () => {
         </div>
       </div>
 
-      <MedicineUsageFilters filters={filters} onFiltersChange={setFilters} />
+      <MedicineUsageFilters 
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        startDate={startDate}
+        onStartDateChange={setStartDate}
+        endDate={endDate}
+        onEndDateChange={setEndDate}
+      />
 
       {filteredData.length === 0 ? (
         <Card>
@@ -286,17 +331,27 @@ const MedicineUsagePage = () => {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {currentData.map((usage) => (
-              <MedicineUsageCard key={usage.id} usage={usage} />
-            ))}
+            {currentData.map((usage) => {
+              const cardData = transformDataForCard(usage);
+              return (
+                <MedicineUsageCard 
+                  key={usage.id} 
+                  id={cardData.id}
+                  patientName={cardData.patientName}
+                  patientNumber={cardData.patientNumber}
+                  reportDate={cardData.reportDate}
+                  medicines={cardData.medicines}
+                />
+              );
+            })}
           </div>
 
           <MedicineUsagePagination
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
-            totalItems={filteredData.length}
-            itemsPerPage={itemsPerPage}
+            totalRecords={filteredData.length}
+            recordsPerPage={itemsPerPage}
           />
         </>
       )}
