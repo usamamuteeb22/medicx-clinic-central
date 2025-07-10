@@ -36,9 +36,10 @@ const ReportMedicalHistory: React.FC<ReportMedicalHistoryProps> = ({ formData, o
           <span>Medical History & Notes</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="medical_history" className="text-sm font-medium text-gray-700">
+      <CardContent className="space-y-3">
+        {/* Medical History Section */}
+        <div className="space-y-1">
+          <Label htmlFor="medical_history" className="text-xs font-semibold">
             Medical History
           </Label>
           <textarea
@@ -46,13 +47,15 @@ const ReportMedicalHistory: React.FC<ReportMedicalHistoryProps> = ({ formData, o
             placeholder="Document the patient's medical history, previous treatments, allergies, etc..."
             value={formData.medical_history}
             onChange={(e) => handleChange('medical_history', e.target.value)}
-            className="w-full min-h-[120px] p-3 border border-gray-300 rounded-md resize-vertical focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            rows={5}
+            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent resize-none"
+            rows={2}
+            style={{ fontSize: '10pt' }}
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="observations" className="text-sm font-medium text-gray-700">
+        {/* Clinical Observations Section */}
+        <div className="space-y-1">
+          <Label htmlFor="observations" className="text-xs font-semibold">
             Clinical Observations
           </Label>
           <textarea
@@ -60,13 +63,15 @@ const ReportMedicalHistory: React.FC<ReportMedicalHistoryProps> = ({ formData, o
             placeholder="Record clinical observations, examination findings, diagnostic impressions..."
             value={formData.observations}
             onChange={(e) => handleChange('observations', e.target.value)}
-            className="w-full min-h-[120px] p-3 border border-gray-300 rounded-md resize-vertical focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            rows={5}
+            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent resize-none"
+            rows={2}
+            style={{ fontSize: '10pt' }}
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="recommendations" className="text-sm font-medium text-gray-700">
+        {/* Recommendations Section */}
+        <div className="space-y-1">
+          <Label htmlFor="recommendations" className="text-xs font-semibold">
             Recommendations & Treatment Plan
           </Label>
           <textarea
@@ -74,8 +79,9 @@ const ReportMedicalHistory: React.FC<ReportMedicalHistoryProps> = ({ formData, o
             placeholder="Provide treatment recommendations, follow-up instructions, lifestyle advice..."
             value={formData.recommendations}
             onChange={(e) => handleChange('recommendations', e.target.value)}
-            className="w-full min-h-[120px] p-3 border border-gray-300 rounded-md resize-vertical focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            rows={5}
+            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent resize-none"
+            rows={2}
+            style={{ fontSize: '10pt' }}
           />
         </div>
       </CardContent>

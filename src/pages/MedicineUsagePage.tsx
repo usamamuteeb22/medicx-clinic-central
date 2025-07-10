@@ -3,28 +3,27 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { FileDown, Printer, Search, Calendar, User, Pill } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { Download } from 'lucide-react';
-import { generateMedicineUsageExcel } from '@/utils/medicineUsageExcelUtils';
-import { generateMedicineUsagePDF } from '@/utils/medicineUsagePdfUtils';
+import { useAuth } from '@/contexts/AuthContext';
+import { exportToExcel } from '@/utils/medicineUsageExcelUtils';
+import { generatePDF } from '@/utils/medicineUsagePdfUtils';
 import MedicineUsageFilters from '@/components/usage/MedicineUsageFilters';
-import MedicineUsageCard from '@/components/usage/MedicineUsageCard';
 import MedicineUsagePagination from '@/components/usage/MedicineUsagePagination';
 
 interface Patient {
   id: string;
-  patient_id: number;
   name: string;
+  patient_id: number;
   age: number;
   gender: string;
-  phone_number: string;
+  phone_number?: string;
 }
 
 interface Medicine {
   id: string;
   name: string;
   category: string;
-  total_quantity: number;
 }
 
 interface MedicineUsage {
@@ -38,242 +37,167 @@ interface MedicineUsage {
   patient: Patient;
 }
 
-// Transform MedicineUsage to match MedicineUsageCard props
-interface MedicineUsageCardData {
-  id: string;
-  patientName: string;
-  patientNumber: number;
+interface GroupedUsageReport {
   reportDate: string;
-  medicines: {
-    name: string;
+  patient: Patient;
+  medicines: Array<{
+    medicine: Medicine;
     quantity: number;
-    morning: boolean;
-    afternoon: boolean;
-    evening: boolean;
-    night: boolean;
-  }[];
+  }>;
+  totalMedicines: number;
 }
 
 const MedicineUsagePage = () => {
-  const [usageData, setUsageData] = useState<MedicineUsage[]>([]);
-  const [filteredData, setFilteredData] = useState<MedicineUsage[]>([]);
+  const { user } = useAuth();
+  const [usageRecords, setUsageRecords] = useState<MedicineUsage[]>([]);
+  const [groupedReports, setGroupedReports] = useState<GroupedUsageReport[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState<Date | undefined>();
-  const [endDate, setEndDate] = useState<Date | undefined>();
-
-  const itemsPerPage = 12;
+  const [dateFilter, setDateFilter] = useState('');
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchUsageData();
   }, []);
 
   useEffect(() => {
-    applyFilters();
-  }, [searchTerm, startDate, endDate, usageData]);
+    groupUsageData();
+  }, [usageRecords, searchTerm, dateFilter]);
 
   const fetchUsageData = async () => {
     try {
       setLoading(true);
-      setError(null);
-      console.log('Fetching medicine usage data...');
-
-      const { data: usageRecords, error: usageError } = await supabase
+      
+      const { data: usageData, error } = await supabase
         .from('medicine_usage')
-        .select('*')
+        .select(`
+          *,
+          medicine:medicines(*),
+          patient:patients(*)
+        `)
         .order('usage_date', { ascending: false });
 
-      if (usageError) {
-        console.error('Error fetching usage records:', usageError);
-        throw usageError;
-      }
+      if (error) throw error;
 
-      console.log('Fetched usage records:', usageRecords?.length || 0);
-
-      if (!usageRecords || usageRecords.length === 0) {
-        setUsageData([]);
-        setFilteredData([]);
-        return;
-      }
-
-      // Fetch medicine and patient data for each usage record
-      const enrichedUsageData = await Promise.all(
-        usageRecords.map(async (usage) => {
-          const [medicineResult, patientResult] = await Promise.all([
-            supabase
-              .from('medicines')
-              .select('*')
-              .eq('id', usage.medicine_id)
-              .single(),
-            supabase
-              .from('patients')
-              .select('*')
-              .eq('id', usage.patient_id)
-              .single()
-          ]);
-
-          return {
-            ...usage,
-            medicine: medicineResult.data || {
-              id: usage.medicine_id || '',
-              name: 'Unknown Medicine',
-              category: 'unknown',
-              total_quantity: 0
-            },
-            patient: patientResult.data || {
-              id: usage.patient_id || '',
-              patient_id: 0,
-              name: 'Unknown Patient',
-              age: 0,
-              gender: 'unknown',
-              phone_number: ''
-            }
-          };
-        })
-      );
-
-      console.log('Enriched usage data:', enrichedUsageData.length);
-      setUsageData(enrichedUsageData);
-      setFilteredData(enrichedUsageData);
-
+      setUsageRecords(usageData || []);
     } catch (error: any) {
-      console.error('Error in fetchUsageData:', error);
-      setError(error.message || 'Failed to fetch medicine usage data');
+      console.error('Error fetching usage data:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to fetch medicine usage data"
+        description: "Failed to fetch medicine usage data"
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...usageData];
+  const groupUsageData = () => {
+    let filteredRecords = usageRecords;
 
     // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(item => 
-        item.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.patient.patient_id.toString().includes(searchTerm) ||
-        item.medicine.name.toLowerCase().includes(searchTerm.toLowerCase())
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      filteredRecords = filteredRecords.filter(record => 
+        record.patient?.name.toLowerCase().includes(searchLower) ||
+        record.medicine?.name.toLowerCase().includes(searchLower) ||
+        record.patient?.patient_id.toString().includes(searchTerm)
       );
     }
 
-    // Apply date filters
-    if (startDate) {
-      filtered = filtered.filter(item => 
-        new Date(item.usage_date) >= startDate
-      );
-    }
-    if (endDate) {
-      filtered = filtered.filter(item => 
-        new Date(item.usage_date) <= endDate
+    // Apply date filter
+    if (dateFilter) {
+      filteredRecords = filteredRecords.filter(record => 
+        record.usage_date.startsWith(dateFilter)
       );
     }
 
-    setFilteredData(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
-  };
+    // Group by patient and date
+    const grouped = filteredRecords.reduce((acc, record) => {
+      const key = `${record.patient_id}-${record.usage_date.split('T')[0]}`;
+      
+      if (!acc[key]) {
+        acc[key] = {
+          reportDate: record.usage_date,
+          patient: record.patient,
+          medicines: [],
+          totalMedicines: 0
+        };
+      }
 
-  // Transform data for MedicineUsageCard
-  const transformDataForCard = (usage: MedicineUsage): MedicineUsageCardData => {
-    return {
-      id: usage.id,
-      patientName: usage.patient.name,
-      patientNumber: usage.patient.patient_id,
-      reportDate: usage.usage_date,
-      medicines: [{
-        name: usage.medicine.name,
-        quantity: usage.quantity_used,
-        morning: true, // Default values since we don't have this data
-        afternoon: false,
-        evening: false,
-        night: false
-      }]
-    };
-  };
-
-  // Transform data for Excel/PDF export
-  const transformDataForExport = (data: MedicineUsage[]) => {
-    return data.map(usage => ({
-      id: usage.id,
-      patient_name: usage.patient.name,
-      patient_number: usage.patient.patient_id,
-      report_date: usage.usage_date,
-      medicines: [{
-        name: usage.medicine.name,
-        quantity: usage.quantity_used,
-        morning: true,
-        afternoon: false,
-        evening: false,
-        night: false
-      }]
-    }));
-  };
-
-  const handleDownloadExcel = () => {
-    try {
-      const exportData = transformDataForExport(filteredData);
-      generateMedicineUsageExcel(exportData);
-      toast({
-        title: "Success",
-        description: "Excel file downloaded successfully"
+      acc[key].medicines.push({
+        medicine: record.medicine,
+        quantity: record.quantity_used
       });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to generate Excel file"
-      });
-    }
-  };
+      acc[key].totalMedicines += record.quantity_used;
 
-  const handleDownloadPDF = () => {
-    try {
-      const exportData = transformDataForExport(filteredData);
-      generateMedicineUsagePDF(exportData);
-      toast({
-        title: "Success",
-        description: "PDF file downloaded successfully"
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to generate PDF file"
-      });
-    }
-  };
+      return acc;
+    }, {} as Record<string, GroupedUsageReport>);
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentData = filteredData.slice(startIndex, endIndex);
-
-  if (loading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>Loading medicine usage data...</p>
-        </div>
-      </div>
+    const groupedArray = Object.values(grouped).sort((a, b) => 
+      new Date(b.reportDate).getTime() - new Date(a.reportDate).getTime()
     );
-  }
 
-  if (error) {
+    setGroupedReports(groupedArray);
+  };
+
+  const handleExportExcel = () => {
+    const exportData = usageRecords.map(record => ({
+      patient_name: record.patient?.name || 'Unknown',
+      patient_number: record.patient?.patient_id || 0,
+      medicine_name: record.medicine?.name || 'Unknown',
+      quantity_used: record.quantity_used,
+      usage_date: record.usage_date,
+      report_date: record.usage_date
+    }));
+    
+    exportToExcel(exportData);
+  };
+
+  const handleGeneratePDF = () => {
+    const exportData = usageRecords.map(record => ({
+      patient_name: record.patient?.name || 'Unknown',
+      patient_number: record.patient?.patient_id || 0,
+      medicine_name: record.medicine?.name || 'Unknown',
+      quantity_used: record.quantity_used,
+      usage_date: record.usage_date,
+      report_date: record.usage_date
+    }));
+    
+    generatePDF(exportData);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Pagination
+  const totalPages = Math.ceil(groupedReports.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedReports = groupedReports.slice(startIndex, startIndex + itemsPerPage);
+
+  if (!user) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-6">
         <Card>
           <CardContent className="text-center py-8">
-            <h2 className="text-xl font-semibold text-red-600 mb-2">Error Loading Data</h2>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <Button onClick={fetchUsageData}>Try Again</Button>
+            <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
+            <p className="text-gray-600">Please log in to access medicine usage data.</p>
           </CardContent>
         </Card>
       </div>
@@ -281,79 +205,125 @@ const MedicineUsagePage = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Medicine Usage</h1>
-          <p className="text-gray-600">Track medicine consumption and usage patterns</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Medicine Usage Reports</h1>
+          <p className="text-gray-600">Track and monitor medicine consumption by patients</p>
         </div>
         <div className="flex space-x-2">
-          <Button 
-            onClick={handleDownloadExcel} 
-            variant="outline" 
-            className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Download Excel
+          <Button onClick={handleExportExcel} variant="outline" className="flex items-center space-x-2">
+            <FileDown className="h-4 w-4" />
+            <span>Export Excel</span>
           </Button>
-          <Button 
-            onClick={handleDownloadPDF} 
-            variant="outline" 
-            className="bg-red-50 hover:bg-red-100 border-red-200 text-red-700"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Download PDF
+          <Button onClick={handleGeneratePDF} variant="outline" className="flex items-center space-x-2">
+            <Printer className="h-4 w-4" />
+            <span>Generate PDF</span>
           </Button>
         </div>
       </div>
 
-      <MedicineUsageFilters 
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        startDate={startDate}
-        onStartDateChange={setStartDate}
-        endDate={endDate}
-        onEndDateChange={setEndDate}
-      />
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Search className="h-5 w-5" />
+            <span>Search & Filter</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Search</label>
+              <input
+                type="text"
+                placeholder="Search by patient name, medicine name, or patient ID..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Filter by Date</label>
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {filteredData.length === 0 ? (
+      {/* Usage Reports */}
+      {loading ? (
         <Card>
-          <CardContent className="text-center py-12">
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">No Usage Records Found</h3>
-            <p className="text-gray-500">
-              {usageData.length === 0 
-                ? "No medicine usage has been recorded yet." 
-                : "No records match your current filter criteria."
-              }
-            </p>
+          <CardContent className="text-center py-8">
+            <div className="text-gray-500">Loading medicine usage data...</div>
           </CardContent>
         </Card>
+      ) : paginatedReports.length > 0 ? (
+        <div className="space-y-4">
+          {paginatedReports.map((report, index) => (
+            <Card key={`${report.patient.id}-${report.reportDate}-${index}`} className="border-l-4 border-l-blue-500">
+              <CardHeader className="pb-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <User className="h-4 w-4 text-blue-600" />
+                    <div>
+                      <div className="font-semibold">{report.patient.name}</div>
+                      <div className="text-sm text-gray-500">ID: {report.patient.patient_id}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-green-600" />
+                    <div>
+                      <div className="font-semibold">Usage Date</div>
+                      <div className="text-sm text-gray-500">{formatDate(report.reportDate)}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Pill className="h-4 w-4 text-purple-600" />
+                    <div>
+                      <div className="font-semibold">Total Medicines</div>
+                      <div className="text-sm text-gray-500">{report.totalMedicines} units</div>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <h4 className="font-medium text-gray-700 mb-3">Prescribed Medicines:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {report.medicines.map((medicineItem, medIndex) => (
+                      <div key={`${medicineItem.medicine.id}-${medIndex}`} className="bg-gray-50 p-3 rounded-lg">
+                        <div className="font-medium text-gray-800">{medicineItem.medicine.name}</div>
+                        <div className="text-sm text-gray-600">Category: {medicineItem.medicine.category}</div>
+                        <div className="text-sm font-semibold text-blue-600">Quantity: {medicineItem.quantity}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {currentData.map((usage) => {
-              const cardData = transformDataForCard(usage);
-              return (
-                <MedicineUsageCard 
-                  key={usage.id} 
-                  id={cardData.id}
-                  patientName={cardData.patientName}
-                  patientNumber={cardData.patientNumber}
-                  reportDate={cardData.reportDate}
-                  medicines={cardData.medicines}
-                />
-              );
-            })}
-          </div>
+        <Card>
+          <CardContent className="text-center py-8">
+            <div className="text-gray-500">No medicine usage records found.</div>
+          </CardContent>
+        </Card>
+      )}
 
-          <MedicineUsagePagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            totalRecords={filteredData.length}
-            recordsPerPage={itemsPerPage}
-          />
-        </>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <MedicineUsagePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       )}
     </div>
   );

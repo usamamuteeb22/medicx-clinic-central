@@ -1,15 +1,14 @@
 
 import React, { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserPlus } from 'lucide-react';
 
 interface PatientRegistrationFormProps {
   onPatientAdded: () => void;
@@ -30,12 +29,11 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.name || !formData.age || !formData.gender) {
+    if (!user) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Please fill in all required fields"
+        description: "You must be logged in to add patients"
       });
       return;
     }
@@ -52,16 +50,19 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
           address: formData.address || null,
           category: formData.category || null,
           description: formData.description || null,
-          created_by: user?.id
+          created_by: user.id
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error adding patient:', error);
+        throw error;
+      }
 
       toast({
         title: "Success",
-        description: "Patient registered successfully!"
+        description: "Patient added successfully!"
       });
 
       // Reset form
@@ -76,13 +77,12 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
       });
 
       onPatientAdded();
-
     } catch (error: any) {
       console.error('Error adding patient:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to register patient"
+        description: error.message || "Failed to add patient"
       });
     } finally {
       setLoading(false);
@@ -92,21 +92,17 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <UserPlus className="h-5 w-5" />
-          <span>Register New Patient</span>
-        </CardTitle>
+        <CardTitle>Patient Registration</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name *</Label>
+              <Label htmlFor="name">Name *</Label>
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder="Enter patient's full name"
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
             </div>
@@ -115,12 +111,11 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
               <Input
                 id="age"
                 type="number"
-                value={formData.age}
-                onChange={(e) => setFormData({...formData, age: e.target.value})}
-                placeholder="Enter age"
-                required
                 min="0"
                 max="150"
+                value={formData.age}
+                onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                required
               />
             </div>
           </div>
@@ -128,14 +123,18 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="gender">Gender *</Label>
-              <Select value={formData.gender} onValueChange={(value) => setFormData({...formData, gender: value})}>
+              <Select
+                value={formData.gender}
+                onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                required
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select gender" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -144,17 +143,19 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
               <Input
                 id="phone"
                 value={formData.phone_number}
-                onChange={(e) => setFormData({...formData, phone_number: e.target.value})}
-                placeholder="Enter phone number"
+                onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
               />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
-            <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+            <Select
+              value={formData.category}
+              onValueChange={(value) => setFormData({ ...formData, category: value })}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder="Select category (optional)" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Paid">Paid</SelectItem>
@@ -169,25 +170,23 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
             <Textarea
               id="address"
               value={formData.address}
-              onChange={(e) => setFormData({...formData, address: e.target.value})}
-              placeholder="Enter patient's address"
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               rows={2}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Additional Notes</Label>
+            <Label htmlFor="description">Description/Notes</Label>
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
-              placeholder="Any additional information about the patient"
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
             />
           </div>
 
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? 'Registering...' : 'Register Patient'}
+            {loading ? 'Adding Patient...' : 'Add Patient'}
           </Button>
         </form>
       </CardContent>

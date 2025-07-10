@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Stethoscope } from 'lucide-react';
 
@@ -37,104 +36,104 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
           <span>Medical Vitals & Clinical Details</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="hemoglobin" className="text-sm font-medium text-gray-700">
+      <CardContent className="space-y-4">
+        {/* Medical Vitals Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="space-y-1">
+            <Label htmlFor="hemoglobin" className="text-xs font-medium">
               Hemoglobin (HB)
             </Label>
-            <Input
+            <input
               id="hemoglobin"
               type="number"
               step="0.1"
               placeholder="e.g., 12.5"
               value={formData.hemoglobin}
               onChange={(e) => handleChange('hemoglobin', e.target.value)}
-              className="h-10"
+              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="wbc" className="text-sm font-medium text-gray-700">
+          <div className="space-y-1">
+            <Label htmlFor="wbc" className="text-xs font-medium">
               WBC Count
             </Label>
-            <Input
+            <input
               id="wbc"
               type="number"
               placeholder="e.g., 7000"
               value={formData.wbc}
               onChange={(e) => handleChange('wbc', e.target.value)}
-              className="h-10"
+              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="platelets" className="text-sm font-medium text-gray-700">
+          <div className="space-y-1">
+            <Label htmlFor="platelets" className="text-xs font-medium">
               Platelets
             </Label>
-            <Input
+            <input
               id="platelets"
               type="number"
               placeholder="e.g., 250000"
               value={formData.platelets}
               onChange={(e) => handleChange('platelets', e.target.value)}
-              className="h-10"
+              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="blood_pressure" className="text-sm font-medium text-gray-700">
+          <div className="space-y-1">
+            <Label htmlFor="blood_pressure" className="text-xs font-medium">
               Blood Pressure
             </Label>
-            <Input
+            <input
               id="blood_pressure"
               placeholder="e.g., 120/80"
               value={formData.blood_pressure}
               onChange={(e) => handleChange('blood_pressure', e.target.value)}
-              className="h-10"
+              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="temperature" className="text-sm font-medium text-gray-700">
+          <div className="space-y-1">
+            <Label htmlFor="temperature" className="text-xs font-medium">
               Temperature (°F)
             </Label>
-            <Input
+            <input
               id="temperature"
               type="number"
               step="0.1"
               placeholder="e.g., 98.6"
               value={formData.temperature}
               onChange={(e) => handleChange('temperature', e.target.value)}
-              className="h-10"
+              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="weight" className="text-sm font-medium text-gray-700">
+          <div className="space-y-1">
+            <Label htmlFor="weight" className="text-xs font-medium">
               Weight (kg)
             </Label>
-            <Input
+            <input
               id="weight"
               type="number"
               step="0.1"
               placeholder="e.g., 70.5"
               value={formData.weight}
               onChange={(e) => handleChange('weight', e.target.value)}
-              className="h-10"
+              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="clinical_complaint" className="text-sm font-medium text-gray-700">
-            Clinical Complaint
+        {/* Clinical Details Section - Compact layout (~27mm height, 2-3 lines) */}
+        <div className="space-y-1">
+          <Label htmlFor="clinical_complaint" className="text-xs font-medium">
+            Clinical Details
           </Label>
           <textarea
             id="clinical_complaint"
             placeholder="Describe the patient's complaints and symptoms..."
             value={formData.clinical_complaint}
             onChange={(e) => handleChange('clinical_complaint', e.target.value)}
-            className="w-full min-h-[100px] p-3 border border-gray-300 rounded-md resize-vertical focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            rows={4}
+            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent resize-none"
+            rows={3}
+            style={{ maxHeight: '27mm', minHeight: '27mm' }}
           />
         </div>
       </CardContent>

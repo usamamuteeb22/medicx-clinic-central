@@ -51,12 +51,12 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
         .from('patient_reports')
         .select('*')
         .eq('created_by_role', 'reception')
-        .order('created_at', { ascending: false })
-        .limit(20);
+        .order('created_at', { ascending: true })
+        .limit(50);
 
       if (error) throw error;
 
-      // Fetch patient data for each report and filter by search term
+      // Fetch patient data for each report and assign sequential report IDs
       const reportsWithPatients = await Promise.all(
         reportsData?.map(async (report, index) => {
           const { data: patientData } = await supabase
@@ -65,7 +65,7 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
             .eq('id', report.patient_id)
             .single();
 
-          // Generate sequential report ID starting from 2001
+          // Sequential report ID starting from 2001 based on creation order
           const reportId = 2001 + index;
 
           return {
