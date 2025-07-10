@@ -1,225 +1,304 @@
 
-import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
 import { Download } from 'lucide-react';
+import { generateMedicineUsageExcel } from '@/utils/medicineUsageExcelUtils';
+import { generateMedicineUsagePDF } from '@/utils/medicineUsagePdfUtils';
 import MedicineUsageFilters from '@/components/usage/MedicineUsageFilters';
 import MedicineUsageCard from '@/components/usage/MedicineUsageCard';
 import MedicineUsagePagination from '@/components/usage/MedicineUsagePagination';
-import { generateMedicineUsageExcel } from '@/utils/medicineUsageExcelUtils';
 
-interface MedicineUsageRecord {
+interface Patient {
   id: string;
-  patient_id: string;
-  patient_name: string;
-  patient_number: number;
-  report_date: string;
-  medicines: Array<{
-    name: string;
-    quantity: number;
-    morning: boolean;
-    afternoon: boolean;
-    evening: boolean;
-    night: boolean;
-  }>;
+  patient_id: number;
+  name: string;
+  age: number;
+  gender: string;
+  phone_number: string;
 }
 
-const RECORDS_PER_PAGE = 10;
+interface Medicine {
+  id: string;
+  name: string;
+  category: string;
+  total_quantity: number;
+}
+
+interface MedicineUsage {
+  id: string;
+  medicine_id: string;
+  patient_id: string;
+  quantity_used: number;
+  usage_date: string;
+  created_by: string;
+  medicine: Medicine;
+  patient: Patient;
+}
+
+interface Filters {
+  dateFrom: string;
+  dateTo: string;
+  selectedMedicine: string;
+  selectedPatient: string;
+}
 
 const MedicineUsagePage = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [usageData, setUsageData] = useState<MedicineUsage[]>([]);
+  const [filteredData, setFilteredData] = useState<MedicineUsage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Optimized query with better data fetching
-  const { data: usageData = { records: [], totalCount: 0 }, isLoading } = useQuery({
-    queryKey: ['medicine-usage-records', currentPage, searchTerm, startDate, endDate],
-    queryFn: async () => {
-      console.log('Fetching medicine usage records with pagination...');
-      
-      // Calculate offset for pagination
-      const offset = (currentPage - 1) * RECORDS_PER_PAGE;
-      
-      // Build the query with filters
-      let reportsQuery = supabase
-        .from('patient_reports')
-        .select(`
-          id,
-          patient_id,
-          report_date,
-          patients!inner(name, patient_id)
-        `, { count: 'exact' })
-        .order('report_date', { ascending: false });
-
-      // Apply date filters
-      if (startDate) {
-        reportsQuery = reportsQuery.gte('report_date', startDate.toISOString());
-      }
-      if (endDate) {
-        const endOfDay = new Date(endDate);
-        endOfDay.setHours(23, 59, 59, 999);
-        reportsQuery = reportsQuery.lte('report_date', endOfDay.toISOString());
-      }
-
-      // Apply search filter
-      if (searchTerm) {
-        reportsQuery = reportsQuery.or(`patients.name.ilike.%${searchTerm}%,patients.patient_id.eq.${searchTerm}`);
-      }
-
-      // Apply pagination
-      reportsQuery = reportsQuery.range(offset, offset + RECORDS_PER_PAGE - 1);
-
-      const { data: reports, error, count } = await reportsQuery;
-
-      if (error) {
-        console.error('Error fetching reports:', error);
-        throw error;
-      }
-
-      console.log('Reports fetched:', reports?.length, 'Total count:', count);
-
-      // Fetch prescriptions for all reports in a single query
-      const reportIds = reports?.map(r => r.id) || [];
-      
-      let prescriptionsData: any[] = [];
-      if (reportIds.length > 0) {
-        const { data: prescriptions } = await supabase
-          .from('medicine_prescriptions')
-          .select(`
-            patient_report_id,
-            quantity,
-            morning,
-            afternoon,
-            evening,
-            night,
-            medicines!inner(name)
-          `)
-          .in('patient_report_id', reportIds);
-        
-        prescriptionsData = prescriptions || [];
-      }
-
-      // Transform the data efficiently
-      const records: MedicineUsageRecord[] = reports?.map((report: any) => {
-        const reportPrescriptions = prescriptionsData.filter(p => p.patient_report_id === report.id);
-        
-        const medicines = reportPrescriptions.map(prescription => ({
-          name: prescription.medicines?.name || 'Unknown Medicine',
-          quantity: prescription.quantity || 0,
-          morning: prescription.morning || false,
-          afternoon: prescription.afternoon || false,
-          evening: prescription.evening || false,
-          night: prescription.night || false
-        }));
-
-        return {
-          id: report.id,
-          patient_id: report.patient_id,
-          patient_name: report.patients?.name || 'Unknown Patient',
-          patient_number: report.patients?.patient_id || 0,
-          report_date: report.report_date || new Date().toISOString(),
-          medicines
-        };
-      }) || [];
-
-      return {
-        records,
-        totalCount: count || 0
-      };
-    },
-    staleTime: 30000, // Cache for 30 seconds
+  const [filters, setFilters] = useState<Filters>({
+    dateFrom: '',
+    dateTo: '',
+    selectedMedicine: '',
+    selectedPatient: ''
   });
 
-  // Calculate pagination values
-  const totalPages = Math.ceil(usageData.totalCount / RECORDS_PER_PAGE);
+  const itemsPerPage = 12;
 
-  const handleGenerateExcel = async () => {
-    // For Excel generation, we might want to fetch all filtered records
-    // or limit to current page data
-    generateMedicineUsageExcel(usageData.records);
+  useEffect(() => {
+    fetchUsageData();
+  }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [filters, usageData]);
+
+  const fetchUsageData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('Fetching medicine usage data...');
+
+      const { data: usageRecords, error: usageError } = await supabase
+        .from('medicine_usage')
+        .select('*')
+        .order('usage_date', { ascending: false });
+
+      if (usageError) {
+        console.error('Error fetching usage records:', usageError);
+        throw usageError;
+      }
+
+      console.log('Fetched usage records:', usageRecords?.length || 0);
+
+      if (!usageRecords || usageRecords.length === 0) {
+        setUsageData([]);
+        setFilteredData([]);
+        return;
+      }
+
+      // Fetch medicine and patient data for each usage record
+      const enrichedUsageData = await Promise.all(
+        usageRecords.map(async (usage) => {
+          const [medicineResult, patientResult] = await Promise.all([
+            supabase
+              .from('medicines')
+              .select('*')
+              .eq('id', usage.medicine_id)
+              .single(),
+            supabase
+              .from('patients')
+              .select('*')
+              .eq('id', usage.patient_id)
+              .single()
+          ]);
+
+          return {
+            ...usage,
+            medicine: medicineResult.data || {
+              id: usage.medicine_id || '',
+              name: 'Unknown Medicine',
+              category: 'unknown',
+              total_quantity: 0
+            },
+            patient: patientResult.data || {
+              id: usage.patient_id || '',
+              patient_id: 0,
+              name: 'Unknown Patient',
+              age: 0,
+              gender: 'unknown',
+              phone_number: ''
+            }
+          };
+        })
+      );
+
+      console.log('Enriched usage data:', enrichedUsageData.length);
+      setUsageData(enrichedUsageData);
+      setFilteredData(enrichedUsageData);
+
+    } catch (error: any) {
+      console.error('Error in fetchUsageData:', error);
+      setError(error.message || 'Failed to fetch medicine usage data');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to fetch medicine usage data"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const applyFilters = () => {
+    let filtered = [...usageData];
+
+    // Apply date filters
+    if (filters.dateFrom) {
+      filtered = filtered.filter(item => 
+        new Date(item.usage_date) >= new Date(filters.dateFrom)
+      );
+    }
+    if (filters.dateTo) {
+      filtered = filtered.filter(item => 
+        new Date(item.usage_date) <= new Date(filters.dateTo)
+      );
+    }
+
+    // Apply medicine filter
+    if (filters.selectedMedicine) {
+      filtered = filtered.filter(item => 
+        item.medicine.name.toLowerCase().includes(filters.selectedMedicine.toLowerCase())
+      );
+    }
+
+    // Apply patient filter
+    if (filters.selectedPatient) {
+      filtered = filtered.filter(item => 
+        item.patient.name.toLowerCase().includes(filters.selectedPatient.toLowerCase()) ||
+        item.patient.patient_id.toString().includes(filters.selectedPatient)
+      );
+    }
+
+    setFilteredData(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
   };
 
-  // Reset to first page when filters change
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, startDate, endDate]);
+  const handleDownloadExcel = () => {
+    try {
+      generateMedicineUsageExcel(filteredData);
+      toast({
+        title: "Success",
+        description: "Excel file downloaded successfully"
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to generate Excel file"
+      });
+    }
+  };
 
-  if (isLoading) {
+  const handleDownloadPDF = () => {
+    try {
+      generateMedicineUsagePDF(filteredData);
+      toast({
+        title: "Success",
+        description: "PDF file downloaded successfully"
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to generate PDF file"
+      });
+    }
+  };
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentData = filteredData.slice(startIndex, endIndex);
+
+  if (loading) {
     return (
       <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-2">Loading medicine usage records...</span>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading medicine usage data...</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="container mx-auto p-4 lg:p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">Medicine Usage Records</h1>
-        <Button 
-          onClick={handleGenerateExcel} 
-          className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-        >
-          <Download className="h-4 w-4" />
-          <span>Download Excel Summary</span>
-        </Button>
-      </div>
-
-      <MedicineUsageFilters
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        startDate={startDate}
-        onStartDateChange={setStartDate}
-        endDate={endDate}
-        onEndDateChange={setEndDate}
-      />
-
-      {/* Medicine Usage Cards */}
-      <div className="grid gap-4">
-        {usageData.records.map((record) => (
-          <MedicineUsageCard
-            key={record.id}
-            id={record.id}
-            patientName={record.patient_name}
-            patientNumber={record.patient_number}
-            reportDate={record.report_date}
-            medicines={record.medicines}
-          />
-        ))}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Card>
-          <CardContent className="py-4">
-            <MedicineUsagePagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              totalRecords={usageData.totalCount}
-              recordsPerPage={RECORDS_PER_PAGE}
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {usageData.records.length === 0 && (
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
         <Card>
           <CardContent className="text-center py-8">
-            <p className="text-gray-500">No medicine usage records found.</p>
+            <h2 className="text-xl font-semibold text-red-600 mb-2">Error Loading Data</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button onClick={fetchUsageData}>Try Again</Button>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Medicine Usage</h1>
+          <p className="text-gray-600">Track medicine consumption and usage patterns</p>
+        </div>
+        <div className="flex space-x-2">
+          <Button 
+            onClick={handleDownloadExcel} 
+            variant="outline" 
+            className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download Excel
+          </Button>
+          <Button 
+            onClick={handleDownloadPDF} 
+            variant="outline" 
+            className="bg-red-50 hover:bg-red-100 border-red-200 text-red-700"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </Button>
+        </div>
+      </div>
+
+      <MedicineUsageFilters filters={filters} onFiltersChange={setFilters} />
+
+      {filteredData.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">No Usage Records Found</h3>
+            <p className="text-gray-500">
+              {usageData.length === 0 
+                ? "No medicine usage has been recorded yet." 
+                : "No records match your current filter criteria."
+              }
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {currentData.map((usage) => (
+              <MedicineUsageCard key={usage.id} usage={usage} />
+            ))}
+          </div>
+
+          <MedicineUsagePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={filteredData.length}
+            itemsPerPage={itemsPerPage}
+          />
+        </>
       )}
     </div>
   );

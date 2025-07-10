@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,11 +46,11 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
   const searchReports = async () => {
     setLoading(true);
     try {
-      // For now, we'll search in patient_reports table until the new table is available
-      // This will be updated once the reception_reports table is available
+      // Search in patient_reports table with reception role filter
       const { data: reportsData, error } = await supabase
         .from('patient_reports')
         .select('*')
+        .eq('created_by_role', 'reception')
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -57,16 +58,19 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
 
       // Fetch patient data for each report and filter by search term
       const reportsWithPatients = await Promise.all(
-        reportsData?.map(async (report) => {
+        reportsData?.map(async (report, index) => {
           const { data: patientData } = await supabase
             .from('patients')
             .select('*')
             .eq('id', report.patient_id)
             .single();
 
+          // Generate sequential report ID starting from 2001
+          const reportId = 2001 + index;
+
           return {
             id: report.id,
-            report_id: 2001, // Placeholder until new table is available
+            report_id: reportId,
             patient_id: report.patient_id,
             created_at: report.created_at,
             patient: patientData || {

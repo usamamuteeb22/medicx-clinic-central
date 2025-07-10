@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -74,7 +75,7 @@ const ReceptionReportPage = () => {
 
   const fetchReceptionReports = async () => {
     try {
-      // For now, we'll use patient_reports table until reception_reports is available
+      // Fetch reception reports with proper sequential IDs
       const { data: reportsData, error } = await supabase
         .from('patient_reports')
         .select('*')
@@ -83,18 +84,21 @@ const ReceptionReportPage = () => {
 
       if (error) throw error;
 
-      // Fetch patient data for each report
+      // Fetch patient data for each report with sequential report IDs
       const reportsWithPatients = await Promise.all(
-        reportsData?.map(async (report) => {
+        reportsData?.map(async (report, index) => {
           const { data: patientData } = await supabase
             .from('patients')
             .select('*')
             .eq('id', report.patient_id)
             .single();
 
+          // Generate sequential report ID starting from 2001
+          const reportId = 2001 + index;
+
           return {
             id: report.id,
-            report_id: 2001 + parseInt(report.id.slice(-4), 16) % 1000, // Temporary ID generation
+            report_id: reportId,
             patient_id: report.patient_id,
             hemoglobin: report.hemoglobin,
             wbc: report.wbc,
@@ -134,7 +138,7 @@ const ReceptionReportPage = () => {
 
     setLoading(true);
     try {
-      // For now, save to patient_reports with reception role marker
+      // Save to patient_reports with reception role marker
       const { data: reportResult, error: reportError } = await supabase
         .from('patient_reports')
         .insert({
@@ -164,7 +168,7 @@ const ReceptionReportPage = () => {
       resetForm();
       fetchReceptionReports();
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving report:', error);
       toast({
         variant: "destructive",

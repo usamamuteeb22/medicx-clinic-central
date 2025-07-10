@@ -7,7 +7,6 @@ import { toast } from '@/hooks/use-toast';
 import { Search, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { generatePatientsExcel } from '@/utils/patientsExcelUtils';
-import { generatePatientsPDF } from '@/utils/patientsPdfUtils';
 import { Tables } from '@/integrations/supabase/types';
 import PatientSearchFilters from '@/components/patients/PatientSearchFilters';
 import PatientsTable from '@/components/patients/PatientsTable';
@@ -100,22 +99,6 @@ const PatientsPage = () => {
     }
   };
 
-  const handleDownloadPDF = () => {
-    try {
-      generatePatientsPDF(filteredPatients);
-      toast({
-        title: "Success",
-        description: "PDF file downloaded successfully"
-      });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to generate PDF file"
-      });
-    }
-  };
-
   const handleEditPatient = (patientId: string) => {
     navigate(`/patient/${patientId}/edit`);
   };
@@ -157,14 +140,6 @@ const PatientsPage = () => {
           >
             <Download className="h-4 w-4 mr-2" />
             Download Excel
-          </Button>
-          <Button 
-            onClick={handleDownloadPDF} 
-            variant="outline" 
-            className="bg-red-50 hover:bg-red-100 border-red-200 text-red-700"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Download PDF
           </Button>
         </div>
       </div>
