@@ -6,9 +6,8 @@ import { Button } from '@/components/ui/button';
 import { FileDown, Printer, Search, Calendar, User, Pill } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { exportToExcel } from '@/utils/medicineUsageExcelUtils';
-import { generatePDF } from '@/utils/medicineUsagePdfUtils';
-import MedicineUsageFilters from '@/components/usage/MedicineUsageFilters';
+import { generateMedicineUsageExcel } from '@/utils/medicineUsageExcelUtils';
+import { generateMedicineUsagePDF } from '@/utils/medicineUsagePdfUtils';
 import MedicineUsagePagination from '@/components/usage/MedicineUsagePagination';
 
 interface Patient {
@@ -33,8 +32,8 @@ interface MedicineUsage {
   quantity_used: number;
   usage_date: string;
   created_by: string;
-  medicine: Medicine;
-  patient: Patient;
+  medicine?: Medicine;
+  patient?: Patient;
 }
 
 interface GroupedUsageReport {
@@ -69,18 +68,47 @@ const MedicineUsagePage = () => {
     try {
       setLoading(true);
       
-      const { data: usageData, error } = await supabase
+      // First get medicine usage records
+      const { data: usageData, error: usageError } = await supabase
         .from('medicine_usage')
-        .select(`
-          *,
-          medicine:medicines(*),
-          patient:patients(*)
-        `)
+        .select('*')
         .order('usage_date', { ascending: false });
 
-      if (error) throw error;
+      if (usageError) throw usageError;
 
-      setUsageRecords(usageData || []);
+      if (!usageData || usageData.length === 0) {
+        setUsageRecords([]);
+        return;
+      }
+
+      // Get unique medicine IDs and patient IDs
+      const medicineIds = [...new Set(usageData.map(record => record.medicine_id).filter(Boolean))];
+      const patientIds = [...new Set(usageData.map(record => record.patient_id).filter(Boolean))];
+
+      // Fetch medicines
+      const { data: medicinesData } = await supabase
+        .from('medicines')
+        .select('*')
+        .in('id', medicineIds);
+
+      // Fetch patients
+      const { data: patientsData } = await supabase
+        .from('patients')
+        .select('*')
+        .in('id', patientIds);
+
+      // Create lookup maps
+      const medicinesMap = new Map(medicinesData?.map(med => [med.id, med]) || []);
+      const patientsMap = new Map(patientsData?.map(pat => [pat.id, pat]) || []);
+
+      // Combine the data
+      const enrichedUsageData = usageData.map(record => ({
+        ...record,
+        medicine: medicinesMap.get(record.medicine_id!),
+        patient: patientsMap.get(record.patient_id!)
+      })).filter(record => record.medicine && record.patient);
+
+      setUsageRecords(enrichedUsageData as MedicineUsage[]);
     } catch (error: any) {
       console.error('Error fetching usage data:', error);
       toast({
@@ -115,6 +143,8 @@ const MedicineUsagePage = () => {
 
     // Group by patient and date
     const grouped = filteredRecords.reduce((acc, record) => {
+      if (!record.patient || !record.medicine) return acc;
+      
       const key = `${record.patient_id}-${record.usage_date.split('T')[0]}`;
       
       if (!acc[key]) {
@@ -143,29 +173,45 @@ const MedicineUsagePage = () => {
   };
 
   const handleExportExcel = () => {
-    const exportData = usageRecords.map(record => ({
-      patient_name: record.patient?.name || 'Unknown',
-      patient_number: record.patient?.patient_id || 0,
-      medicine_name: record.medicine?.name || 'Unknown',
-      quantity_used: record.quantity_used,
-      usage_date: record.usage_date,
-      report_date: record.usage_date
-    }));
+    const exportData = usageRecords
+      .filter(record => record.patient && record.medicine)
+      .map(record => ({
+        id: record.id,
+        patient_name: record.patient!.name,
+        patient_number: record.patient!.patient_id,
+        report_date: record.usage_date,
+        medicines: [{
+          name: record.medicine!.name,
+          quantity: record.quantity_used,
+          morning: false,
+          afternoon: false,
+          evening: false,
+          night: false
+        }]
+      }));
     
-    exportToExcel(exportData);
+    generateMedicineUsageExcel(exportData);
   };
 
   const handleGeneratePDF = () => {
-    const exportData = usageRecords.map(record => ({
-      patient_name: record.patient?.name || 'Unknown',
-      patient_number: record.patient?.patient_id || 0,
-      medicine_name: record.medicine?.name || 'Unknown',
-      quantity_used: record.quantity_used,
-      usage_date: record.usage_date,
-      report_date: record.usage_date
-    }));
+    const exportData = usageRecords
+      .filter(record => record.patient && record.medicine)
+      .map(record => ({
+        id: record.id,
+        patient_name: record.patient!.name,
+        patient_number: record.patient!.patient_id,
+        report_date: record.usage_date,
+        medicines: [{
+          name: record.medicine!.name,
+          quantity: record.quantity_used,
+          morning: false,
+          afternoon: false,
+          evening: false,
+          night: false
+        }]
+      }));
     
-    generatePDF(exportData);
+    generateMedicineUsagePDF(exportData);
   };
 
   const formatDate = (dateString: string) => {
@@ -173,16 +219,6 @@ const MedicineUsagePage = () => {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
-    });
-  };
-
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
     });
   };
 
@@ -323,6 +359,8 @@ const MedicineUsagePage = () => {
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
+          totalRecords={groupedReports.length}
+          recordsPerPage={itemsPerPage}
         />
       )}
     </div>
