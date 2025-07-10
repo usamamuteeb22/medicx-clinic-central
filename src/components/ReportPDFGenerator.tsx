@@ -98,6 +98,11 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
     }
   };
 
+  // Create a no-op function for the onFormDataChange prop since this is read-only
+  const handleFormDataChange = () => {
+    // No-op for read-only PDF view
+  };
+
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-4">
@@ -127,10 +132,16 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
 
             <div className="content">
               <ReportPatientInfo patient={patient} />
-              <ReportVitals reportData={reportData} />
+              <ReportVitals 
+                formData={reportData} 
+                onFormDataChange={handleFormDataChange}
+              />
               <ReportClinicalDetails clinicalComplaint={reportData.clinical_complaint} />
               <ReportMedicineTable prescribedMedicines={prescribedMedicines} />
-              <ReportMedicalHistory reportData={reportData} />
+              <ReportMedicalHistory 
+                formData={reportData} 
+                onFormDataChange={handleFormDataChange}
+              />
             </div>
 
             <ReportFooter />
