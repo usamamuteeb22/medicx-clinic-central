@@ -40,18 +40,24 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
 
     setLoading(true);
     try {
+      // Prepare the data payload with proper category handling
+      const payload = {
+        name: formData.name,
+        age: parseInt(formData.age),
+        gender: formData.gender,
+        phone_number: formData.phone_number || null,
+        address: formData.address || null,
+        // Ensure category is null if empty string, otherwise use the selected value
+        category: formData.category === '' ? null : formData.category,
+        description: formData.description || null,
+        created_by: user.id
+      };
+
+      console.log('Submitting patient data:', payload);
+
       const { data, error } = await supabase
         .from('patients')
-        .insert({
-          name: formData.name,
-          age: parseInt(formData.age),
-          gender: formData.gender,
-          phone_number: formData.phone_number || null,
-          address: formData.address || null,
-          category: formData.category || null,
-          description: formData.description || null,
-          created_by: user.id
-        })
+        .insert(payload)
         .select()
         .single();
 
@@ -59,6 +65,8 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
         console.error('Error adding patient:', error);
         throw error;
       }
+
+      console.log('Patient added successfully:', data);
 
       toast({
         title: "Success",
@@ -152,7 +160,10 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
             <Label htmlFor="category">Category</Label>
             <Select
               value={formData.category}
-              onValueChange={(value) => setFormData({ ...formData, category: value })}
+              onValueChange={(value) => {
+                console.log('Category selected:', value);
+                setFormData({ ...formData, category: value });
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select category (optional)" />
