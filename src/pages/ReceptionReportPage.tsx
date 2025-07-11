@@ -23,7 +23,6 @@ interface Patient {
 
 interface ReceptionReport {
   id: string;
-  report_id: number;
   patient_id: string;
   hemoglobin: number | null;
   wbc: number | null;
@@ -33,6 +32,7 @@ interface ReceptionReport {
   weight: number | null;
   clinical_complaint: string | null;
   created_at: string;
+  created_by_role: string | null;
   patient: Patient;
 }
 
@@ -75,10 +75,11 @@ const ReceptionReportPage = () => {
 
   const fetchReceptionReports = async () => {
     try {
-      // Fetch reception reports from the reception_reports table
+      // Fetch reception reports from the patient_reports table filtered by reception role
       const { data: reportsData, error } = await supabase
-        .from('reception_reports')
+        .from('patient_reports')
         .select('*')
+        .eq('created_by_role', 'reception')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -94,7 +95,6 @@ const ReceptionReportPage = () => {
 
           return {
             id: report.id,
-            report_id: report.report_id, // Use the actual report_id from database
             patient_id: report.patient_id,
             hemoglobin: report.hemoglobin,
             wbc: report.wbc,
@@ -104,6 +104,7 @@ const ReceptionReportPage = () => {
             weight: report.weight,
             clinical_complaint: report.clinical_complaint,
             created_at: report.created_at,
+            created_by_role: report.created_by_role,
             patient: patientData || {
               id: report.patient_id,
               patient_id: 0,
@@ -134,9 +135,9 @@ const ReceptionReportPage = () => {
 
     setLoading(true);
     try {
-      // Save to reception_reports table - let database assign report_id automatically
+      // Save to patient_reports table with reception role
       const { data: reportResult, error: reportError } = await supabase
-        .from('reception_reports')
+        .from('patient_reports')
         .insert({
           patient_id: selectedPatient.id,
           hemoglobin: formData.hemoglobin ? parseFloat(formData.hemoglobin) : null,
@@ -147,18 +148,19 @@ const ReceptionReportPage = () => {
           weight: formData.weight ? parseFloat(formData.weight) : null,
           clinical_complaint: formData.clinical_complaint || null,
           created_by: user?.id,
-          created_by_role: 'reception'
+          created_by_role: 'reception',
+          status: 'reception_completed'
         })
         .select()
         .single();
 
       if (reportError) throw reportError;
 
-      console.log('Reception report saved with ID:', reportResult.report_id);
+      console.log('Reception report saved with ID:', reportResult.id);
 
       toast({
         title: "Success",
-        description: `Reception report saved successfully! Report ID: ${reportResult.report_id}`
+        description: `Reception report saved successfully!`
       });
 
       // Reset form and refresh reports
@@ -363,7 +365,7 @@ const ReceptionReportPage = () => {
                     className="cursor-pointer hover:bg-gray-50"
                     onClick={() => handleViewReportDetails(report)}
                   >
-                    <TableCell className="font-medium">{report.report_id}</TableCell>
+                    <TableCell className="font-medium">{report.id.slice(0, 8)}</TableCell>
                     <TableCell>{report.patient.name}</TableCell>
                     <TableCell>{report.patient.patient_id}</TableCell>
                     <TableCell>{formatDate(report.created_at)}</TableCell>
@@ -407,7 +409,7 @@ const ReceptionReportPage = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Report ID</Label>
-                  <p className="font-medium">{selectedReportDetails.report_id}</p>
+                  <p className="font-medium">{selectedReportDetails.id.slice(0, 8)}</p>
                 </div>
                 <div>
                   <Label>Patient Name</Label>

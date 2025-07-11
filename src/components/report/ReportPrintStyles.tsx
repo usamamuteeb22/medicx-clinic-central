@@ -3,7 +3,8 @@ import React from 'react';
 
 const ReportPrintStyles = () => {
   return (
-    <style jsx>{`
+    <style dangerouslySetInnerHTML={{
+      __html: `
       @media print {
         * {
           -webkit-print-color-adjust: exact !important;
@@ -258,7 +259,8 @@ const ReportPrintStyles = () => {
           min-height: 18px;
         }
       }
-    `}</style>
+      `
+    }} />
   );
 };
 
