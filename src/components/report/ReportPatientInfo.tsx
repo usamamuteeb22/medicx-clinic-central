@@ -16,28 +16,31 @@ interface ReportPatientInfoProps {
 
 const ReportPatientInfo: React.FC<ReportPatientInfoProps> = ({ patient }) => {
   return (
-    <div className="section patient-section">
-      <div className="section-title">Patient Information</div>
+    <div className="patient-info-section avoid-break">
       <div className="patient-info-grid">
         <div className="patient-info-item">
-          <strong>Patient ID:</strong>
-          <span>{patient.patient_id}</span>
+          <span className="patient-info-label">Patient Name:</span>
+          <span className="patient-info-value">{patient.name}</span>
         </div>
         <div className="patient-info-item">
-          <strong>Name:</strong>
-          <span>{patient.name}</span>
+          <span className="patient-info-label">Patient ID:</span>
+          <span className="patient-info-value">{patient.patient_id}</span>
         </div>
         <div className="patient-info-item">
-          <strong>Age:</strong>
-          <span>{patient.age} years</span>
+          <span className="patient-info-label">Age:</span>
+          <span className="patient-info-value">{patient.age} years</span>
         </div>
         <div className="patient-info-item">
-          <strong>Gender:</strong>
-          <span>{patient.gender}</span>
+          <span className="patient-info-label">Gender:</span>
+          <span className="patient-info-value">{patient.gender}</span>
         </div>
         <div className="patient-info-item">
-          <strong>Phone:</strong>
-          <span>{patient.phone_number || 'N/A'}</span>
+          <span className="patient-info-label">Phone Number:</span>
+          <span className="patient-info-value">{patient.phone_number || 'N/A'}</span>
+        </div>
+        <div className="patient-info-item">
+          <span className="patient-info-label">Report Date:</span>
+          <span className="patient-info-value">{new Date().toLocaleDateString()}</span>
         </div>
       </div>
     </div>

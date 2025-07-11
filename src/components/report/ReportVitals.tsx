@@ -1,139 +1,125 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Stethoscope } from 'lucide-react';
 
+interface ReportData {
+  hemoglobin: string;
+  wbc: string;
+  platelets: string;
+  blood_pressure: string;
+  temperature: string;
+  weight: string;
+  clinical_complaint: string;
+  medical_history: string;
+  observations: string;
+  recommendations: string;
+}
+
 interface ReportVitalsProps {
-  formData: {
-    hemoglobin: string;
-    wbc: string;
-    platelets: string;
-    blood_pressure: string;
-    temperature: string;
-    weight: string;
-    clinical_complaint: string;
-    medical_history: string;
-    observations: string;
-    recommendations: string;
-  };
-  onFormDataChange: (formData: any) => void;
+  formData: ReportData;
+  onFormDataChange: (data: ReportData) => void;
 }
 
 const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange }) => {
-  const handleChange = (field: string, value: string) => {
-    onFormDataChange({
-      ...formData,
-      [field]: value
-    });
-  };
-
   return (
-    <Card>
-      <CardHeader>
+    <Card className="medical-vitals-section">
+      <CardHeader className="print-hide">
         <CardTitle className="flex items-center space-x-2">
           <Stethoscope className="h-5 w-5" />
           <span>Medical Vitals & Clinical Details</span>
         </CardTitle>
       </CardHeader>
+      
+      {/* Print-only header */}
+      <div className="hidden print:block">
+        <h3>Medical Vitals & Clinical Details</h3>
+      </div>
+
       <CardContent className="space-y-4">
-        {/* Medical Vitals Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <div className="space-y-1">
-            <Label htmlFor="hemoglobin" className="text-xs font-medium">
-              Hemoglobin (HB)
-            </Label>
-            <input
+        <div className="vitals-grid">
+          <div className="vital-item">
+            <Label htmlFor="hemoglobin" className="vital-label">Hemoglobin (HB)</Label>
+            <Input
               id="hemoglobin"
               type="number"
               step="0.1"
               placeholder="e.g., 12.5"
               value={formData.hemoglobin}
-              onChange={(e) => handleChange('hemoglobin', e.target.value)}
-              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => onFormDataChange({...formData, hemoglobin: e.target.value})}
+              className="vital-value"
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="wbc" className="text-xs font-medium">
-              WBC Count
-            </Label>
-            <input
+          <div className="vital-item">
+            <Label htmlFor="wbc" className="vital-label">WBC Count</Label>
+            <Input
               id="wbc"
               type="number"
               placeholder="e.g., 7000"
               value={formData.wbc}
-              onChange={(e) => handleChange('wbc', e.target.value)}
-              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => onFormDataChange({...formData, wbc: e.target.value})}
+              className="vital-value"
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="platelets" className="text-xs font-medium">
-              Platelets
-            </Label>
-            <input
+          <div className="vital-item">
+            <Label htmlFor="platelets" className="vital-label">Platelets</Label>
+            <Input
               id="platelets"
               type="number"
               placeholder="e.g., 250000"
               value={formData.platelets}
-              onChange={(e) => handleChange('platelets', e.target.value)}
-              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => onFormDataChange({...formData, platelets: e.target.value})}
+              className="vital-value"
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="blood_pressure" className="text-xs font-medium">
-              Blood Pressure
-            </Label>
-            <input
+          <div className="vital-item">
+            <Label htmlFor="blood_pressure" className="vital-label">Blood Pressure</Label>
+            <Input
               id="blood_pressure"
               placeholder="e.g., 120/80"
               value={formData.blood_pressure}
-              onChange={(e) => handleChange('blood_pressure', e.target.value)}
-              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => onFormDataChange({...formData, blood_pressure: e.target.value})}
+              className="vital-value"
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="temperature" className="text-xs font-medium">
-              Temperature (°F)
-            </Label>
-            <input
+          <div className="vital-item">
+            <Label htmlFor="temperature" className="vital-label">Temperature (°F)</Label>
+            <Input
               id="temperature"
               type="number"
               step="0.1"
               placeholder="e.g., 98.6"
               value={formData.temperature}
-              onChange={(e) => handleChange('temperature', e.target.value)}
-              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => onFormDataChange({...formData, temperature: e.target.value})}
+              className="vital-value"
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="weight" className="text-xs font-medium">
-              Weight (kg)
-            </Label>
-            <input
+          <div className="vital-item">
+            <Label htmlFor="weight" className="vital-label">Weight (kg)</Label>
+            <Input
               id="weight"
               type="number"
               step="0.1"
               placeholder="e.g., 70.5"
               value={formData.weight}
-              onChange={(e) => handleChange('weight', e.target.value)}
-              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => onFormDataChange({...formData, weight: e.target.value})}
+              className="vital-value"
             />
           </div>
         </div>
 
-        {/* Clinical Details Section - Compact layout (~27mm height, 2-3 lines) */}
-        <div className="space-y-1">
-          <Label htmlFor="clinical_complaint" className="text-xs font-medium">
-            Clinical Details
-          </Label>
-          <textarea
+        <div className="clinical-complaint">
+          <Label htmlFor="clinical_complaint" className="clinical-complaint-label">Clinical Complaint</Label>
+          <Textarea
             id="clinical_complaint"
             placeholder="Describe the patient's complaints and symptoms..."
             value={formData.clinical_complaint}
-            onChange={(e) => handleChange('clinical_complaint', e.target.value)}
-            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent resize-none"
+            onChange={(e) => onFormDataChange({...formData, clinical_complaint: e.target.value})}
             rows={3}
-            style={{ maxHeight: '27mm', minHeight: '27mm' }}
+            className="clinical-complaint-text"
           />
         </div>
       </CardContent>

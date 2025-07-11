@@ -1,247 +1,264 @@
 
 import React from 'react';
 
-const ReportPrintStyles: React.FC = () => {
+const ReportPrintStyles = () => {
   return (
-    <style>
-      {`
-        @page {
-          size: A4 portrait;
-          margin: 5mm 7mm;
-        }
+    <style jsx>{`
+      @media print {
         * {
+          -webkit-print-color-adjust: exact !important;
+          color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        @page {
+          size: A4;
+          margin: 0.75in;
+        }
+
+        body {
+          font-family: Arial, sans-serif;
+          font-size: 12pt;
+          line-height: 1.4;
+          color: #000;
+        }
+
+        .report-container {
+          width: 100%;
+          max-width: none;
           margin: 0;
           padding: 0;
-          box-sizing: border-box;
+          background: white;
         }
-        body {
-          font-family: 'Roboto', 'Arial', sans-serif;
-          font-size: 10pt;
-          line-height: 1.1;
-          color: #000;
-          height: 100vh;
-          width: 100%;
-        }
-        .report-container {
-          height: 100vh;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-        }
-        
-        /* Header Section - 15-17% of page height */
-        .header {
-          height: 16%;
-          border-bottom: 1px solid #ccc;
-          padding: 3mm 0 2mm 0;
-          margin-bottom: 2mm;
-        }
-        .header-title {
-          text-align: center;
-          font-size: 17pt;
-          font-weight: bold;
-          margin-bottom: 4mm;
-          line-height: 1.2;
-        }
-        .header-content {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          font-size: 11pt;
-          margin-bottom: 2mm;
-        }
-        .doctor-info {
-          flex: 1;
-          line-height: 1.2;
-        }
-        .doctor-info h4 {
-          font-weight: bold;
-          margin-bottom: 1mm;
-          font-size: 12pt;
-        }
-        .doctor-info div {
-          margin-bottom: 0.5mm;
-        }
-        .timing-info {
-          text-align: right;
-          flex: 0 0 100px;
-          line-height: 1.2;
-        }
-        .timing-info h4 {
-          font-weight: bold;
-          margin-bottom: 1mm;
-          font-size: 12pt;
-        }
-        .report-meta {
-          text-align: right;
-          font-size: 10pt;
-          margin-top: 2mm;
-          line-height: 1.1;
-        }
-        
-        /* Content Area - Dynamic height */
+
         .content {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 2mm;
-          min-height: 0;
+          padding: 0;
+          margin: 0;
         }
-        
-        /* Section Styling */
-        .section {
-          border: 0.5px solid #ccc;
-          padding: 2mm 3mm;
-          background: #fff;
-          margin-bottom: 1mm;
+
+        /* Hide UI elements not needed in print */
+        .no-print,
+        button,
+        .print-hide {
+          display: none !important;
         }
-        .section-title {
+
+        /* Clean styling for Medical Vitals section */
+        .medical-vitals-section {
+          margin: 20px 0;
+          page-break-inside: avoid;
+        }
+
+        .medical-vitals-section h3 {
+          font-size: 14pt;
           font-weight: bold;
-          font-size: 11pt;
-          margin-bottom: 2mm;
-          border-bottom: 0.5px solid #ddd;
-          padding-bottom: 1mm;
-          line-height: 1.1;
+          margin: 0 0 12px 0;
+          color: #000;
+          border-bottom: 2px solid #000;
+          padding-bottom: 4px;
         }
-        
-        /* Patient Information - Fixed 21mm height */
-        .patient-section {
-          height: 21mm;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-        }
-        .patient-info-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-          gap: 4mm;
-          font-size: 10pt;
-          line-height: 1.2;
-        }
-        .patient-info-item {
-          display: flex;
-          flex-direction: column;
-        }
-        .patient-info-item strong {
-          font-weight: bold;
-          margin-bottom: 0.5mm;
-        }
-        
-        /* Medical Vitals - Fixed 21mm height */
-        .vitals-section {
-          height: 21mm;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-        }
+
         .vitals-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
-          gap: 4mm;
-          font-size: 10pt;
-          line-height: 1.2;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 15px;
+          margin-bottom: 15px;
         }
-        .vitals-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 4mm;
-        }
+
         .vital-item {
-          display: flex;
-          flex-direction: column;
+          border: none;
+          padding: 0;
+          margin: 0;
         }
-        .vital-item strong {
+
+        .vital-label {
           font-weight: bold;
-          margin-bottom: 0.5mm;
+          font-size: 11pt;
+          color: #333;
+          display: block;
+          margin-bottom: 2px;
         }
-        
-        /* Clinical Details - Max 24mm height */
-        .clinical-section {
-          max-height: 24mm;
-          overflow: hidden;
+
+        .vital-value {
+          font-size: 12pt;
+          color: #000;
+          border: none;
+          background: none;
+          padding: 4px 0;
+          border-bottom: 1px solid #ccc;
+          display: block;
+          width: 100%;
+          min-height: 18px;
         }
-        .clinical-content {
-          font-size: 10pt;
-          line-height: 1.3;
-          text-align: justify;
+
+        /* Clean styling for Clinical Complaint */
+        .clinical-complaint {
+          margin: 15px 0;
+          page-break-inside: avoid;
         }
-        
-        /* Medicine Table - Dynamic height up to 81mm (9 rows) */
-        .medicine-section {
-          max-height: 81mm;
-          overflow: hidden;
+
+        .clinical-complaint-label {
+          font-weight: bold;
+          font-size: 11pt;
+          color: #333;
+          display: block;
+          margin-bottom: 4px;
         }
+
+        .clinical-complaint-text {
+          font-size: 12pt;
+          color: #000;
+          border: 1px solid #ccc;
+          padding: 8px;
+          min-height: 60px;
+          width: 100%;
+          background: none;
+          line-height: 1.5;
+        }
+
+        /* Medical History & Notes section */
+        .medical-history-section {
+          margin: 20px 0;
+          page-break-inside: avoid;
+        }
+
+        .medical-history-section h3 {
+          font-size: 14pt;
+          font-weight: bold;
+          margin: 0 0 12px 0;
+          color: #000;
+          border-bottom: 2px solid #000;
+          padding-bottom: 4px;
+        }
+
+        .history-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 15px;
+        }
+
+        .history-item {
+          border: none;
+          padding: 0;
+          margin: 0;
+        }
+
+        .history-label {
+          font-weight: bold;
+          font-size: 11pt;
+          color: #333;
+          display: block;
+          margin-bottom: 4px;
+        }
+
+        .history-text {
+          font-size: 12pt;
+          color: #000;
+          border: 1px solid #ccc;
+          padding: 8px;
+          min-height: 50px;
+          width: 100%;
+          background: none;
+          line-height: 1.5;
+        }
+
+        /* Remove input styling for print */
+        input, textarea, select {
+          border: none !important;
+          background: none !important;
+          box-shadow: none !important;
+          outline: none !important;
+          -webkit-appearance: none !important;
+          appearance: none !important;
+        }
+
+        /* Ensure text is visible */
+        input[type="text"], 
+        input[type="number"], 
+        textarea {
+          color: #000 !important;
+          background: transparent !important;
+        }
+
+        /* Medicine table styling */
         .medicine-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 10pt;
-          line-height: 1.1;
+          margin: 15px 0;
         }
+
+        .medicine-table th,
+        .medicine-table td {
+          border: 1px solid #333;
+          padding: 8px;
+          text-align: left;
+          font-size: 11pt;
+        }
+
         .medicine-table th {
-          background-color: #f8f9fa;
+          background-color: #f0f0f0 !important;
+          font-weight: bold;
+        }
+
+        /* Page breaks */
+        .page-break-before {
+          page-break-before: always;
+        }
+
+        .page-break-after {
+          page-break-after: always;
+        }
+
+        .avoid-break {
+          page-break-inside: avoid;
+        }
+
+        /* Header and footer spacing */
+        .report-header {
+          margin-bottom: 25px;
+          page-break-after: avoid;
+        }
+
+        .report-footer {
+          margin-top: 30px;
+          page-break-before: avoid;
+        }
+
+        /* Patient info section */
+        .patient-info-section {
+          margin: 20px 0;
+          page-break-inside: avoid;
+        }
+
+        .patient-info-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 15px;
+        }
+
+        .patient-info-item {
+          padding: 0;
+          margin: 0;
+        }
+
+        .patient-info-label {
           font-weight: bold;
           font-size: 11pt;
-          padding: 2mm;
-          border: 0.5px solid #ccc;
-          text-align: left;
-          height: 9mm;
+          color: #333;
+          display: block;
+          margin-bottom: 2px;
         }
-        .medicine-table td {
-          padding: 2mm;
-          border: 0.5px solid #ccc;
-          text-align: left;
-          vertical-align: top;
-          height: 9mm;
+
+        .patient-info-value {
+          font-size: 12pt;
+          color: #000;
+          border-bottom: 1px solid #ccc;
+          padding: 4px 0;
+          display: block;
+          min-height: 18px;
         }
-        
-        /* Medical History - Dynamic height up to 60mm */
-        .history-section {
-          flex: 1;
-          max-height: 60mm;
-          overflow: hidden;
-        }
-        .history-item {
-          margin-bottom: 2mm;
-        }
-        .history-item h4 {
-          font-weight: bold;
-          margin-bottom: 1mm;
-          font-size: 10pt;
-        }
-        .history-item p {
-          line-height: 1.3;
-          font-size: 10pt;
-          text-align: justify;
-          margin-bottom: 1mm;
-        }
-        
-        /* Footer - 6-8% of page height */
-        .footer {
-          height: 7%;
-          border-top: 1px solid #ccc;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 2mm 0;
-          margin-top: 2mm;
-          font-size: 10pt;
-          line-height: 1.2;
-        }
-        .footer-contact {
-          font-weight: bold;
-        }
-        .footer-address {
-          text-align: right;
-          font-weight: bold;
-          max-width: 60%;
-        }
-        
-        @media print {
-          .no-print { display: none !important; }
-          body { print-color-adjust: exact; }
-        }
-      `}
-    </style>
+      }
+    `}</style>
   );
 };
 

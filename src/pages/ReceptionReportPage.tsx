@@ -75,30 +75,26 @@ const ReceptionReportPage = () => {
 
   const fetchReceptionReports = async () => {
     try {
-      // Fetch reception reports with proper sequential IDs
+      // Fetch reception reports from the reception_reports table
       const { data: reportsData, error } = await supabase
-        .from('patient_reports')
+        .from('reception_reports')
         .select('*')
-        .eq('created_by_role', 'reception')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Fetch patient data for each report with sequential report IDs
+      // Fetch patient data for each report
       const reportsWithPatients = await Promise.all(
-        reportsData?.map(async (report, index) => {
+        reportsData?.map(async (report) => {
           const { data: patientData } = await supabase
             .from('patients')
             .select('*')
             .eq('id', report.patient_id)
             .single();
 
-          // Generate sequential report ID starting from 2001
-          const reportId = 2001 + index;
-
           return {
             id: report.id,
-            report_id: reportId,
+            report_id: report.report_id, // Use the actual report_id from database
             patient_id: report.patient_id,
             hemoglobin: report.hemoglobin,
             wbc: report.wbc,
@@ -138,9 +134,9 @@ const ReceptionReportPage = () => {
 
     setLoading(true);
     try {
-      // Save to patient_reports with reception role marker
+      // Save to reception_reports table - let database assign report_id automatically
       const { data: reportResult, error: reportError } = await supabase
-        .from('patient_reports')
+        .from('reception_reports')
         .insert({
           patient_id: selectedPatient.id,
           hemoglobin: formData.hemoglobin ? parseFloat(formData.hemoglobin) : null,
@@ -151,17 +147,18 @@ const ReceptionReportPage = () => {
           weight: formData.weight ? parseFloat(formData.weight) : null,
           clinical_complaint: formData.clinical_complaint || null,
           created_by: user?.id,
-          created_by_role: 'reception',
-          status: 'incomplete'
+          created_by_role: 'reception'
         })
         .select()
         .single();
 
       if (reportError) throw reportError;
 
+      console.log('Reception report saved with ID:', reportResult.report_id);
+
       toast({
         title: "Success",
-        description: "Reception report saved successfully!"
+        description: `Reception report saved successfully! Report ID: ${reportResult.report_id}`
       });
 
       // Reset form and refresh reports
