@@ -58,48 +58,48 @@ const BasePrintStyles = () => {
           margin: 0 !important;
         }
 
-        /* Section spacing */
+        /* Section spacing - minimized */
         .report-section {
-          margin-bottom: 6mm;
+          margin-bottom: 2mm;
           border: 0.5mm solid #000;
           page-break-inside: avoid;
         }
 
-        /* Header section */
+        /* Header section - no border, at top */
         .header {
-          height: 45mm;
+          height: 35mm;
           width: 190mm;
-          margin-bottom: 6mm;
-          border: 0.5mm solid #000;
-          padding: 3mm;
+          margin-bottom: 2mm;
+          padding: 3mm 0;
+          border: none;
         }
 
         .header-title {
           text-align: center;
           font-size: 14pt;
           font-weight: bold;
-          height: 12mm;
-          line-height: 12mm;
-          margin-bottom: 3mm;
+          height: 8mm;
+          line-height: 8mm;
+          margin-bottom: 2mm;
         }
 
         .header-content {
           display: flex;
           justify-content: space-between;
-          height: 25mm;
+          height: 20mm;
           align-items: flex-start;
         }
 
         .doctor-info {
           width: 63mm;
-          height: 25mm;
+          height: 20mm;
           font-size: 10pt;
           line-height: 1.2;
         }
 
         .timing-info {
           width: 63mm;
-          height: 25mm;
+          height: 20mm;
           font-size: 10pt;
           line-height: 1.2;
         }
@@ -107,32 +107,32 @@ const BasePrintStyles = () => {
         .doctor-info h4, .timing-info h4 {
           font-size: 11pt;
           font-weight: bold;
-          margin: 0 0 2mm 0;
+          margin: 0 0 1mm 0;
         }
 
         .doctor-info div, .timing-info div {
-          margin: 1mm 0;
+          margin: 0.5mm 0;
         }
 
         .report-meta {
           text-align: right;
           font-size: 10pt;
-          height: 6mm;
-          line-height: 6mm;
-          margin-top: 2mm;
+          height: 4mm;
+          line-height: 4mm;
+          margin-top: 1mm;
         }
 
         /* Footer */
         .footer {
           width: 190mm;
-          height: 12mm;
+          height: 8mm;
           border-top: 0.5mm solid #000;
           display: flex;
           justify-content: space-between;
           align-items: center;
           font-size: 10pt;
-          padding: 2mm 0;
-          margin-top: 6mm;
+          padding: 1mm 0;
+          margin-top: 2mm;
         }
 
         .footer-contact {

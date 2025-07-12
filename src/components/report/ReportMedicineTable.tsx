@@ -34,39 +34,33 @@ const ReportMedicineTable: React.FC<ReportMedicineTableProps> = ({
     return times.length > 0 ? times.join(', ') : 'Not Specified';
   };
 
+  // Only show medicines that are actually prescribed
+  const activeMedicines = prescribedMedicines.filter(medicine => medicine.quantity > 0);
+
+  // Don't render the section if no medicines are prescribed
+  if (activeMedicines.length === 0) {
+    return null;
+  }
+
   return (
-    <div className="section medicine-section">
-      <div className="section-title">Prescribed Medicines</div>
+    <div className="medicine-section">
+      <h3>Prescribed Medicines</h3>
       <table className="medicine-table">
         <thead>
           <tr>
-            <th style={{width: '30%'}}>Medicine</th>
-            <th style={{width: '20%'}}>Category</th>
-            <th style={{width: '15%'}}>Quantity</th>
-            <th style={{width: '35%'}}>Dosage Timing</th>
+            <th>Medicine</th>
+            <th>Category</th>
+            <th>Quantity</th>
+            <th>Dosage Timing</th>
           </tr>
         </thead>
         <tbody>
-          {prescribedMedicines.slice(0, 8).map((medicine, index) => (
+          {activeMedicines.map((medicine, index) => (
             <tr key={index}>
               <td>{medicine.medicine.name}</td>
               <td className="capitalize">{medicine.medicine.category}</td>
               <td>{medicine.quantity}</td>
               <td>{getDosageText(medicine)}</td>
-            </tr>
-          ))}
-          {prescribedMedicines.length === 0 && (
-            <tr>
-              <td colSpan={4} style={{textAlign: 'center', color: '#666'}}>No medicines prescribed</td>
-            </tr>
-          )}
-          {/* Fill empty rows to maintain consistent spacing */}
-          {Array.from({ length: Math.max(0, 8 - prescribedMedicines.length) }).map((_, index) => (
-            <tr key={`empty-${index}`}>
-              <td>--</td>
-              <td>--</td>
-              <td>--</td>
-              <td>--</td>
             </tr>
           ))}
         </tbody>

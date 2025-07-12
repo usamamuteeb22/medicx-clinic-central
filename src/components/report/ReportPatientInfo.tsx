@@ -16,9 +16,10 @@ interface ReportPatientInfoProps {
 
 const ReportPatientInfo: React.FC<ReportPatientInfoProps> = ({ patient }) => {
   return (
-    <div className="patient-info-section avoid-break">
+    <div className="patient-info-section">
+      <h3>Patient Information</h3>
       <div className="patient-info-grid">
-        <div className="patient-info-left">
+        <div className="patient-info-content">
           <div className="patient-info-item">
             <span className="patient-info-label">Patient ID:</span>
             <span className="patient-info-value">{patient.patient_id}</span>
@@ -35,10 +36,8 @@ const ReportPatientInfo: React.FC<ReportPatientInfoProps> = ({ patient }) => {
             <span className="patient-info-label">Gender:</span>
             <span className="patient-info-value">{patient.gender}</span>
           </div>
-        </div>
-        <div className="patient-info-right">
           <div className="patient-info-item">
-            <span className="patient-info-label">Phone Number:</span>
+            <span className="patient-info-label">Phone:</span>
             <span className="patient-info-value">{patient.phone_number || 'N/A'}</span>
           </div>
         </div>

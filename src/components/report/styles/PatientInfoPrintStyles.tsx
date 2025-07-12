@@ -6,57 +6,52 @@ const PatientInfoPrintStyles = () => {
     <style dangerouslySetInnerHTML={{
       __html: `
       @media print {
-        /* Patient info section - 25mm height */
+        /* Patient info section - 20mm height */
         .patient-info-section {
           width: 190mm;
-          height: 25mm;
+          height: 20mm;
           border: 0.5mm solid #000;
-          padding: 3mm;
-          margin-bottom: 6mm;
+          padding: 2mm;
+          margin-bottom: 2mm;
           page-break-inside: avoid;
+        }
+
+        .patient-info-section h3 {
+          font-size: 12pt;
+          font-weight: bold;
+          margin: 0 0 2mm 0;
+          color: #000;
+          height: 3mm;
+          line-height: 3mm;
         }
 
         .patient-info-grid {
           display: flex;
-          height: 19mm;
+          height: 13mm;
+          align-items: center;
         }
 
-        .patient-info-left {
-          width: 130mm;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 3mm;
-        }
-
-        .patient-info-right {
-          width: 60mm;
-          padding-left: 5mm;
+        .patient-info-content {
+          width: 100%;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8mm;
+          font-size: 10pt;
         }
 
         .patient-info-item {
-          height: 8mm;
-          display: flex;
-          flex-direction: column;
+          display: inline-flex;
+          align-items: center;
+          height: 5mm;
         }
 
         .patient-info-label {
           font-weight: bold;
-          font-size: 10pt;
-          color: #333;
-          height: 3mm;
-          line-height: 3mm;
-          margin-bottom: 1mm;
+          margin-right: 2mm;
         }
 
         .patient-info-value {
-          font-size: 11pt;
           color: #000;
-          border-bottom: 0.3mm solid #ccc;
-          height: 4mm;
-          line-height: 4mm;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
         }
       }
       `
