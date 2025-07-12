@@ -6,13 +6,13 @@ const PatientInfoPrintStyles = () => {
     <style dangerouslySetInnerHTML={{
       __html: `
       @media print {
-        /* Patient info section - moved 4mm down */
+        /* Patient info section - moved further down to avoid header overflow */
         .patient-info-section {
           width: 190mm;
           height: 18mm;
           border: 0.5mm solid #000;
           padding: 2mm;
-          margin-top: 4mm;
+          margin-top: 8mm;
           margin-bottom: 1mm;
           page-break-inside: avoid;
         }

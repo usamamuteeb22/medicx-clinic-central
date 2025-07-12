@@ -9,17 +9,17 @@ const MedicalHistoryPrintStyles = () => {
         /* Medical History & Notes section - flexible height with more space */
         .medical-history-section {
           width: 190mm;
-          min-height: 80mm;
+          min-height: 60mm;
           border: 0.5mm solid #000;
           padding: 2mm;
-          margin-bottom: 1mm;
+          margin-bottom: 5mm;
           page-break-inside: avoid;
         }
 
         .medical-history-section h3 {
           font-size: 11pt;
           font-weight: bold;
-          margin: 0 0 1.5mm 0;
+          margin: 0 0 2mm 0;
           color: #000;
           height: 3mm;
           line-height: 3mm;
@@ -28,11 +28,11 @@ const MedicalHistoryPrintStyles = () => {
         .history-grid {
           display: flex;
           flex-direction: column;
-          gap: 1.5mm;
+          gap: 2mm;
         }
 
         .history-item {
-          min-height: 20mm;
+          min-height: 15mm;
           display: flex;
           flex-direction: column;
         }
@@ -54,13 +54,13 @@ const MedicalHistoryPrintStyles = () => {
           background: none;
           border: none;
           resize: none;
-          min-height: 15mm;
+          min-height: 10mm;
         }
 
-        /* Hide empty history items */
+        /* Hide empty history items and their labels */
         .history-item:empty,
-        .history-item .history-text:empty {
-          display: none;
+        .history-item.empty-section {
+          display: none !important;
         }
       }
       `
