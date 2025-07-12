@@ -184,7 +184,6 @@ export type Database = {
           reception_completed_at: string | null
           recommendations: string | null
           report_date: string | null
-          status: string | null
           temperature: number | null
           wbc: number | null
           weight: number | null
@@ -205,7 +204,6 @@ export type Database = {
           reception_completed_at?: string | null
           recommendations?: string | null
           report_date?: string | null
-          status?: string | null
           temperature?: number | null
           wbc?: number | null
           weight?: number | null
@@ -226,7 +224,6 @@ export type Database = {
           reception_completed_at?: string | null
           recommendations?: string | null
           report_date?: string | null
-          status?: string | null
           temperature?: number | null
           wbc?: number | null
           weight?: number | null

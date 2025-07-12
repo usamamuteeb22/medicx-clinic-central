@@ -10,31 +10,33 @@ const BasePrintStyles = () => {
           -webkit-print-color-adjust: exact !important;
           color-adjust: exact !important;
           print-color-adjust: exact !important;
+          box-sizing: border-box;
         }
 
         @page {
-          size: A4;
-          margin: 0.75in;
+          size: A4 portrait;
+          margin: 10mm;
         }
 
         body {
           font-family: Arial, sans-serif;
-          font-size: 12pt;
-          line-height: 1.4;
+          font-size: 11pt;
+          line-height: 1.3;
           color: #000;
+          margin: 0;
+          padding: 0;
         }
 
         .report-container {
-          width: 100%;
-          max-width: none;
-          margin: 0;
+          width: 190mm;
+          max-width: 190mm;
+          margin: 0 auto;
           padding: 0;
           background: white;
         }
 
         .content {
-          padding: 0;
-          margin: 0;
+          width: 100%;
         }
 
         /* Hide UI elements not needed in print */
@@ -52,38 +54,94 @@ const BasePrintStyles = () => {
           outline: none !important;
           -webkit-appearance: none !important;
           appearance: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
         }
 
-        /* Ensure text is visible */
-        input[type="text"], 
-        input[type="number"], 
-        textarea {
-          color: #000 !important;
-          background: transparent !important;
-        }
-
-        /* Page breaks */
-        .page-break-before {
-          page-break-before: always;
-        }
-
-        .page-break-after {
-          page-break-after: always;
-        }
-
-        .avoid-break {
+        /* Section spacing */
+        .report-section {
+          margin-bottom: 6mm;
+          border: 0.5mm solid #000;
           page-break-inside: avoid;
         }
 
-        /* Header and footer spacing */
-        .report-header {
-          margin-bottom: 25px;
-          page-break-after: avoid;
+        /* Header section */
+        .header {
+          height: 45mm;
+          width: 190mm;
+          margin-bottom: 6mm;
+          border: 0.5mm solid #000;
+          padding: 3mm;
         }
 
-        .report-footer {
-          margin-top: 30px;
-          page-break-before: avoid;
+        .header-title {
+          text-align: center;
+          font-size: 14pt;
+          font-weight: bold;
+          height: 12mm;
+          line-height: 12mm;
+          margin-bottom: 3mm;
+        }
+
+        .header-content {
+          display: flex;
+          justify-content: space-between;
+          height: 25mm;
+          align-items: flex-start;
+        }
+
+        .doctor-info {
+          width: 63mm;
+          height: 25mm;
+          font-size: 10pt;
+          line-height: 1.2;
+        }
+
+        .timing-info {
+          width: 63mm;
+          height: 25mm;
+          font-size: 10pt;
+          line-height: 1.2;
+        }
+
+        .doctor-info h4, .timing-info h4 {
+          font-size: 11pt;
+          font-weight: bold;
+          margin: 0 0 2mm 0;
+        }
+
+        .doctor-info div, .timing-info div {
+          margin: 1mm 0;
+        }
+
+        .report-meta {
+          text-align: right;
+          font-size: 10pt;
+          height: 6mm;
+          line-height: 6mm;
+          margin-top: 2mm;
+        }
+
+        /* Footer */
+        .footer {
+          width: 190mm;
+          height: 12mm;
+          border-top: 0.5mm solid #000;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 10pt;
+          padding: 2mm 0;
+          margin-top: 6mm;
+        }
+
+        .footer-contact {
+          font-weight: bold;
+        }
+
+        .footer-address {
+          text-align: right;
+          line-height: 1.2;
         }
       }
       `

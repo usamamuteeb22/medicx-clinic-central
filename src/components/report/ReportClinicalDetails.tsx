@@ -8,16 +8,8 @@ interface ReportClinicalDetailsProps {
 const ReportClinicalDetails: React.FC<ReportClinicalDetailsProps> = ({ 
   clinicalComplaint 
 }) => {
-  if (!clinicalComplaint) return null;
-
-  return (
-    <div className="section clinical-section">
-      <div className="section-title">Clinical Details</div>
-      <div className="clinical-content">
-        {clinicalComplaint}
-      </div>
-    </div>
-  );
+  // This component is now handled in ReportVitals for better layout control
+  return null;
 };
 
 export default ReportClinicalDetails;

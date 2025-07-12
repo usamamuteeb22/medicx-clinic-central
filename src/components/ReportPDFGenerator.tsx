@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,6 @@ import { Printer, X } from 'lucide-react';
 import ReportHeader from './report/ReportHeader';
 import ReportPatientInfo from './report/ReportPatientInfo';
 import ReportVitals from './report/ReportVitals';
-import ReportClinicalDetails from './report/ReportClinicalDetails';
 import ReportMedicineTable from './report/ReportMedicineTable';
 import ReportMedicalHistory from './report/ReportMedicalHistory';
 import ReportFooter from './report/ReportFooter';
@@ -136,7 +134,6 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
                 formData={reportData} 
                 onFormDataChange={handleFormDataChange}
               />
-              <ReportClinicalDetails clinicalComplaint={reportData.clinical_complaint} />
               <ReportMedicineTable prescribedMedicines={prescribedMedicines} />
               <ReportMedicalHistory 
                 formData={reportData} 
