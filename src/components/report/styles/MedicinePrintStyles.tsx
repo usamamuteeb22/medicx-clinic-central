@@ -9,17 +9,17 @@ const MedicinePrintStyles = () => {
         /* Medicine section - dynamic height based on content */
         .medicine-section {
           width: 190mm;
-          min-height: 30mm;
+          min-height: 25mm;
           border: 0.5mm solid #000;
           padding: 2mm;
-          margin-bottom: 2mm;
+          margin-bottom: 1mm;
           page-break-inside: avoid;
         }
 
         .medicine-section h3 {
-          font-size: 12pt;
+          font-size: 11pt;
           font-weight: bold;
-          margin: 0 0 2mm 0;
+          margin: 0 0 1.5mm 0;
           color: #000;
           height: 3mm;
           line-height: 3mm;
@@ -28,15 +28,15 @@ const MedicinePrintStyles = () => {
         .medicine-table {
           width: 100%;
           border-collapse: collapse;
-          margin-top: 2mm;
+          margin-top: 1.5mm;
         }
 
         .medicine-table th {
           background-color: #f0f0f0 !important;
           font-weight: bold;
           font-size: 10pt;
-          height: 6mm;
-          line-height: 6mm;
+          height: 5mm;
+          line-height: 5mm;
           border: 0.3mm solid #333;
           padding: 1mm;
           text-align: center;
@@ -44,8 +44,8 @@ const MedicinePrintStyles = () => {
 
         .medicine-table td {
           font-size: 10pt;
-          height: 6mm;
-          line-height: 6mm;
+          height: 5mm;
+          line-height: 5mm;
           border: 0.3mm solid #333;
           padding: 1mm;
           text-align: center;
@@ -56,7 +56,7 @@ const MedicinePrintStyles = () => {
 
         .medicine-table th:nth-child(1),
         .medicine-table td:nth-child(1) {
-          width: 25%;
+          width: 35%;
           text-align: left;
         }
 
@@ -72,7 +72,7 @@ const MedicinePrintStyles = () => {
 
         .medicine-table th:nth-child(4),
         .medicine-table td:nth-child(4) {
-          width: 40%;
+          width: 30%;
           text-align: left;
         }
 

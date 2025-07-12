@@ -6,20 +6,21 @@ const PatientInfoPrintStyles = () => {
     <style dangerouslySetInnerHTML={{
       __html: `
       @media print {
-        /* Patient info section - 20mm height */
+        /* Patient info section - moved 4mm down */
         .patient-info-section {
           width: 190mm;
-          height: 20mm;
+          height: 18mm;
           border: 0.5mm solid #000;
           padding: 2mm;
-          margin-bottom: 2mm;
+          margin-top: 4mm;
+          margin-bottom: 1mm;
           page-break-inside: avoid;
         }
 
         .patient-info-section h3 {
-          font-size: 12pt;
+          font-size: 11pt;
           font-weight: bold;
-          margin: 0 0 2mm 0;
+          margin: 0 0 1.5mm 0;
           color: #000;
           height: 3mm;
           line-height: 3mm;
@@ -27,7 +28,7 @@ const PatientInfoPrintStyles = () => {
 
         .patient-info-grid {
           display: flex;
-          height: 13mm;
+          height: 11mm;
           align-items: center;
         }
 
@@ -35,19 +36,20 @@ const PatientInfoPrintStyles = () => {
           width: 100%;
           display: flex;
           flex-wrap: wrap;
-          gap: 8mm;
+          gap: 6mm;
           font-size: 10pt;
+          line-height: 1.2;
         }
 
         .patient-info-item {
           display: inline-flex;
           align-items: center;
-          height: 5mm;
+          height: 4mm;
         }
 
         .patient-info-label {
           font-weight: bold;
-          margin-right: 2mm;
+          margin-right: 1.5mm;
         }
 
         .patient-info-value {

@@ -25,6 +25,23 @@ interface ReportVitalsProps {
 }
 
 const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange }) => {
+  // Format values for print display
+  const formatVital = (value: string, unit: string) => {
+    return value ? `${value}${unit}` : '';
+  };
+
+  const formatWBC = (value: string) => {
+    return value ? `${value}/µL` : '';
+  };
+
+  const formatPlatelets = (value: string) => {
+    return value ? `${value}/µL` : '';
+  };
+
+  const formatBloodPressure = (value: string) => {
+    return value ? `${value} mmHg` : '';
+  };
+
   return (
     <>
       <Card className="medical-vitals-section">
@@ -44,7 +61,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
           <div className="vitals-grid">
             <div className="vital-item">
               <span className="vital-label">Hemoglobin:</span>
-              <span className="vital-value">{formData.hemoglobin} g/dL</span>
+              <span className="vital-value">{formatVital(formData.hemoglobin, ' g/dL')}</span>
               <Input
                 type="number"
                 step="0.1"
@@ -56,7 +73,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
             </div>
             <div className="vital-item">
               <span className="vital-label">WBC:</span>
-              <span className="vital-value">{formData.wbc}</span>
+              <span className="vital-value">{formatWBC(formData.wbc)}</span>
               <Input
                 type="number"
                 placeholder="e.g., 7000"
@@ -67,7 +84,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
             </div>
             <div className="vital-item">
               <span className="vital-label">Platelets:</span>
-              <span className="vital-value">{formData.platelets}</span>
+              <span className="vital-value">{formatPlatelets(formData.platelets)}</span>
               <Input
                 type="number"
                 placeholder="e.g., 250000"
@@ -78,7 +95,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
             </div>
             <div className="vital-item">
               <span className="vital-label">Blood Pressure:</span>
-              <span className="vital-value">{formData.blood_pressure}mmHg</span>
+              <span className="vital-value">{formatBloodPressure(formData.blood_pressure)}</span>
               <Input
                 placeholder="e.g., 120/80"
                 value={formData.blood_pressure}
@@ -88,7 +105,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
             </div>
             <div className="vital-item">
               <span className="vital-label">Temperature:</span>
-              <span className="vital-value">{formData.temperature}°F</span>
+              <span className="vital-value">{formatVital(formData.temperature, '°F')}</span>
               <Input
                 type="number"
                 step="0.1"
@@ -100,7 +117,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
             </div>
             <div className="vital-item">
               <span className="vital-label">Weight:</span>
-              <span className="vital-value">{formData.weight} kg</span>
+              <span className="vital-value">{formatVital(formData.weight, ' kg')}</span>
               <Input
                 type="number"
                 step="0.1"
@@ -114,27 +131,31 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
         </CardContent>
       </Card>
 
-      {/* Clinical Details Section */}
-      <Card className="clinical-complaint-section print:hidden">
-        <CardHeader className="print-hide">
-          <CardTitle>Clinical Details</CardTitle>
-        </CardHeader>
-        <CardContent className="print:p-0">
-          <Textarea
-            placeholder="Describe the patient's complaints and symptoms..."
-            value={formData.clinical_complaint}
-            onChange={(e) => onFormDataChange({...formData, clinical_complaint: e.target.value})}
-            rows={3}
-            className="clinical-complaint-text"
-          />
-        </CardContent>
-      </Card>
+      {/* Clinical Details Section - only show if there's content */}
+      {formData.clinical_complaint && (
+        <>
+          <Card className="clinical-complaint-section print:hidden">
+            <CardHeader className="print-hide">
+              <CardTitle>Clinical Details</CardTitle>
+            </CardHeader>
+            <CardContent className="print:p-0">
+              <Textarea
+                placeholder="Describe the patient's complaints and symptoms..."
+                value={formData.clinical_complaint}
+                onChange={(e) => onFormDataChange({...formData, clinical_complaint: e.target.value})}
+                rows={3}
+                className="clinical-complaint-text"
+              />
+            </CardContent>
+          </Card>
 
-      {/* Print-only Clinical Details */}
-      <div className="clinical-complaint-section hidden print:block">
-        <h3>Clinical Details</h3>
-        <div className="clinical-complaint-text">{formData.clinical_complaint}</div>
-      </div>
+          {/* Print-only Clinical Details */}
+          <div className="clinical-complaint-section hidden print:block">
+            <h3>Clinical Details</h3>
+            <div className="clinical-complaint-text">{formData.clinical_complaint}</div>
+          </div>
+        </>
+      )}
     </>
   );
 };
