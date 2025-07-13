@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,60 +22,20 @@ interface ReportMedicalHistoryProps {
   onFormDataChange: (data: ReportData) => void;
 }
 
-const ReportMedicalHistory: React.FC<ReportMedicalHistoryProps> = ({ formData, onFormDataChange }) => {
-  // Check if any section has content
-  const hasContent = formData.medical_history || formData.observations || formData.recommendations;
+const ReportMedicalHistory: React.FC<ReportMedicalHistoryProps> = ({
+  formData,
+  onFormDataChange,
+}) => {
+  const { medical_history, observations, recommendations } = formData;
+  const hasAnyContent = medical_history || observations || recommendations;
 
-  // Don't render the section at all if no content in print mode
-  if (!hasContent) {
-    return (
-      <div className="print:hidden">
-        <Card className="medical-history-section">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <FileText className="h-5 w-5" />
-              <span>Medical History & Notes</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="history-item">
-              <Label htmlFor="medical_history" className="history-label">Medical History</Label>
-              <Textarea
-                id="medical_history"
-                value={formData.medical_history}
-                onChange={(e) => onFormDataChange({...formData, medical_history: e.target.value})}
-                rows={4}
-                className="history-text"
-              />
-            </div>
-            <div className="history-item">
-              <Label htmlFor="observations" className="history-label">Doctor's Observations</Label>
-              <Textarea
-                id="observations"
-                value={formData.observations}
-                onChange={(e) => onFormDataChange({...formData, observations: e.target.value})}
-                rows={4}
-                className="history-text"
-              />
-            </div>
-            <div className="history-item">
-              <Label htmlFor="recommendations" className="history-label">Recommendations</Label>
-              <Textarea
-                id="recommendations"
-                value={formData.recommendations}
-                onChange={(e) => onFormDataChange({...formData, recommendations: e.target.value})}
-                rows={4}
-                className="history-text"
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  if (!hasAnyContent) {
+    return null;
   }
 
   return (
     <>
+      {/* Editable screen version */}
       <Card className="medical-history-section print:hidden">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -86,31 +45,43 @@ const ReportMedicalHistory: React.FC<ReportMedicalHistoryProps> = ({ formData, o
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="history-item">
-            <Label htmlFor="medical_history" className="history-label">Medical History</Label>
+            <Label htmlFor="medical_history" className="history-label">
+              Medical History
+            </Label>
             <Textarea
               id="medical_history"
-              value={formData.medical_history}
-              onChange={(e) => onFormDataChange({...formData, medical_history: e.target.value})}
+              value={medical_history}
+              onChange={(e) =>
+                onFormDataChange({ ...formData, medical_history: e.target.value })
+              }
               rows={4}
               className="history-text"
             />
           </div>
           <div className="history-item">
-            <Label htmlFor="observations" className="history-label">Doctor's Observations</Label>
+            <Label htmlFor="observations" className="history-label">
+              Doctor's Observations
+            </Label>
             <Textarea
               id="observations"
-              value={formData.observations}
-              onChange={(e) => onFormDataChange({...formData, observations: e.target.value})}
+              value={observations}
+              onChange={(e) =>
+                onFormDataChange({ ...formData, observations: e.target.value })
+              }
               rows={4}
               className="history-text"
             />
           </div>
           <div className="history-item">
-            <Label htmlFor="recommendations" className="history-label">Recommendations</Label>
+            <Label htmlFor="recommendations" className="history-label">
+              Recommendations
+            </Label>
             <Textarea
               id="recommendations"
-              value={formData.recommendations}
-              onChange={(e) => onFormDataChange({...formData, recommendations: e.target.value})}
+              value={recommendations}
+              onChange={(e) =>
+                onFormDataChange({ ...formData, recommendations: e.target.value })
+              }
               rows={4}
               className="history-text"
             />
@@ -118,26 +89,26 @@ const ReportMedicalHistory: React.FC<ReportMedicalHistoryProps> = ({ formData, o
         </CardContent>
       </Card>
 
-      {/* Print-only version - only show sections with content and hide empty headings */}
+      {/* Print-only version - show *only* non-empty fields */}
       <div className="medical-history-section hidden print:block">
         <h3>Medical History & Notes</h3>
-        <div className="history-grid">
-          {formData.medical_history && (
+        <div className="history-grid space-y-4">
+          {medical_history && (
             <div className="history-item">
               <div className="history-label">Medical History</div>
-              <div className="history-text">{formData.medical_history}</div>
+              <div className="history-text">{medical_history}</div>
             </div>
           )}
-          {formData.observations && (
+          {observations && (
             <div className="history-item">
               <div className="history-label">Doctor's Observations</div>
-              <div className="history-text">{formData.observations}</div>
+              <div className="history-text">{observations}</div>
             </div>
           )}
-          {formData.recommendations && (
+          {recommendations && (
             <div className="history-item">
               <div className="history-label">Recommendations</div>
-              <div className="history-text">{formData.recommendations}</div>
+              <div className="history-text">{recommendations}</div>
             </div>
           )}
         </div>
