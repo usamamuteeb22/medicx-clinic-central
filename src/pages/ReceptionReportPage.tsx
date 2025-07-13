@@ -247,7 +247,7 @@ const ReceptionReportPage = () => {
                     id="hemoglobin"
                     type="number"
                     step="0.1"
-                    placeholder="e.g., 12.5"
+                    // placeholder="e.g., 12.5"
                     value={formData.hemoglobin}
                     onChange={(e) => setFormData({...formData, hemoglobin: e.target.value})}
                   />
@@ -257,7 +257,7 @@ const ReceptionReportPage = () => {
                   <Input
                     id="wbc"
                     type="number"
-                    placeholder="e.g., 7000"
+                    // placeholder="e.g., 7000"
                     value={formData.wbc}
                     onChange={(e) => setFormData({...formData, wbc: e.target.value})}
                   />
@@ -267,7 +267,7 @@ const ReceptionReportPage = () => {
                   <Input
                     id="platelets"
                     type="number"
-                    placeholder="e.g., 250000"
+                    // placeholder="e.g., 250000"
                     value={formData.platelets}
                     onChange={(e) => setFormData({...formData, platelets: e.target.value})}
                   />
@@ -279,7 +279,7 @@ const ReceptionReportPage = () => {
                   <Label htmlFor="blood_pressure">Blood Pressure</Label>
                   <Input
                     id="blood_pressure"
-                    placeholder="e.g., 120/80"
+                    // placeholder="e.g., 120/80"
                     value={formData.blood_pressure}
                     onChange={(e) => setFormData({...formData, blood_pressure: e.target.value})}
                   />
@@ -290,7 +290,7 @@ const ReceptionReportPage = () => {
                     id="temperature"
                     type="number"
                     step="0.1"
-                    placeholder="e.g., 98.6"
+                    // placeholder="e.g., 98.6"
                     value={formData.temperature}
                     onChange={(e) => setFormData({...formData, temperature: e.target.value})}
                   />
@@ -301,7 +301,7 @@ const ReceptionReportPage = () => {
                     id="weight"
                     type="number"
                     step="0.1"
-                    placeholder="e.g., 70.5"
+                    // placeholder="e.g., 70.5"
                     value={formData.weight}
                     onChange={(e) => setFormData({...formData, weight: e.target.value})}
                   />

@@ -59,7 +59,6 @@ const MedicalHistoryPrintStyles = () => {
         }
 
         /* Hide empty history items and their labels */
-        .history-item:empty,
         .history-item.empty-section {
           display: none !important;
         }
