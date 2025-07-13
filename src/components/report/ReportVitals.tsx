@@ -22,11 +22,22 @@ interface ReportVitalsProps {
   onFormDataChange: (data: ReportData) => void;
 }
 
+// Helper: allow only valid numbers (1 decimal point)
+const sanitizeDecimalInput = (value: string) => {
+  return value
+    .replace(/[^\d.]/g, '')      // remove non-digits/non-dot
+    .replace(/(\..*?)\./g, '$1') // only one dot
+    .replace(/^0+(\d)/, '$1');   // remove leading zeros
+};
+
+// Helper: allow only integers
+const sanitizeIntegerInput = (value: string) => {
+  return value.replace(/\D/g, '');
+};
+
 const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange }) => {
-  // Helpers to append units for print
-  const formatVital = (value: string, unit: string) => {
-    return value ? `${value} ${unit}` : '';
-  };
+  // Format for print
+  const formatVital = (value: string, unit: string) => value ? `${value} ${unit}` : '';
 
   return (
     <>
@@ -38,13 +49,13 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
           </CardTitle>
         </CardHeader>
 
-        {/* Print-only Header */}
         <div className="hidden print:block">
           <h3>Medical Vitals</h3>
         </div>
 
         <CardContent className="space-y-4 print:p-0">
           <div className="vitals-grid">
+
             {/* Hemoglobin */}
             <div className="vital-item">
               <span className="vital-label">Hemoglobin:</span>
@@ -52,11 +63,13 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                 {formatVital(formData.hemoglobin, 'g/dL')}
               </span>
               <Input
-                type="number"
-                step="0.1"
+                type="text"
                 value={formData.hemoglobin}
                 onChange={(e) =>
-                  onFormDataChange({ ...formData, hemoglobin: e.target.value })
+                  onFormDataChange({
+                    ...formData,
+                    hemoglobin: sanitizeDecimalInput(e.target.value),
+                  })
                 }
                 className="print:hidden"
               />
@@ -69,10 +82,13 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                 {formatVital(formData.wbc, '/µL')}
               </span>
               <Input
-                type="number"
+                type="text"
                 value={formData.wbc}
                 onChange={(e) =>
-                  onFormDataChange({ ...formData, wbc: e.target.value })
+                  onFormDataChange({
+                    ...formData,
+                    wbc: sanitizeIntegerInput(e.target.value),
+                  })
                 }
                 className="print:hidden"
               />
@@ -85,10 +101,13 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                 {formatVital(formData.platelets, '/µL')}
               </span>
               <Input
-                type="number"
+                type="text"
                 value={formData.platelets}
                 onChange={(e) =>
-                  onFormDataChange({ ...formData, platelets: e.target.value })
+                  onFormDataChange({
+                    ...formData,
+                    platelets: sanitizeIntegerInput(e.target.value),
+                  })
                 }
                 className="print:hidden"
               />
@@ -101,9 +120,13 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                 {formatVital(formData.blood_pressure, 'mmHg')}
               </span>
               <Input
+                type="text"
                 value={formData.blood_pressure}
                 onChange={(e) =>
-                  onFormDataChange({ ...formData, blood_pressure: e.target.value })
+                  onFormDataChange({
+                    ...formData,
+                    blood_pressure: sanitizeIntegerInput(e.target.value),
+                  })
                 }
                 className="print:hidden"
               />
@@ -116,11 +139,13 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                 {formatVital(formData.temperature, '°F')}
               </span>
               <Input
-                type="number"
-                step="0.1"
+                type="text"
                 value={formData.temperature}
                 onChange={(e) =>
-                  onFormDataChange({ ...formData, temperature: e.target.value })
+                  onFormDataChange({
+                    ...formData,
+                    temperature: sanitizeDecimalInput(e.target.value),
+                  })
                 }
                 className="print:hidden"
               />
@@ -133,20 +158,23 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                 {formatVital(formData.weight, 'kg')}
               </span>
               <Input
-                type="number"
-                step="0.1"
+                type="text"
                 value={formData.weight}
                 onChange={(e) =>
-                  onFormDataChange({ ...formData, weight: e.target.value })
+                  onFormDataChange({
+                    ...formData,
+                    weight: sanitizeDecimalInput(e.target.value),
+                  })
                 }
                 className="print:hidden"
               />
             </div>
+
           </div>
         </CardContent>
       </Card>
 
-      {/* Clinical Complaint Section - only show if there's content */}
+      {/* Clinical Complaint Section */}
       {formData.clinical_complaint && (
         <>
           <Card className="clinical-complaint-section print:hidden">
@@ -158,7 +186,10 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                 placeholder="Describe the patient's complaints and symptoms..."
                 value={formData.clinical_complaint}
                 onChange={(e) =>
-                  onFormDataChange({ ...formData, clinical_complaint: e.target.value })
+                  onFormDataChange({
+                    ...formData,
+                    clinical_complaint: e.target.value,
+                  })
                 }
                 rows={3}
                 className="clinical-complaint-text"
@@ -166,7 +197,6 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
             </CardContent>
           </Card>
 
-          {/* Print-only Clinical Details */}
           <div className="clinical-complaint-section hidden print:block">
             <h3>Clinical Details</h3>
             <div className="clinical-complaint-text">
