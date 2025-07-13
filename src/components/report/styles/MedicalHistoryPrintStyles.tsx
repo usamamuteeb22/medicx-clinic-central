@@ -23,6 +23,7 @@ const MedicalHistoryPrintStyles = () => {
           color: #000;
           height: 3mm;
           line-height: 3mm;
+          margin-bottom: 8mm;
         }
 
         .history-grid {

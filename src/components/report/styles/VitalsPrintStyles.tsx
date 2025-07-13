@@ -9,7 +9,7 @@ const VitalsPrintStyles = () => {
         /* Medical Vitals section - fixed height and proper spacing */
         .medical-vitals-section {
           width: 190mm;
-          height: 25mm;
+          height: 29mm;
           border: 0.5mm solid #000;
           padding: 2mm;
           margin-bottom: 1mm;
@@ -29,7 +29,7 @@ const VitalsPrintStyles = () => {
           display: grid;
           grid-template-columns: 1fr 1fr 1fr;
           grid-template-rows: 1fr 1fr;
-          gap: 3mm 6mm;
+          gap: 1mm 3mm;
           height: 18mm;
           align-items: center;
         }

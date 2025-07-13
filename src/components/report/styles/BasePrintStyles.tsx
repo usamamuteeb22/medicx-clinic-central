@@ -121,7 +121,7 @@ const BasePrintStyles = () => {
           font-size: 9pt;
           height: 4mm;
           line-height: 4mm;
-          margin-top: 1mm;
+          margin-top: 8mm;
         }
 
         /* Footer - fixed at bottom */
