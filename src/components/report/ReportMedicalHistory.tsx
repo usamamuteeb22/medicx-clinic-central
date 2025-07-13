@@ -122,29 +122,32 @@ const ReportMedicalHistory: React.FC<ReportMedicalHistoryProps> = ({ formData, o
       </Card>
 
       {/* Print-only version - only show sections with content and hide empty headings */}
-      <div className="medical-history-section hidden print:block">
-        <h3>Medical History & Notes</h3>
-        <div className="history-grid">
-          {formData.medical_history && (
-            <div className="history-item">
-              <div className="history-label">Medical History</div>
-              <div className="history-text">{formData.medical_history}</div>
-            </div>
-          )}
-          {formData.observations && (
-            <div className="history-item">
-              <div className="history-label">Doctor's Observations</div>
-              <div className="history-text">{formData.observations}</div>
-            </div>
-          )}
-          {formData.recommendations && (
-            <div className="history-item">
-              <div className="history-label">Recommendations</div>
-              <div className="history-text">{formData.recommendations}</div>
-            </div>
-          )}
-        </div>
+    <div className="medical-history-section hidden print:block">
+      <h3>Medical History & Notes</h3>
+      <div className="history-grid">
+        {formData.medical_history && (
+          <div className="history-item">
+            <div className="history-label">Medical History</div>
+            <div className="history-text">{formData.medical_history}</div>
+          </div>
+        )}
+
+        {formData.observations && (
+          <div className="history-item">
+            <div className="history-label">Doctor's Observations</div>
+            <div className="history-text">{formData.observations}</div>
+          </div>
+        )}
+
+        {formData.recommendations && (
+          <div className="history-item">
+            <div className="history-label">Recommendations</div>
+            <div className="history-text">{formData.recommendations}</div>
+          </div>
+        )}
       </div>
+    </div>
+
     </>
   );
 };
