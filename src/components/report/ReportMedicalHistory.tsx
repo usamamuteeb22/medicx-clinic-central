@@ -43,7 +43,6 @@ const ReportMedicalHistory: React.FC<ReportMedicalHistoryProps> = ({ formData, o
               <Label htmlFor="medical_history" className="history-label">Medical History</Label>
               <Textarea
                 id="medical_history"
-                placeholder="Previous medical conditions, surgeries, medications..."
                 value={formData.medical_history}
                 onChange={(e) => onFormDataChange({...formData, medical_history: e.target.value})}
                 rows={4}
@@ -54,7 +53,6 @@ const ReportMedicalHistory: React.FC<ReportMedicalHistoryProps> = ({ formData, o
               <Label htmlFor="observations" className="history-label">Doctor's Observations</Label>
               <Textarea
                 id="observations"
-                placeholder="Clinical observations and findings..."
                 value={formData.observations}
                 onChange={(e) => onFormDataChange({...formData, observations: e.target.value})}
                 rows={4}
@@ -65,7 +63,6 @@ const ReportMedicalHistory: React.FC<ReportMedicalHistoryProps> = ({ formData, o
               <Label htmlFor="recommendations" className="history-label">Recommendations</Label>
               <Textarea
                 id="recommendations"
-                placeholder="Treatment recommendations and follow-up instructions..."
                 value={formData.recommendations}
                 onChange={(e) => onFormDataChange({...formData, recommendations: e.target.value})}
                 rows={4}
