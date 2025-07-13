@@ -65,7 +65,6 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
               <Input
                 type="number"
                 step="0.1"
-                placeholder="e.g., 12.5"
                 value={formData.hemoglobin}
                 onChange={(e) => onFormDataChange({...formData, hemoglobin: e.target.value})}
                 className="print:hidden"
@@ -76,7 +75,6 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
               <span className="vital-value">{formatWBC(formData.wbc)}</span>
               <Input
                 type="number"
-                placeholder="e.g., 7000"
                 value={formData.wbc}
                 onChange={(e) => onFormDataChange({...formData, wbc: e.target.value})}
                 className="print:hidden"
@@ -87,7 +85,6 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
               <span className="vital-value">{formatPlatelets(formData.platelets)}</span>
               <Input
                 type="number"
-                placeholder="e.g., 250000"
                 value={formData.platelets}
                 onChange={(e) => onFormDataChange({...formData, platelets: e.target.value})}
                 className="print:hidden"
@@ -97,7 +94,6 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
               <span className="vital-label">Blood Pressure:</span>
               <span className="vital-value">{formatBloodPressure(formData.blood_pressure)}</span>
               <Input
-                placeholder="e.g., 120/80"
                 value={formData.blood_pressure}
                 onChange={(e) => onFormDataChange({...formData, blood_pressure: e.target.value})}
                 className="print:hidden"
@@ -109,7 +105,6 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
               <Input
                 type="number"
                 step="0.1"
-                placeholder="e.g., 98.6"
                 value={formData.temperature}
                 onChange={(e) => onFormDataChange({...formData, temperature: e.target.value})}
                 className="print:hidden"
@@ -121,7 +116,6 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
               <Input
                 type="number"
                 step="0.1"
-                placeholder="e.g., 70.5"
                 value={formData.weight}
                 onChange={(e) => onFormDataChange({...formData, weight: e.target.value})}
                 className="print:hidden"
