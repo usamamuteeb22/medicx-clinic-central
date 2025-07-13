@@ -149,7 +149,6 @@ const ReceptionReportPage = () => {
           clinical_complaint: formData.clinical_complaint || null,
           created_by: user?.id,
           created_by_role: 'reception',
-          status: 'reception_completed'
         })
         .select()
         .single();
