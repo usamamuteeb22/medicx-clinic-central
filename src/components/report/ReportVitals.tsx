@@ -134,7 +134,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
       {/* Clinical Details Section - only show if there's content */}
       {formData.clinical_complaint && (
         <>
-          {/* <Card className="clinical-complaint-section print:hidden">
+          <Card className="clinical-complaint-section print:hidden">
             <CardHeader className="print-hide">
               <CardTitle>Clinical Details</CardTitle>
             </CardHeader>
@@ -147,7 +147,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                 className="clinical-complaint-text"
               />
             </CardContent>
-          </Card> */}
+          </Card>
 
           {/* Print-only Clinical Details */}
           <div className="clinical-complaint-section hidden print:block">

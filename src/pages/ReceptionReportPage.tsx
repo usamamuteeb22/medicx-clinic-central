@@ -308,7 +308,7 @@ const ReceptionReportPage = () => {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="clinical_complaint">Clinical Complaint</Label>
                 <Textarea
                   id="clinical_complaint"
@@ -317,7 +317,7 @@ const ReceptionReportPage = () => {
                   onChange={(e) => setFormData({...formData, clinical_complaint: e.target.value})}
                   rows={3}
                 />
-              </div>
+              </div> */}
             </CardContent>
           </Card>
 
