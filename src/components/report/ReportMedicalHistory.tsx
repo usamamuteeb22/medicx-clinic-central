@@ -5,15 +5,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { FileText } from 'lucide-react';
 
-interface ReportData {
+interface FormData {
+  hemoglobin: string;
+  wbc: string;
+  platelets: string;
+  blood_pressure: string;
+  temperature: string;
+  weight: string;
+  clinical_complaint: string;
   medical_history: string;
   observations: string;
   recommendations: string;
 }
 
 interface ReportMedicalHistoryProps {
-  formData: ReportData;
-  onFormDataChange: (data: ReportData) => void;
+  formData: FormData;
+  onFormDataChange: (data: FormData) => void;
 }
 
 const ReportMedicalHistory: React.FC<ReportMedicalHistoryProps> = ({

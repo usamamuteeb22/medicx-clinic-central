@@ -1,10 +1,11 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Stethoscope } from 'lucide-react';
 
-interface ReportData {
+interface FormData {
   hemoglobin: string;
   wbc: string;
   platelets: string;
@@ -18,8 +19,8 @@ interface ReportData {
 }
 
 interface ReportVitalsProps {
-  formData: ReportData;
-  onFormDataChange: (data: ReportData) => void;
+  formData: FormData;
+  onFormDataChange: (data: FormData) => void;
 }
 
 // Helper: allow only valid numbers (1 decimal point)
