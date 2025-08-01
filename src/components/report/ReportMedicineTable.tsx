@@ -12,10 +12,14 @@ interface PrescribedMedicine {
   id: string;
   medicine: Medicine;
   quantity: number;
+  days: number;
   morning: boolean;
-  afternoon?: boolean;
+  afternoon: boolean;
   evening: boolean;
   night: boolean;
+  before_meal: boolean;
+  after_meal: boolean;
+  fasting: boolean;
 }
 
 interface ReportMedicineTableProps {
@@ -34,6 +38,14 @@ const ReportMedicineTable: React.FC<ReportMedicineTableProps> = ({
     return times.length > 0 ? times.join(', ') : 'Not Specified';
   };
 
+  const getMealTimingText = (medicine: PrescribedMedicine) => {
+    const timings = [];
+    if (medicine.before_meal) timings.push('Before Meal');
+    if (medicine.after_meal) timings.push('After Meal');
+    if (medicine.fasting) timings.push('Fasting');
+    return timings.length > 0 ? timings.join(', ') : 'Not Specified';
+  };
+
   // Only show medicines that are actually prescribed
   const activeMedicines = prescribedMedicines.filter(medicine => medicine.quantity > 0);
 
@@ -50,8 +62,10 @@ const ReportMedicineTable: React.FC<ReportMedicineTableProps> = ({
           <tr>
             <th>Medicine</th>
             <th>Category</th>
+            <th>Days</th>
             <th>Quantity</th>
             <th>Dosage Timing</th>
+            <th>Meal Timing</th>
           </tr>
         </thead>
         <tbody>
@@ -59,8 +73,10 @@ const ReportMedicineTable: React.FC<ReportMedicineTableProps> = ({
             <tr key={index}>
               <td>{medicine.medicine.name}</td>
               <td className="capitalize">{medicine.medicine.category}</td>
+              <td>{medicine.days}</td>
               <td>{medicine.quantity}</td>
               <td>{getDosageText(medicine)}</td>
+              <td>{getMealTimingText(medicine)}</td>
             </tr>
           ))}
         </tbody>

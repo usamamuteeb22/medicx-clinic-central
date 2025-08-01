@@ -15,10 +15,14 @@ interface PrescribedMedicine {
   id: string;
   medicine: Medicine;
   quantity: number;
+  days: number;
   morning: boolean;
   afternoon: boolean;
   evening: boolean;
   night: boolean;
+  before_meal: boolean;
+  after_meal: boolean;
+  fasting: boolean;
 }
 
 interface MedicinePrescriptionSectionProps {

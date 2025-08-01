@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -31,9 +32,14 @@ interface PrescribedMedicine {
   id: string;
   medicine: Medicine;
   quantity: number;
+  days: number;
   morning: boolean;
+  afternoon: boolean;
   evening: boolean;
   night: boolean;
+  before_meal: boolean;
+  after_meal: boolean;
+  fasting: boolean;
 }
 
 interface ReportData {

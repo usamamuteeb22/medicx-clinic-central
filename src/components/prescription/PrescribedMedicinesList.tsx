@@ -16,10 +16,14 @@ interface PrescribedMedicine {
   id: string;
   medicine: Medicine;
   quantity: number;
+  days: number;
   morning: boolean;
   afternoon: boolean;
   evening: boolean;
   night: boolean;
+  before_meal: boolean;
+  after_meal: boolean;
+  fasting: boolean;
 }
 
 interface PrescribedMedicinesListProps {
@@ -40,6 +44,14 @@ const PrescribedMedicinesList: React.FC<PrescribedMedicinesListProps> = ({
     return times.length > 0 ? times.join(', ') : 'Not specified';
   };
 
+  const getMealTimingText = (medicine: PrescribedMedicine) => {
+    const timings = [];
+    if (medicine.before_meal) timings.push('Before Meal');
+    if (medicine.after_meal) timings.push('After Meal');
+    if (medicine.fasting) timings.push('Fasting');
+    return timings.length > 0 ? timings.join(', ') : 'Not specified';
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -58,8 +70,10 @@ const PrescribedMedicinesList: React.FC<PrescribedMedicinesListProps> = ({
                 <TableRow>
                   <TableHead>Medicine</TableHead>
                   <TableHead>Category</TableHead>
+                  <TableHead>Days</TableHead>
                   <TableHead>Quantity</TableHead>
                   <TableHead>Dosage Timing</TableHead>
+                  <TableHead>Meal Timing</TableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
@@ -68,8 +82,10 @@ const PrescribedMedicinesList: React.FC<PrescribedMedicinesListProps> = ({
                   <TableRow key={medicine.id}>
                     <TableCell className="font-medium">{medicine.medicine.name}</TableCell>
                     <TableCell className="capitalize">{medicine.medicine.category}</TableCell>
+                    <TableCell>{medicine.days}</TableCell>
                     <TableCell>{medicine.quantity}</TableCell>
                     <TableCell>{getDosageText(medicine)}</TableCell>
+                    <TableCell>{getMealTimingText(medicine)}</TableCell>
                     <TableCell>
                       <Button
                         variant="destructive"

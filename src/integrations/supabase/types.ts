@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           afternoon: boolean | null
           created_at: string | null
+          days: number | null
           evening: boolean | null
           id: string
           medicine_id: string | null
@@ -29,6 +30,7 @@ export type Database = {
         Insert: {
           afternoon?: boolean | null
           created_at?: string | null
+          days?: number | null
           evening?: boolean | null
           id?: string
           medicine_id?: string | null
@@ -40,6 +42,7 @@ export type Database = {
         Update: {
           afternoon?: boolean | null
           created_at?: string | null
+          days?: number | null
           evening?: boolean | null
           id?: string
           medicine_id?: string | null
@@ -170,62 +173,65 @@ export type Database = {
       patient_reports: {
         Row: {
           blood_pressure: string | null
+          bsr: number | null
           clinical_complaint: string | null
           created_at: string | null
           created_by: string | null
           created_by_role: string | null
           doctor_completed_at: string | null
-          hemoglobin: number | null
           id: string
           medical_history: string | null
+          medicine_notes: string | null
           observations: string | null
           patient_id: string
-          platelets: number | null
           reception_completed_at: string | null
           recommendations: string | null
           report_date: string | null
+          saturation: number | null
           temperature: number | null
-          wbc: number | null
+          test_advice: string | null
           weight: number | null
         }
         Insert: {
           blood_pressure?: string | null
+          bsr?: number | null
           clinical_complaint?: string | null
           created_at?: string | null
           created_by?: string | null
           created_by_role?: string | null
           doctor_completed_at?: string | null
-          hemoglobin?: number | null
           id?: string
           medical_history?: string | null
+          medicine_notes?: string | null
           observations?: string | null
           patient_id: string
-          platelets?: number | null
           reception_completed_at?: string | null
           recommendations?: string | null
           report_date?: string | null
+          saturation?: number | null
           temperature?: number | null
-          wbc?: number | null
+          test_advice?: string | null
           weight?: number | null
         }
         Update: {
           blood_pressure?: string | null
+          bsr?: number | null
           clinical_complaint?: string | null
           created_at?: string | null
           created_by?: string | null
           created_by_role?: string | null
           doctor_completed_at?: string | null
-          hemoglobin?: number | null
           id?: string
           medical_history?: string | null
+          medicine_notes?: string | null
           observations?: string | null
           patient_id?: string
-          platelets?: number | null
           reception_completed_at?: string | null
           recommendations?: string | null
           report_date?: string | null
+          saturation?: number | null
           temperature?: number | null
-          wbc?: number | null
+          test_advice?: string | null
           weight?: number | null
         }
         Relationships: [
