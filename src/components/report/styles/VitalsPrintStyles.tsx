@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 const VitalsPrintStyles = () => (
@@ -8,59 +9,64 @@ const VitalsPrintStyles = () => (
         .medical-vitals-section {
           width: 190mm;
           border: 0.5mm solid #000;
-          padding: 2mm;
-          margin-bottom: 1mm;
+          padding: 3mm;
+          margin-bottom: 3mm;
           page-break-inside: avoid;
         }
+        
         .medical-vitals-section h3 {
-          font-size: 11pt;
+          font-size: 12pt;
           font-weight: bold;
-          margin: 0 0 2mm 0;
+          margin: 0 0 4mm 0;
           color: #000;
         }
+        
         .vitals-grid {
           display: grid;
           grid-template-columns: 1fr 1fr 1fr;
-          grid-template-rows: auto;
-          gap: 1mm 3mm;
+          gap: 4mm 6mm;
+          width: 100%;
         }
+        
         .vital-item {
           display: flex;
           align-items: center;
           font-size: 10pt;
-          overflow: hidden;
+          min-height: 6mm;
         }
+        
         .vital-label {
           font-weight: bold;
-          margin-right: 1.5mm;
-        }
-        .vital-value {
+          margin-right: 2mm;
+          color: #000;
           white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
         }
+        
+        .vital-value {
+          color: #000;
+          word-wrap: break-word;
+        }
+        
         .clinical-complaint-section {
           width: 190mm;
           border: 0.5mm solid #000;
-          padding: 2mm;
-          margin-bottom: 1mm;
+          padding: 3mm;
+          margin-bottom: 3mm;
           page-break-inside: avoid;
         }
+        
         .clinical-complaint-section h3 {
-          font-size: 11pt;
+          font-size: 12pt;
           font-weight: bold;
-          margin: 0 0 2mm 0;
+          margin: 0 0 4mm 0;
           color: #000;
         }
+        
         .clinical-complaint-text {
           font-size: 10pt;
           color: #000;
           line-height: 1.3;
-          width: 100%;
-          white-space: pre-wrap;
-        }
-        input, textarea {
-          display: none !important;
+          word-wrap: break-word;
         }
       }
       `,

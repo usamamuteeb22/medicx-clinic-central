@@ -6,61 +6,36 @@ const MedicalHistoryPrintStyles = () => {
     <style dangerouslySetInnerHTML={{
       __html: `
       @media print {
-        /* Medical History & Notes section - flexible height with more space */
-        .medical-history-section {
+        .medical-history-print {
           width: 190mm;
-          min-height: 60mm;
           border: 0.5mm solid #000;
-          padding: 2mm;
+          padding: 3mm;
           margin-bottom: 5mm;
           page-break-inside: avoid;
         }
 
-        .medical-history-section h3 {
-          font-size: 11pt;
+        .medical-history-print h3 {
+          font-size: 12pt;
           font-weight: bold;
-          margin: 0 0 2mm 0;
+          margin: 0 0 4mm 0;
           color: #000;
-          height: 3mm;
-          line-height: 3mm;
-          margin-bottom: 8mm;
         }
 
-        .history-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 2mm;
+        .medical-history-print .space-y-3 > div {
+          margin-bottom: 3mm;
         }
 
-        .history-item {
-          min-height: 15mm;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .history-label {
+        .medical-history-print .font-bold {
           font-weight: bold;
-          font-size: 10pt;
           color: #000;
-          height: 3mm;
-          line-height: 3mm;
           margin-bottom: 1mm;
         }
 
-        .history-text {
+        .medical-history-print .text-sm {
           font-size: 10pt;
-          color: #000;
           line-height: 1.3;
-          width: 100%;
-          background: none;
-          border: none;
-          resize: none;
-          min-height: 10mm;
-        }
-
-        /* Hide empty history items and their labels */
-        .history-item.empty-section {
-          display: none !important;
+          color: #000;
+          word-wrap: break-word;
         }
       }
       `
