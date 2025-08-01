@@ -9,6 +9,7 @@ import ReportMedicineTable from './report/ReportMedicineTable';
 import ReportMedicalHistory from './report/ReportMedicalHistory';
 import ReportFooter from './report/ReportFooter';
 import ReportPrintStyles from './report/ReportPrintStyles';
+import NotesSection from './report/NotesSection';
 
 interface Patient {
   id: string;
@@ -36,16 +37,17 @@ interface PrescribedMedicine {
 }
 
 interface ReportData {
-  hemoglobin: string;
-  wbc: string;
-  platelets: string;
   blood_pressure: string;
   temperature: string;
   weight: string;
+  bsr: string;
+  saturation: string;
   clinical_complaint: string;
   medical_history: string;
   observations: string;
   recommendations: string;
+  medicine_notes: string;
+  test_advice: string;
 }
 
 interface ReportPDFGeneratorProps {
@@ -135,6 +137,10 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
                 onFormDataChange={handleFormDataChange}
               />
               <ReportMedicineTable prescribedMedicines={prescribedMedicines} />
+              <NotesSection
+                formData={reportData}
+                onFormDataChange={handleFormDataChange}
+              />
               <ReportMedicalHistory 
                 formData={reportData} 
                 onFormDataChange={handleFormDataChange}

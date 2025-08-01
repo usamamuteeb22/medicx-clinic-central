@@ -24,10 +24,14 @@ interface PrescribedMedicine {
   id: string;
   medicine: Medicine;
   quantity: number;
+  days: number;
   morning: boolean;
   afternoon: boolean;
   evening: boolean;
   night: boolean;
+  before_meal: boolean;
+  after_meal: boolean;
+  fasting: boolean;
 }
 
 interface ReceptionReport {
@@ -42,16 +46,17 @@ export const usePatientReportForm = () => {
   const { user } = useAuth();
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [formData, setFormData] = useState({
-    hemoglobin: '',
-    wbc: '',
-    platelets: '',
     blood_pressure: '',
     temperature: '',
     weight: '',
+    bsr: '',
+    saturation: '',
     clinical_complaint: '',
     medical_history: '',
     observations: '',
-    recommendations: ''
+    recommendations: '',
+    medicine_notes: '',
+    test_advice: ''
   });
   const [prescribedMedicines, setPrescribedMedicines] = useState<PrescribedMedicine[]>([]);
   const [loading, setLoading] = useState(false);
@@ -84,9 +89,8 @@ export const usePatientReportForm = () => {
         .from('patient_reports')
         .insert({
           patient_id: selectedPatient.id,
-          hemoglobin: formData.hemoglobin ? parseFloat(formData.hemoglobin) : null,
-          wbc: formData.wbc ? parseInt(formData.wbc) : null,
-          platelets: formData.platelets ? parseInt(formData.platelets) : null,
+          bsr: formData.bsr ? parseFloat(formData.bsr) : null,
+          saturation: formData.saturation ? parseFloat(formData.saturation) : null,
           blood_pressure: formData.blood_pressure || null,
           temperature: formData.temperature ? parseFloat(formData.temperature) : null,
           weight: formData.weight ? parseFloat(formData.weight) : null,
@@ -94,6 +98,8 @@ export const usePatientReportForm = () => {
           medical_history: formData.medical_history || null,
           observations: formData.observations || null,
           recommendations: formData.recommendations || null,
+          medicine_notes: formData.medicine_notes || null,
+          test_advice: formData.test_advice || null,
           created_by: user?.id
         })
         .select()
@@ -109,10 +115,14 @@ export const usePatientReportForm = () => {
             patient_report_id: reportResult.id,
             medicine_id: med.medicine.id,
             quantity: med.quantity,
+            days: med.days,
             morning: med.morning,
             afternoon: med.afternoon,
             evening: med.evening,
-            night: med.night
+            night: med.night,
+            before_meal: med.before_meal,
+            after_meal: med.after_meal,
+            fasting: med.fasting
           })
       );
 
@@ -156,9 +166,8 @@ export const usePatientReportForm = () => {
       // Pre-fill the medical vitals from reception report
       setFormData(prev => ({
         ...prev,
-        hemoglobin: receptionReportData.hemoglobin?.toString() || '',
-        wbc: receptionReportData.wbc?.toString() || '',
-        platelets: receptionReportData.platelets?.toString() || '',
+        bsr: receptionReportData.bsr?.toString() || '',
+        saturation: receptionReportData.saturation?.toString() || '',
         blood_pressure: receptionReportData.blood_pressure || '',
         temperature: receptionReportData.temperature?.toString() || '',
         weight: receptionReportData.weight?.toString() || '',
@@ -183,16 +192,17 @@ export const usePatientReportForm = () => {
   const resetForm = useCallback(() => {
     setSelectedPatient(null);
     setFormData({
-      hemoglobin: '',
-      wbc: '',
-      platelets: '',
       blood_pressure: '',
       temperature: '',
       weight: '',
+      bsr: '',
+      saturation: '',
       clinical_complaint: '',
       medical_history: '',
       observations: '',
-      recommendations: ''
+      recommendations: '',
+      medicine_notes: '',
+      test_advice: ''
     });
     setPrescribedMedicines([]);
     setSavedReportId(null);

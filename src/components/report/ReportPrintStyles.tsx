@@ -5,6 +5,7 @@ import PatientInfoPrintStyles from './styles/PatientInfoPrintStyles';
 import VitalsPrintStyles from './styles/VitalsPrintStyles';
 import MedicalHistoryPrintStyles from './styles/MedicalHistoryPrintStyles';
 import MedicinePrintStyles from './styles/MedicinePrintStyles';
+import NotesPrintStyles from './styles/NotesPrintStyles';
 
 const ReportPrintStyles = () => {
   return (
@@ -14,6 +15,7 @@ const ReportPrintStyles = () => {
       <VitalsPrintStyles />
       <MedicalHistoryPrintStyles />
       <MedicinePrintStyles />
+      <NotesPrintStyles />
     </>
   );
 };

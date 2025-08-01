@@ -23,7 +23,7 @@ const VitalsPrintStyles = () => (
         
         .vitals-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
+          grid-template-columns: 1fr 1fr;
           gap: 4mm 6mm;
           width: 100%;
         }
@@ -40,6 +40,7 @@ const VitalsPrintStyles = () => (
           margin-right: 2mm;
           color: #000;
           white-space: nowrap;
+          min-width: 30mm;
         }
         
         .vital-value {

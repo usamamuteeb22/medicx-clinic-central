@@ -6,16 +6,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Stethoscope } from 'lucide-react';
 
 interface FormData {
-  hemoglobin: string;
-  wbc: string;
-  platelets: string;
   blood_pressure: string;
   temperature: string;
   weight: string;
+  bsr: string;
+  saturation: string;
   clinical_complaint: string;
   medical_history: string;
   observations: string;
   recommendations: string;
+  medicine_notes: string;
+  test_advice: string;
 }
 
 interface ReportVitalsProps {
@@ -29,11 +30,6 @@ const sanitizeDecimalInput = (value: string) => {
     .replace(/[^\d.]/g, '')      // remove non-digits/non-dot
     .replace(/(\..*?)\./g, '$1') // only one dot
     .replace(/^0+(\d)/, '$1');   // remove leading zeros
-};
-
-// Helper: allow only integers
-const sanitizeIntegerInput = (value: string) => {
-  return value.replace(/\D/g, '');
 };
 
 const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange }) => {
@@ -57,63 +53,6 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
         <CardContent className="space-y-4 print:p-0">
           <div className="vitals-grid">
 
-            {/* Hemoglobin */}
-            <div className="vital-item">
-              <span className="vital-label">Hemoglobin:</span>
-              <span className="vital-value hidden print:inline">
-                {formatVital(formData.hemoglobin, 'g/dL')}
-              </span>
-              <Input
-                type="text"
-                value={formData.hemoglobin}
-                onChange={(e) =>
-                  onFormDataChange({
-                    ...formData,
-                    hemoglobin: sanitizeDecimalInput(e.target.value),
-                  })
-                }
-                className="print:hidden"
-              />
-            </div>
-
-            {/* WBC */}
-            <div className="vital-item">
-              <span className="vital-label">WBC:</span>
-              <span className="vital-value hidden print:inline">
-                {formatVital(formData.wbc, '/µL')}
-              </span>
-              <Input
-                type="text"
-                value={formData.wbc}
-                onChange={(e) =>
-                  onFormDataChange({
-                    ...formData,
-                    wbc: sanitizeIntegerInput(e.target.value),
-                  })
-                }
-                className="print:hidden"
-              />
-            </div>
-
-            {/* Platelets */}
-            <div className="vital-item">
-              <span className="vital-label">Platelets:</span>
-              <span className="vital-value hidden print:inline">
-                {formatVital(formData.platelets, '/µL')}
-              </span>
-              <Input
-                type="text"
-                value={formData.platelets}
-                onChange={(e) =>
-                  onFormDataChange({
-                    ...formData,
-                    platelets: sanitizeIntegerInput(e.target.value),
-                  })
-                }
-                className="print:hidden"
-              />
-            </div>
-
             {/* Blood Pressure */}
             <div className="vital-item">
               <span className="vital-label">Blood Pressure:</span>
@@ -122,11 +61,12 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
               </span>
               <Input
                 type="text"
+                placeholder="e.g., 120/80"
                 value={formData.blood_pressure}
                 onChange={(e) =>
                   onFormDataChange({
                     ...formData,
-                    blood_pressure: sanitizeIntegerInput(e.target.value),
+                    blood_pressure: e.target.value,
                   })
                 }
                 className="print:hidden"
@@ -137,10 +77,11 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
             <div className="vital-item">
               <span className="vital-label">Temperature:</span>
               <span className="vital-value hidden print:inline">
-                {formatVital(formData.temperature, '°F')}
+                {formatVital(formData.temperature, '°C')}
               </span>
               <Input
                 type="text"
+                placeholder="e.g., 36.5"
                 value={formData.temperature}
                 onChange={(e) =>
                   onFormDataChange({
@@ -160,11 +101,52 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
               </span>
               <Input
                 type="text"
+                placeholder="e.g., 70.5"
                 value={formData.weight}
                 onChange={(e) =>
                   onFormDataChange({
                     ...formData,
                     weight: sanitizeDecimalInput(e.target.value),
+                  })
+                }
+                className="print:hidden"
+              />
+            </div>
+
+            {/* BSR */}
+            <div className="vital-item">
+              <span className="vital-label">BSR:</span>
+              <span className="vital-value hidden print:inline">
+                {formatVital(formData.bsr, 'mg/dL')}
+              </span>
+              <Input
+                type="text"
+                placeholder="e.g., 15.2"
+                value={formData.bsr}
+                onChange={(e) =>
+                  onFormDataChange({
+                    ...formData,
+                    bsr: sanitizeDecimalInput(e.target.value),
+                  })
+                }
+                className="print:hidden"
+              />
+            </div>
+
+            {/* Saturation */}
+            <div className="vital-item">
+              <span className="vital-label">Saturation:</span>
+              <span className="vital-value hidden print:inline">
+                {formatVital(formData.saturation, '%')}
+              </span>
+              <Input
+                type="text"
+                placeholder="e.g., 98.5"
+                value={formData.saturation}
+                onChange={(e) =>
+                  onFormDataChange({
+                    ...formData,
+                    saturation: sanitizeDecimalInput(e.target.value),
                   })
                 }
                 className="print:hidden"

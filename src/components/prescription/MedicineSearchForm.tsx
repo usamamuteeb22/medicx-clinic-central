@@ -20,10 +20,14 @@ interface PrescribedMedicine {
   id: string;
   medicine: Medicine;
   quantity: number;
+  days: number;
   morning: boolean;
   afternoon: boolean;
   evening: boolean;
   night: boolean;
+  before_meal: boolean;
+  after_meal: boolean;
+  fasting: boolean;
 }
 
 interface MedicineSearchFormProps {
@@ -39,13 +43,24 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
   const [filteredMedicines, setFilteredMedicines] = useState<Medicine[]>([]);
   const [medicineSearchTerm, setMedicineSearchTerm] = useState('');
   const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
-  const [quantity, setQuantity] = useState('');
+  const [days, setDays] = useState('1');
   const [dosageTiming, setDosageTiming] = useState({
     morning: false,
     afternoon: false,
     evening: false,
-    night: false
+    night: false,
+    before_meal: false,
+    after_meal: false,
+    fasting: false
   });
+
+  // Calculate quantity based on days and selected dosage timings
+  const calculateQuantity = () => {
+    const timingCount = Object.values(dosageTiming).filter(Boolean).length;
+    return parseInt(days) * timingCount;
+  };
+
+  const quantity = calculateQuantity();
 
   useEffect(() => {
     fetchMedicines();
@@ -87,20 +102,20 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
   };
 
   const handleAddMedicine = () => {
-    if (!selectedMedicine || !quantity) {
+    if (!selectedMedicine || !days || quantity === 0) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Please select a medicine and enter quantity"
+        description: "Please select a medicine, enter days, and select at least one dosage timing"
       });
       return;
     }
 
-    if (parseInt(quantity) > selectedMedicine.total_quantity) {
+    if (quantity > selectedMedicine.total_quantity) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: `Insufficient stock. Available: ${selectedMedicine.total_quantity}`
+        description: `Insufficient stock. Available: ${selectedMedicine.total_quantity}, Required: ${quantity}`
       });
       return;
     }
@@ -118,24 +133,31 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
     const newPrescription: PrescribedMedicine = {
       id: crypto.randomUUID(),
       medicine: selectedMedicine,
-      quantity: parseInt(quantity),
+      quantity: quantity,
+      days: parseInt(days),
       morning: dosageTiming.morning,
       afternoon: dosageTiming.afternoon,
       evening: dosageTiming.evening,
-      night: dosageTiming.night
+      night: dosageTiming.night,
+      before_meal: dosageTiming.before_meal,
+      after_meal: dosageTiming.after_meal,
+      fasting: dosageTiming.fasting
     };
 
     onAddMedicine(newPrescription);
 
     // Reset form
     setSelectedMedicine(null);
-    setQuantity('');
+    setDays('1');
     setMedicineSearchTerm('');
     setDosageTiming({
       morning: false,
       afternoon: false,
       evening: false,
-      night: false
+      night: false,
+      before_meal: false,
+      after_meal: false,
+      fasting: false
     });
   };
 
@@ -191,7 +213,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label className="text-emerald-700">Selected Medicine</Label>
             <div className="p-3 bg-white border border-green-200 rounded-md">
@@ -209,21 +231,31 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-emerald-700">Quantity</Label>
+            <Label className="text-emerald-700">Days</Label>
             <Input
               type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="Enter quantity"
+              value={days}
+              onChange={(e) => setDays(e.target.value)}
+              placeholder="Enter days"
               min="1"
               className="border-green-200 focus:border-green-400"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-emerald-700">Auto-calculated Quantity</Label>
+            <div className="p-3 bg-white border border-green-200 rounded-md">
+              <div className="font-medium text-blue-600">{quantity}</div>
+              <div className="text-xs text-gray-500">
+                {days} days × {Object.values(dosageTiming).filter(Boolean).length} timings
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="space-y-2">
           <Label className="text-emerald-700">Dosage Timing</Label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="morning"
@@ -264,16 +296,46 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
               />
               <Label htmlFor="night">Night</Label>
             </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="before_meal"
+                checked={dosageTiming.before_meal}
+                onCheckedChange={(checked) => 
+                  setDosageTiming({...dosageTiming, before_meal: !!checked})
+                }
+              />
+              <Label htmlFor="before_meal">Before Meal</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="after_meal"
+                checked={dosageTiming.after_meal}
+                onCheckedChange={(checked) => 
+                  setDosageTiming({...dosageTiming, after_meal: !!checked})
+                }
+              />
+              <Label htmlFor="after_meal">After Meal</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="fasting"
+                checked={dosageTiming.fasting}
+                onCheckedChange={(checked) => 
+                  setDosageTiming({...dosageTiming, fasting: !!checked})
+                }
+              />
+              <Label htmlFor="fasting">Fasting</Label>
+            </div>
           </div>
         </div>
 
         <Button 
           onClick={handleAddMedicine} 
           className="w-full bg-emerald-600 hover:bg-emerald-700"
-          disabled={!selectedMedicine || !quantity}
+          disabled={!selectedMedicine || !days || quantity === 0}
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Medicine
+          Add Medicine (Qty: {quantity})
         </Button>
       </CardContent>
     </Card>

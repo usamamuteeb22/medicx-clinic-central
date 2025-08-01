@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,6 +10,7 @@ import MedicinePrescriptionSection from '@/components/report/MedicinePrescriptio
 import ReportMedicalHistory from '@/components/report/ReportMedicalHistory';
 import ReportActionButtons from '@/components/report/ReportActionButtons';
 import { usePatientReportForm } from '@/hooks/usePatientReportForm';
+import NotesSection from '@/components/report/NotesSection';
 
 const PatientReportPage = () => {
   const { user } = useAuth();
@@ -74,6 +74,12 @@ const PatientReportPage = () => {
           <MedicinePrescriptionSection
             prescribedMedicines={prescribedMedicines}
             onPrescribedMedicinesChange={setPrescribedMedicines}
+          />
+
+          {/* Notes Section */}
+          <NotesSection
+            formData={formData}
+            onFormDataChange={setFormData}
           />
 
           {/* Medical History & Notes */}
