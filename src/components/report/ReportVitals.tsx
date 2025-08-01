@@ -4,20 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Stethoscope } from 'lucide-react';
-
-interface FormData {
-  blood_pressure: string;
-  temperature: string;
-  weight: string;
-  bsr: string;
-  saturation: string;
-  clinical_complaint: string;
-  medical_history: string;
-  observations: string;
-  recommendations: string;
-  medicine_notes: string;
-  test_advice: string;
-}
+import { FormData } from '@/types/reportTypes';
 
 interface ReportVitalsProps {
   formData: FormData;

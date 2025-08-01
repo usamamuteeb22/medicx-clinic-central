@@ -4,19 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { FileText } from 'lucide-react';
-
-interface FormData {
-  hemoglobin: string;
-  wbc: string;
-  platelets: string;
-  blood_pressure: string;
-  temperature: string;
-  weight: string;
-  clinical_complaint: string;
-  medical_history: string;
-  observations: string;
-  recommendations: string;
-}
+import { FormData } from '@/types/reportTypes';
 
 interface ReportMedicalHistoryProps {
   formData: FormData;

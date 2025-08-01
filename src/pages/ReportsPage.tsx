@@ -1,138 +1,59 @@
-
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Search, Eye } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { FileText, Search } from 'lucide-react';
-import ReportPDFGenerator from '@/components/ReportPDFGenerator';
+import { Patient, PatientReport, FormData, PrescribedMedicine } from '@/types/reportTypes';
 
-interface Patient {
-  id: string;
-  patient_id: number;
-  name: string;
-  age: number;
-  gender: string;
-  phone_number: string;
-}
-
-interface PatientReport {
-  id: string;
-  patient_id: string;
-  hemoglobin: number | null;
-  wbc: number | null;
-  platelets: number | null;
-  blood_pressure: string | null;
-  temperature: number | null;
-  weight: number | null;
-  clinical_complaint: string | null;
-  medical_history: string | null;
-  observations: string | null;
-  recommendations: string | null;
-  report_date: string;
-  created_at: string;
-  patient: Patient;
-}
-
-interface Medicine {
-  id: string;
-  name: string;
-  category: string;
-  total_quantity: number;
-}
-
-interface PrescribedMedicine {
-  id: string;
-  medicine: Medicine;
-  quantity: number;
-  morning: boolean;
-  evening: boolean;
-  night: boolean;
-}
-
+// Update the PatientReport interface usage and remove old field references
 const ReportsPage = () => {
-  const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [patientReports, setPatientReports] = useState<PatientReport[]>([]);
-  const [allLatestReports, setAllLatestReports] = useState<PatientReport[]>([]);
+  const [reports, setReports] = useState<PatientReport[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filteredReports, setFilteredReports] = useState<PatientReport[]>([]);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState<PatientReport | null>(null);
+  const [reportFormData, setReportFormData] = useState<FormData>({
+    blood_pressure: '',
+    temperature: '',
+    weight: '',
+    bsr: '',
+    saturation: '',
+    clinical_complaint: '',
+    medical_history: '',
+    observations: '',
+    recommendations: '',
+    medicine_notes: '',
+    test_advice: ''
+  });
   const [prescribedMedicines, setPrescribedMedicines] = useState<PrescribedMedicine[]>([]);
-  const [showPDFPreview, setShowPDFPreview] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState<Patient[]>([]);
 
-  // Check user permissions - now includes reception
-  const canAccessPage = useMemo(() => 
-    user?.role === 'admin' || user?.role === 'doctor' || user?.role === 'reception',
-    [user?.role]
-  );
-
-  // Load all latest reports on component mount
-  useEffect(() => {
-    if (canAccessPage) {
-      fetchAllLatestReports();
-    }
-  }, [canAccessPage]);
-
-  // Search patients as user types
-  useEffect(() => {
-    if (searchTerm.trim()) {
-      searchPatients();
-    } else {
-      setSearchResults([]);
-      setSelectedPatient(null);
-      setPatientReports([]);
-    }
-  }, [searchTerm]);
-
-  // Load reports when patient is selected
-  useEffect(() => {
-    if (selectedPatient) {
-      fetchPatientReports();
-    }
-  }, [selectedPatient]);
-
-  const searchPatients = useCallback(async () => {
+  const fetchReports = async () => {
     try {
-      const { data, error } = await supabase
-        .from('patients')
-        .select('*')
-        .or(`name.ilike.%${searchTerm}%,patient_id.eq.${parseInt(searchTerm) || 0},phone_number.ilike.%${searchTerm}%`)
-        .limit(10);
+      setLoading(true);
+      console.log('Fetching reports...');
 
-      if (error) throw error;
-      setSearchResults(data || []);
-    } catch (error) {
-      console.error('Error searching patients:', error);
-    }
-  }, [searchTerm]);
-
-  const fetchPatientReports = useCallback(async () => {
-    if (!selectedPatient) return;
-
-    setLoading(true);
-    try {
-      const { data: reportsData, error } = await supabase
+      const { data: reportsData, error: reportsError } = await supabase
         .from('patient_reports')
-        .select('*')
-        .eq('patient_id', selectedPatient.id)
+        .select(`
+          *,
+          patient:patients(*)
+        `)
+        .eq('created_by_role', 'doctor')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (reportsError) throw reportsError;
 
-      // Transform the data to include patient info
-      const reportsWithPatient = reportsData?.map(report => ({
-        ...report,
-        patient: selectedPatient
-      })) || [];
-
-      setPatientReports(reportsWithPatient);
+      console.log('Reports data:', reportsData);
+      setReports(reportsData || []);
     } catch (error: any) {
-      console.error('Error fetching patient reports:', error);
+      console.error('Error fetching reports:', error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -141,321 +62,294 @@ const ReportsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedPatient]);
+  };
 
-  const fetchAllLatestReports = useCallback(async () => {
-    try {
-      const { data: reportsData, error } = await supabase
-        .from('patient_reports')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50); // Limit for performance
-
-      if (error) throw error;
-
-      // Fetch patient data for each report
-      const reportsWithPatients = await Promise.all(
-        reportsData?.map(async (report) => {
-          const { data: patientData } = await supabase
-            .from('patients')
-            .select('*')
-            .eq('id', report.patient_id)
-            .single();
-
-          return {
-            ...report,
-            patient: patientData || {
-              id: report.patient_id,
-              patient_id: 0,
-              name: 'Unknown Patient',
-              age: 0,
-              gender: 'unknown',
-              phone_number: ''
-            }
-          };
-        }) || []
-      );
-
-      setAllLatestReports(reportsWithPatients);
-    } catch (error: any) {
-      console.error('Error fetching latest reports:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch reports"
-      });
-    }
+  useEffect(() => {
+    fetchReports();
   }, []);
 
-  const handleReportClick = useCallback(async (report: PatientReport) => {
-    setSelectedReport(report);
-    
-    // Fetch prescribed medicines for this report
+  useEffect(() => {
+    // Apply search filter
+    const filtered = reports.filter(report => {
+      const searchTerm = search.toLowerCase();
+      return (
+        report.patient?.name.toLowerCase().includes(searchTerm) ||
+        report.patient?.patient_id.toString().includes(searchTerm) ||
+        report.blood_pressure?.toLowerCase().includes(searchTerm) ||
+        report.clinical_complaint?.toLowerCase().includes(searchTerm)
+      );
+    });
+    setFilteredReports(filtered);
+  }, [search, reports]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+  };
+
+  const handleShowReport = async (report: PatientReport) => {
     try {
-      const { data: prescriptionsData, error } = await supabase
+      console.log('Loading report details for:', report.id);
+      setSelectedReport(report);
+      
+      // Format form data properly for the new schema
+      const reportFormData: FormData = {
+        blood_pressure: report.blood_pressure || '',
+        temperature: report.temperature?.toString() || '',
+        weight: report.weight?.toString() || '',
+        bsr: report.bsr?.toString() || '',
+        saturation: report.saturation?.toString() || '',
+        clinical_complaint: report.clinical_complaint || '',
+        medical_history: report.medical_history || '',
+        observations: report.observations || '',
+        recommendations: report.recommendations || '',
+        medicine_notes: report.medicine_notes || '',
+        test_advice: report.test_advice || ''
+      };
+      setReportFormData(reportFormData);
+
+      // Load medicine prescriptions
+      const { data: prescriptionsData, error: prescriptionsError } = await supabase
         .from('medicine_prescriptions')
-        .select('*')
+        .select(`
+          *,
+          medicine:medicines(*)
+        `)
         .eq('patient_report_id', report.id);
 
-      if (error) throw error;
+      if (prescriptionsError) throw prescriptionsError;
 
-      // Fetch medicine details for each prescription
-      const medicinesWithDetails = await Promise.all(
-        prescriptionsData?.map(async (prescription) => {
-          const { data: medicineData } = await supabase
-            .from('medicines')
-            .select('*')
-            .eq('id', prescription.medicine_id)
-            .single();
+      const prescriptions: PrescribedMedicine[] = prescriptionsData?.map(p => ({
+        id: p.id,
+        medicine: p.medicine,
+        quantity: p.quantity,
+        days: p.days || 1,
+        morning: p.morning || false,
+        afternoon: p.afternoon || false,
+        evening: p.evening || false,
+        night: p.night || false,
+        before_meal: p.before_meal || false,
+        after_meal: p.after_meal || false,
+        fasting: p.fasting || false,
+      })) || [];
+      setPrescribedMedicines(prescriptions);
 
-          return {
-            ...prescription,
-            medicine: medicineData || {
-              id: prescription.medicine_id || '',
-              name: 'Unknown Medicine',
-              category: 'unknown',
-              total_quantity: 0
-            }
-          };
-        }) || []
-      );
-
-      setPrescribedMedicines(medicinesWithDetails);
-      setShowPDFPreview(true);
+      setShowReportModal(true);
     } catch (error: any) {
-      console.error('Error fetching prescribed medicines:', error);
+      console.error('Error loading report details:', error);
       toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to load report details"
       });
     }
-  }, []);
+  };
 
-  const formatDate = useCallback((dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-  }, []);
-
-  const formatTime = useCallback((dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-  }, []);
-
-  if (!canAccessPage) {
-    return (
-      <div className="max-w-7xl mx-auto p-6">
-        <Card>
-          <CardContent className="text-center py-8">
-            <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
-            <p className="text-gray-600">Only Admin, Doctor, and Reception users can access this page.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const handleCloseReportModal = () => {
+    setShowReportModal(false);
+    setSelectedReport(null);
+  };
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Patient Reports</h1>
-          <p className="text-gray-600">View and manage patient medical reports</p>
-        </div>
+        <h1 className="text-3xl font-bold text-gray-900">Patient Reports</h1>
       </div>
 
-      {/* Patient Search */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Search className="h-5 w-5" />
-            <span>Search Patient</span>
+            <span>Search Reports</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative">
-            <Input
-              placeholder="Search by Patient ID, Name, or Phone Number..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="mb-4"
-            />
-            
-            {searchResults.length > 0 && (
-              <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                {searchResults.map((patient) => (
-                  <div
-                    key={patient.id}
-                    className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
-                    onClick={() => {
-                      setSelectedPatient(patient);
-                      setSearchResults([]);
-                      setSearchTerm(`${patient.name} (ID: ${patient.patient_id})`);
-                    }}
-                  >
-                    <div className="font-medium">{patient.name}</div>
-                    <div className="text-sm text-gray-500">
-                      ID: {patient.patient_id} | Age: {patient.age} | Phone: {patient.phone_number}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {selectedPatient && (
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-blue-900 mb-2">Selected Patient</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div><span className="font-medium">Name:</span> {selectedPatient.name}</div>
-                <div><span className="font-medium">ID:</span> {selectedPatient.patient_id}</div>
-                <div><span className="font-medium">Age:</span> {selectedPatient.age}</div>
-                <div><span className="font-medium">Phone:</span> {selectedPatient.phone_number}</div>
-              </div>
-            </div>
-          )}
+          <Input
+            type="text"
+            placeholder="Search by patient name, ID, or report details..."
+            value={search}
+            onChange={handleSearchChange}
+          />
         </CardContent>
       </Card>
 
-      {/* Patient Reports Cards */}
-      {selectedPatient && (
+      {loading ? (
         <Card>
-          <CardHeader>
-            <CardTitle>Reports for {selectedPatient.name}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-4">Loading reports...</div>
-            ) : patientReports.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                No reports found for this patient
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {patientReports.map((report) => (
-                  <Card 
-                    key={report.id} 
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => handleReportClick(report)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <FileText className="h-4 w-4 text-blue-600" />
-                        <span className="font-semibold text-sm">Medical Report</span>
-                      </div>
-                      <div className="text-lg font-bold text-gray-900">
-                        {formatDate(report.created_at)}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {formatTime(report.created_at)}
-                      </div>
-                      {report.clinical_complaint && (
-                        <div className="mt-2 text-xs text-gray-500 line-clamp-2">
-                          {report.clinical_complaint.substring(0, 60)}...
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+          <CardContent className="text-center py-8">
+            Loading reports...
+          </CardContent>
+        </Card>
+      ) : filteredReports.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredReports.map(report => (
+            <Card key={report.id} className="bg-white shadow-md rounded-md overflow-hidden">
+              <CardHeader className="p-4">
+                <CardTitle className="text-lg font-semibold text-gray-900">
+                  {report.patient?.name} (ID: {report.patient?.patient_id})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <p className="text-gray-600">
+                  Report Date: {new Date(report.created_at).toLocaleDateString()}
+                </p>
+                <div className="flex justify-end mt-4">
+                  <Button onClick={() => handleShowReport(report)} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Report
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="text-center py-8">
+            No reports found.
           </CardContent>
         </Card>
       )}
 
-      {/* All Latest Reports Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Latest Reports</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Patient ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Gender</TableHead>
-                  <TableHead>Phone Number</TableHead>
-                  <TableHead>Created Date</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {allLatestReports.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      No reports found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  allLatestReports.map((report) => (
-                    <TableRow 
-                      key={report.id}
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => handleReportClick(report)}
-                    >
-                      <TableCell className="font-medium">{report.patient.patient_id}</TableCell>
-                      <TableCell>{report.patient.name}</TableCell>
-                      <TableCell className="capitalize">{report.patient.gender}</TableCell>
-                      <TableCell>{report.patient.phone_number || 'N/A'}</TableCell>
-                      <TableCell>
-                        <div>
-                          <div>{formatDate(report.created_at)}</div>
-                          <div className="text-sm text-gray-500">{formatTime(report.created_at)}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleReportClick(report);
-                          }}
-                        >
-                          View Report
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Report Modal */}
+      <Dialog open={showReportModal} onOpenChange={handleCloseReportModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Patient Report Details</DialogTitle>
+            <DialogDescription>
+              View the detailed information for this patient report.
+            </DialogDescription>
+          </DialogHeader>
 
-      {/* PDF Preview Modal */}
-      {showPDFPreview && selectedReport && (
-        <ReportPDFGenerator
-          reportId={selectedReport.id}
-          patient={selectedReport.patient}
-          reportData={{
-            hemoglobin: selectedReport.hemoglobin?.toString() || '',
-            wbc: selectedReport.wbc?.toString() || '',
-            platelets: selectedReport.platelets?.toString() || '',
-            blood_pressure: selectedReport.blood_pressure || '',
-            temperature: selectedReport.temperature?.toString() || '',
-            weight: selectedReport.weight?.toString() || '',
-            clinical_complaint: selectedReport.clinical_complaint || '',
-            medical_history: selectedReport.medical_history || '',
-            observations: selectedReport.observations || '',
-            recommendations: selectedReport.recommendations || ''
-          }}
-          prescribedMedicines={prescribedMedicines}
-          onClose={() => {
-            setShowPDFPreview(false);
-            setSelectedReport(null);
-          }}
-        />
-      )}
+          {selectedReport && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Patient Information */}
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Patient Information</h3>
+                <div className="space-y-2">
+                  <div>
+                    <Label>Name:</Label>
+                    <p>{selectedReport.patient?.name}</p>
+                  </div>
+                  <div>
+                    <Label>Patient ID:</Label>
+                    <p>{selectedReport.patient?.patient_id}</p>
+                  </div>
+                  <div>
+                    <Label>Age:</Label>
+                    <p>{selectedReport.patient?.age}</p>
+                  </div>
+                  <div>
+                    <Label>Gender:</Label>
+                    <p>{selectedReport.patient?.gender}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Report Details */}
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Report Details</h3>
+                <div className="space-y-2">
+                  <div>
+                    <Label>Report Date:</Label>
+                    <p>{new Date(selectedReport.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <Label>Blood Pressure:</Label>
+                    <p>{selectedReport.blood_pressure || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label>Temperature:</Label>
+                    <p>{selectedReport.temperature || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label>Weight:</Label>
+                    <p>{selectedReport.weight || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label>BSR:</Label>
+                    <p>{selectedReport.bsr || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label>Saturation:</Label>
+                    <p>{selectedReport.saturation || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label>Clinical Complaint:</Label>
+                    <p>{selectedReport.clinical_complaint || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label>Medical History:</Label>
+                    <p>{selectedReport.medical_history || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label>Observations:</Label>
+                    <p>{selectedReport.observations || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label>Recommendations:</Label>
+                    <p>{selectedReport.recommendations || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label>Medicine Notes:</Label>
+                    <p>{selectedReport.medicine_notes || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label>Test Advice:</Label>
+                    <p>{selectedReport.test_advice || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Prescribed Medicines */}
+              <div className="col-span-2">
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Prescribed Medicines</h3>
+                {prescribedMedicines.length > 0 ? (
+                  <table className="min-w-full leading-normal">
+                    <thead>
+                      <tr>
+                        <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Medicine Name
+                        </th>
+                        <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Quantity
+                        </th>
+                        <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Days
+                        </th>
+                        <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Dosage
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {prescribedMedicines.map(medicine => (
+                        <tr key={medicine.id}>
+                          <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                            {medicine.medicine.name}
+                          </td>
+                          <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                            {medicine.quantity}
+                          </td>
+                          <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                            {medicine.days}
+                          </td>
+                          <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                            {medicine.morning && 'Morning '}
+                            {medicine.afternoon && 'Afternoon '}
+                            {medicine.evening && 'Evening '}
+                            {medicine.night && 'Night '}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p>No medicines prescribed for this report.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
