@@ -60,8 +60,8 @@ const MedicineUsagePage = () => {
           usage_date,
           patient_id,
           medicine_id,
-          patients!medicine_usage_patient_id_fkey(name, patient_id),
-          medicines!medicine_usage_medicine_id_fkey(name, category)
+          patients(name, patient_id),
+          medicines(name, category)
         `)
         .order('usage_date', { ascending: false });
 
