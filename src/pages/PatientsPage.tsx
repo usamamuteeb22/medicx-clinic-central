@@ -3,8 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Search, Download } from 'lucide-react';
+import { Search, Download, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { generatePatientsExcel } from '@/utils/patientsExcelUtils';
 import { Tables } from '@/integrations/supabase/types';
@@ -20,6 +22,11 @@ interface SearchFilters {
   category: string;
 }
 
+interface DateFilters {
+  startDate: string;
+  endDate: string;
+}
+
 const PatientsPage = () => {
   const navigate = useNavigate();
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -28,6 +35,10 @@ const PatientsPage = () => {
     name: '',
     phone: '',
     category: 'all'
+  });
+  const [dateFilters, setDateFilters] = useState<DateFilters>({
+    startDate: '',
+    endDate: ''
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +81,7 @@ const PatientsPage = () => {
   const filteredPatients = patients.filter(patient => {
     if (!patient) return false;
     
+    // Search filters
     const matchesId = !searchFilters.id || 
       patient.patient_id?.toString().includes(searchFilters.id);
     const matchesName = !searchFilters.name || 
@@ -80,7 +92,27 @@ const PatientsPage = () => {
       searchFilters.category === 'all' ||
       (patient.category && patient.category.toLowerCase() === searchFilters.category.toLowerCase());
     
-    return matchesId && matchesName && matchesPhone && matchesCategory;
+    // Date filters
+    let matchesDateRange = true;
+    if (dateFilters.startDate || dateFilters.endDate) {
+      const registrationDate = patient.registration_date ? new Date(patient.registration_date) : null;
+      if (registrationDate) {
+        const startDate = dateFilters.startDate ? new Date(dateFilters.startDate) : null;
+        const endDate = dateFilters.endDate ? new Date(dateFilters.endDate) : null;
+        
+        if (startDate && registrationDate < startDate) {
+          matchesDateRange = false;
+        }
+        if (endDate && registrationDate > new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1)) {
+          matchesDateRange = false;
+        }
+      } else if (dateFilters.startDate || dateFilters.endDate) {
+        // If date filters are set but patient has no registration date, exclude
+        matchesDateRange = false;
+      }
+    }
+    
+    return matchesId && matchesName && matchesPhone && matchesCategory && matchesDateRange;
   });
 
   const handleDownloadExcel = () => {
@@ -88,7 +120,7 @@ const PatientsPage = () => {
       generatePatientsExcel(filteredPatients);
       toast({
         title: "Success",
-        description: "Excel file downloaded successfully"
+        description: `Excel file downloaded with ${filteredPatients.length} filtered patients`
       });
     } catch (error: any) {
       toast({
@@ -101,6 +133,13 @@ const PatientsPage = () => {
 
   const handleEditPatient = (patientId: string) => {
     navigate(`/patient/${patientId}/edit`);
+  };
+
+  const clearDateFilters = () => {
+    setDateFilters({
+      startDate: '',
+      endDate: ''
+    });
   };
 
   if (loading) {
@@ -139,10 +178,58 @@ const PatientsPage = () => {
             className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
           >
             <Download className="h-4 w-4 mr-2" />
-            Download Excel
+            Download Excel ({filteredPatients.length} patients)
           </Button>
         </div>
       </div>
+
+      {/* Date Range Filter */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Calendar className="h-5 w-5" />
+            <span>Date Range Filter</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div className="space-y-2">
+              <Label htmlFor="startDate">Start Date</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={dateFilters.startDate}
+                onChange={(e) => setDateFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endDate">End Date</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={dateFilters.endDate}
+                onChange={(e) => setDateFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Button 
+                onClick={clearDateFilters} 
+                variant="outline"
+                className="w-full"
+              >
+                Clear Dates
+              </Button>
+            </div>
+          </div>
+          {(dateFilters.startDate || dateFilters.endDate) && (
+            <div className="mt-3 text-sm text-blue-600">
+              Filtering by registration date: {dateFilters.startDate || 'Any'} to {dateFilters.endDate || 'Any'}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -165,6 +252,7 @@ const PatientsPage = () => {
 
             <div className="text-sm text-gray-500 mt-4">
               Showing {filteredPatients.length} of {patients.length} patients
+              {(dateFilters.startDate || dateFilters.endDate) && " (filtered by date range)"}
             </div>
           </div>
         </CardContent>
