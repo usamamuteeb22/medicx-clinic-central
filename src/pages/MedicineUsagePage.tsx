@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -60,8 +59,8 @@ const MedicineUsagePage = () => {
           usage_date,
           patient_id,
           medicine_id,
-          patients(name, patient_id),
-          medicines(name, category)
+          patients!medicine_usage_patient_id_fkey(name, patient_id),
+          medicines!medicine_usage_medicine_id_fkey(name, category)
         `)
         .order('usage_date', { ascending: false });
 
