@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,12 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Search, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { Patient, PatientReport, FormData, PrescribedMedicine } from '@/types/reportTypes';
 
-// Update the PatientReport interface usage and remove old field references
 const ReportsPage = () => {
   const [reports, setReports] = useState<PatientReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,19 +37,35 @@ const ReportsPage = () => {
       setLoading(true);
       console.log('Fetching reports...');
 
+      // First fetch reports
       const { data: reportsData, error: reportsError } = await supabase
         .from('patient_reports')
-        .select(`
-          *,
-          patient:patients(*)
-        `)
+        .select('*')
         .eq('created_by_role', 'doctor')
         .order('created_at', { ascending: false });
 
       if (reportsError) throw reportsError;
 
-      console.log('Reports data:', reportsData);
-      setReports(reportsData || []);
+      // Then fetch patients separately and join manually
+      const reportIds = reportsData?.map(r => r.patient_id) || [];
+      const { data: patientsData, error: patientsError } = await supabase
+        .from('patients')
+        .select('*')
+        .in('id', reportIds);
+
+      if (patientsError) throw patientsError;
+
+      // Create a map for quick patient lookup
+      const patientMap = new Map(patientsData?.map(p => [p.id, p]) || []);
+
+      // Combine reports with patient data
+      const reportsWithPatients: PatientReport[] = reportsData?.map(report => ({
+        ...report,
+        patient: patientMap.get(report.patient_id) || null
+      })) || [];
+
+      console.log('Reports data:', reportsWithPatients);
+      setReports(reportsWithPatients);
     } catch (error: any) {
       console.error('Error fetching reports:', error);
       toast({
@@ -73,8 +87,8 @@ const ReportsPage = () => {
     const filtered = reports.filter(report => {
       const searchTerm = search.toLowerCase();
       return (
-        report.patient?.name.toLowerCase().includes(searchTerm) ||
-        report.patient?.patient_id.toString().includes(searchTerm) ||
+        report.patient?.name?.toLowerCase().includes(searchTerm) ||
+        report.patient?.patient_id?.toString().includes(searchTerm) ||
         report.blood_pressure?.toLowerCase().includes(searchTerm) ||
         report.clinical_complaint?.toLowerCase().includes(searchTerm)
       );
@@ -110,27 +124,39 @@ const ReportsPage = () => {
       // Load medicine prescriptions
       const { data: prescriptionsData, error: prescriptionsError } = await supabase
         .from('medicine_prescriptions')
-        .select(`
-          *,
-          medicine:medicines(*)
-        `)
+        .select('*')
         .eq('patient_report_id', report.id);
 
       if (prescriptionsError) throw prescriptionsError;
 
-      const prescriptions: PrescribedMedicine[] = prescriptionsData?.map(p => ({
-        id: p.id,
-        medicine: p.medicine,
-        quantity: p.quantity,
-        days: p.days || 1,
-        morning: p.morning || false,
-        afternoon: p.afternoon || false,
-        evening: p.evening || false,
-        night: p.night || false,
-        before_meal: p.before_meal || false,
-        after_meal: p.after_meal || false,
-        fasting: p.fasting || false,
-      })) || [];
+      // Fetch medicines separately
+      const medicineIds = prescriptionsData?.map(p => p.medicine_id) || [];
+      const { data: medicinesData, error: medicinesError } = await supabase
+        .from('medicines')
+        .select('*')
+        .in('id', medicineIds);
+
+      if (medicinesError) throw medicinesError;
+
+      // Create medicine map
+      const medicineMap = new Map(medicinesData?.map(m => [m.id, m]) || []);
+
+      const prescriptions: PrescribedMedicine[] = prescriptionsData?.map(p => {
+        const medicine = medicineMap.get(p.medicine_id);
+        return {
+          id: p.id,
+          medicine: medicine || { id: '', name: 'Unknown Medicine', category: '', total_quantity: 0 },
+          quantity: p.quantity,
+          days: p.days || 1,
+          morning: p.morning || false,
+          afternoon: p.afternoon || false,
+          evening: p.evening || false,
+          night: p.night || false,
+          before_meal: p.before_meal || false,
+          after_meal: p.after_meal || false,
+          fasting: p.fasting || false,
+        };
+      }) || [];
       setPrescribedMedicines(prescriptions);
 
       setShowReportModal(true);
@@ -184,7 +210,7 @@ const ReportsPage = () => {
             <Card key={report.id} className="bg-white shadow-md rounded-md overflow-hidden">
               <CardHeader className="p-4">
                 <CardTitle className="text-lg font-semibold text-gray-900">
-                  {report.patient?.name} (ID: {report.patient?.patient_id})
+                  {report.patient?.name || 'Unknown Patient'} (ID: {report.patient?.patient_id || 'N/A'})
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4">
@@ -227,19 +253,19 @@ const ReportsPage = () => {
                 <div className="space-y-2">
                   <div>
                     <Label>Name:</Label>
-                    <p>{selectedReport.patient?.name}</p>
+                    <p>{selectedReport.patient?.name || 'N/A'}</p>
                   </div>
                   <div>
                     <Label>Patient ID:</Label>
-                    <p>{selectedReport.patient?.patient_id}</p>
+                    <p>{selectedReport.patient?.patient_id || 'N/A'}</p>
                   </div>
                   <div>
                     <Label>Age:</Label>
-                    <p>{selectedReport.patient?.age}</p>
+                    <p>{selectedReport.patient?.age || 'N/A'}</p>
                   </div>
                   <div>
                     <Label>Gender:</Label>
-                    <p>{selectedReport.patient?.gender}</p>
+                    <p>{selectedReport.patient?.gender || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -318,6 +344,9 @@ const ReportsPage = () => {
                         <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                           Dosage
                         </th>
+                        <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Meal Timing
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -333,10 +362,19 @@ const ReportsPage = () => {
                             {medicine.days}
                           </td>
                           <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                            {medicine.morning && 'Morning '}
-                            {medicine.afternoon && 'Afternoon '}
-                            {medicine.evening && 'Evening '}
-                            {medicine.night && 'Night '}
+                            {[
+                              medicine.morning && 'Morning',
+                              medicine.afternoon && 'Afternoon',
+                              medicine.evening && 'Evening',
+                              medicine.night && 'Night'
+                            ].filter(Boolean).join(', ') || 'Not specified'}
+                          </td>
+                          <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                            {[
+                              medicine.before_meal && 'Before Meal',
+                              medicine.after_meal && 'After Meal',
+                              medicine.fasting && 'Fasting'
+                            ].filter(Boolean).join(', ') || 'Not specified'}
                           </td>
                         </tr>
                       ))}

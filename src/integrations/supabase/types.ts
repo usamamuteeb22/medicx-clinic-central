@@ -16,10 +16,13 @@ export type Database = {
     Tables: {
       medicine_prescriptions: {
         Row: {
+          after_meal: boolean | null
           afternoon: boolean | null
+          before_meal: boolean | null
           created_at: string | null
           days: number | null
           evening: boolean | null
+          fasting: boolean | null
           id: string
           medicine_id: string | null
           morning: boolean | null
@@ -28,10 +31,13 @@ export type Database = {
           quantity: number
         }
         Insert: {
+          after_meal?: boolean | null
           afternoon?: boolean | null
+          before_meal?: boolean | null
           created_at?: string | null
           days?: number | null
           evening?: boolean | null
+          fasting?: boolean | null
           id?: string
           medicine_id?: string | null
           morning?: boolean | null
@@ -40,10 +46,13 @@ export type Database = {
           quantity: number
         }
         Update: {
+          after_meal?: boolean | null
           afternoon?: boolean | null
+          before_meal?: boolean | null
           created_at?: string | null
           days?: number | null
           evening?: boolean | null
+          fasting?: boolean | null
           id?: string
           medicine_id?: string | null
           morning?: boolean | null
