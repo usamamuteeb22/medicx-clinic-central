@@ -8,6 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { Database } from '@/integrations/supabase/types';
+
+type MedicineCategory = Database['public']['Enums']['medicine_category'];
 
 interface AddMedicineModalProps {
   isOpen: boolean;
@@ -23,7 +26,7 @@ const AddMedicineModal: React.FC<AddMedicineModalProps> = ({
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
-    category: '',
+    category: '' as MedicineCategory,
     total_quantity: '',
     expiry_date: ''
   });
@@ -46,7 +49,7 @@ const AddMedicineModal: React.FC<AddMedicineModalProps> = ({
         .from('medicines')
         .insert({
           name: formData.name,
-          category: formData.category,
+          category: formData.category as MedicineCategory,
           total_quantity: parseInt(formData.total_quantity),
           expiry_date: formData.expiry_date || null
         });
@@ -60,7 +63,7 @@ const AddMedicineModal: React.FC<AddMedicineModalProps> = ({
 
       setFormData({
         name: '',
-        category: '',
+        category: '' as MedicineCategory,
         total_quantity: '',
         expiry_date: ''
       });
@@ -82,7 +85,7 @@ const AddMedicineModal: React.FC<AddMedicineModalProps> = ({
   const handleClose = () => {
     setFormData({
       name: '',
-      category: '',
+      category: '' as MedicineCategory,
       total_quantity: '',
       expiry_date: ''
     });
@@ -110,18 +113,26 @@ const AddMedicineModal: React.FC<AddMedicineModalProps> = ({
             <Label htmlFor="category">Category *</Label>
             <Select
               value={formData.category}
-              onValueChange={(value) => setFormData({ ...formData, category: value })}
+              onValueChange={(value: MedicineCategory) => setFormData({ ...formData, category: value })}
               required
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Tablet">Tablet</SelectItem>
-                <SelectItem value="Syrup">Syrup</SelectItem>
-                <SelectItem value="Injection">Injection</SelectItem>
+                <SelectItem value="tablet">Tablet</SelectItem>
+                <SelectItem value="syrup">Syrup</SelectItem>
+                <SelectItem value="injection">Injection</SelectItem>
                 <SelectItem value="Capsule">Capsule</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
+                <SelectItem value="sachet">Sachet</SelectItem>
+                <SelectItem value="drops">Drops</SelectItem>
+                <SelectItem value="lotion">Lotion</SelectItem>
+                <SelectItem value="cream">Cream</SelectItem>
+                <SelectItem value="ointment">Ointment</SelectItem>
+                <SelectItem value="suspension">Suspension</SelectItem>
+                <SelectItem value="gel">Gel</SelectItem>
+                <SelectItem value="infusion">Infusion</SelectItem>
+                <SelectItem value="transfusion">Transfusion</SelectItem>
               </SelectContent>
             </Select>
           </div>

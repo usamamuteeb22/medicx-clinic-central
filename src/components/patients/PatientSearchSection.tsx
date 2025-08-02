@@ -53,6 +53,30 @@ const PatientSearchSection: React.FC<PatientSearchSectionProps> = ({ refreshTrig
     }
   };
 
+  const handleDeletePatient = async (patientId: string) => {
+    try {
+      const { error } = await supabase
+        .from('patients')
+        .delete()
+        .eq('id', patientId);
+
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Patient deleted successfully"
+      });
+      
+      fetchPatients();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete patient"
+      });
+    }
+  };
+
   const filteredPatients = patients.filter(patient => {
     const matchesId = searchFilters.id === '' || 
       patient.patient_id.toString().includes(searchFilters.id);
@@ -80,7 +104,10 @@ const PatientSearchSection: React.FC<PatientSearchSectionProps> = ({ refreshTrig
             searchFilters={searchFilters}
             onFiltersChange={setSearchFilters}
           />
-          <PatientsTable patients={filteredPatients} />
+          <PatientsTable 
+            patients={filteredPatients} 
+            onDeletePatient={handleDeletePatient}
+          />
         </div>
       </CardContent>
     </Card>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -131,6 +130,30 @@ const PatientsPage = () => {
     }
   };
 
+  const handleDeletePatient = async (patientId: string) => {
+    try {
+      const { error } = await supabase
+        .from('patients')
+        .delete()
+        .eq('id', patientId);
+
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Patient deleted successfully"
+      });
+      
+      fetchPatients();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete patient"
+      });
+    }
+  };
+
   const handleEditPatient = (patientId: string) => {
     navigate(`/patient/${patientId}/edit`);
   };
@@ -247,7 +270,7 @@ const PatientsPage = () => {
             
             <PatientsTable 
               patients={filteredPatients}
-              onEdit={handleEditPatient}
+              onDeletePatient={handleDeletePatient}
             />
 
             <div className="text-sm text-gray-500 mt-4">

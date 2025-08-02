@@ -25,7 +25,7 @@ const MedicineStockPage = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const navigate = useNavigate();
 
-  const { data: medicines = [], isLoading } = useQuery({
+  const { data: medicines = [], isLoading, refetch } = useQuery({
     queryKey: ['medicines'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -46,6 +46,10 @@ const MedicineStockPage = () => {
 
   const handleDownloadExcel = () => {
     generateMedicineStockExcel(filteredMedicines);
+  };
+
+  const handleMedicineAdded = () => {
+    refetch();
   };
 
   if (isLoading) {
@@ -78,6 +82,7 @@ const MedicineStockPage = () => {
       <AddMedicineModal 
         isOpen={showAddModal} 
         onClose={() => setShowAddModal(false)} 
+        onMedicineAdded={handleMedicineAdded}
       />
     </div>
   );

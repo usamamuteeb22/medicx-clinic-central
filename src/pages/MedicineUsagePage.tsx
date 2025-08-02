@@ -9,9 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Download } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { generateMedicineUsageExcel } from '@/utils/medicineUsageExcelUtils';
-import MedicineUsageCard from '@/components/usage/MedicineUsageCard';
-import MedicineUsageFilters from '@/components/usage/MedicineUsageFilters';
-import MedicineUsagePagination from '@/components/usage/MedicineUsagePagination';
 
 interface MedicineUsageRecord {
   id: string;
@@ -28,13 +25,28 @@ interface MedicineUsageRecord {
   }>;
 }
 
+interface MedicineUsage {
+  id: string;
+  quantity_used: number;
+  usage_date: string;
+  patient_id: string;
+  medicine_id: string;
+  patients: {
+    name: string;
+    patient_id: number;
+  } | null;
+  medicines: {
+    name: string;
+    category: string;
+  } | null;
+}
+
 const MedicineUsagePage = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [currentPage, setCurrentPage] = useState(1);
   const [filteredRecords, setFilteredRecords] = useState<MedicineUsageRecord[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
   const { data: medicineUsage = [], isLoading } = useQuery({
@@ -48,8 +60,8 @@ const MedicineUsagePage = () => {
           usage_date,
           patient_id,
           medicine_id,
-          patients!inner(name, patient_id),
-          medicines!inner(name, category)
+          patients!medicine_usage_patient_id_fkey(name, patient_id),
+          medicines!medicine_usage_medicine_id_fkey(name, category)
         `)
         .order('usage_date', { ascending: false });
 
@@ -63,37 +75,37 @@ const MedicineUsagePage = () => {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Group by patient and date
-      const grouped: { [key: string]: MedicineUsageRecord } = {};
-      
-      data?.forEach(usage => {
-        const key = `${usage.patient_id}-${usage.usage_date.split('T')[0]}`;
-        if (!grouped[key]) {
-          grouped[key] = {
-            id: usage.id,
-            patient_name: usage.patients?.name || 'Unknown',
-            patient_number: usage.patients?.patient_id || 0,
-            report_date: usage.usage_date,
-            medicines: []
-          };
-        }
-        
-        grouped[key].medicines.push({
-          name: usage.medicines?.name || 'Unknown Medicine',
-          quantity: usage.quantity_used,
-          morning: false, // These would need to come from prescription data
-          afternoon: false,
-          evening: false,
-          night: false
-        });
-      });
-
-      return Object.values(grouped);
+      return data as MedicineUsage[];
     }
   });
 
   useEffect(() => {
-    let filtered = medicineUsage;
+    // Group by patient and date
+    const grouped: { [key: string]: MedicineUsageRecord } = {};
+    
+    medicineUsage.forEach(usage => {
+      const key = `${usage.patient_id}-${usage.usage_date.split('T')[0]}`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          id: usage.id,
+          patient_name: usage.patients?.name || 'Unknown',
+          patient_number: usage.patients?.patient_id || 0,
+          report_date: usage.usage_date,
+          medicines: []
+        };
+      }
+      
+      grouped[key].medicines.push({
+        name: usage.medicines?.name || 'Unknown Medicine',
+        quantity: usage.quantity_used,
+        morning: false, // These would need to come from prescription data
+        afternoon: false,
+        evening: false,
+        night: false
+      });
+    });
+
+    let filtered = Object.values(grouped);
 
     if (searchTerm) {
       filtered = filtered.filter(record =>
@@ -103,14 +115,9 @@ const MedicineUsagePage = () => {
       );
     }
 
-    if (selectedCategory !== 'All') {
-      // Note: Category filtering would need medicine category data from the query
-      filtered = filtered;
-    }
-
     setFilteredRecords(filtered);
     setCurrentPage(1);
-  }, [medicineUsage, searchTerm, selectedCategory]);
+  }, [medicineUsage, searchTerm]);
 
   const handleExportExcel = () => {
     try {
@@ -170,13 +177,24 @@ const MedicineUsagePage = () => {
         </CardContent>
       </Card>
 
-      {/* Search and Filters */}
-      <MedicineUsageFilters
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
-      />
+      {/* Search Filter */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Search Filter</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="search">Search by Patient Name, ID, or Medicine</Label>
+            <Input
+              id="search"
+              type="text"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Export Button */}
       <div className="flex justify-end">
@@ -202,15 +220,60 @@ const MedicineUsagePage = () => {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {paginatedRecords.map((record) => (
-              <MedicineUsageCard key={record.id} record={record} />
+              <Card key={record.id} className="shadow-md hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold text-lg">{record.patient_name}</h3>
+                        <p className="text-sm text-gray-600">Patient ID: {record.patient_number}</p>
+                      </div>
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        {new Date(record.report_date).toLocaleDateString()}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm text-gray-700">Medicines Used:</h4>
+                      {record.medicines.map((medicine, index) => (
+                        <div key={index} className="flex justify-between items-center text-sm">
+                          <span className="truncate">{medicine.name}</span>
+                          <span className="bg-gray-100 px-2 py-1 rounded text-xs">
+                            Qty: {medicine.quantity}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
           
-          <MedicineUsagePagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </>
       ) : (
         <Card>
