@@ -1,119 +1,133 @@
 
 import React from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Edit } from 'lucide-react';
-import { Tables } from '@/integrations/supabase/types';
+import { Edit, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-type Patient = Tables<'patients'>;
+interface Patient {
+  id: string;
+  patient_id: number;
+  name: string;
+  age?: number;
+  age_years?: number;
+  age_months?: number;
+  age_days?: number;
+  gender: string;
+  phone_number: string;
+  cnic?: string;
+  category?: string;
+  registration_date: string;
+}
 
 interface PatientsTableProps {
   patients: Patient[];
-  onEdit?: (patientId: string) => void;
+  onDeletePatient: (id: string) => void;
 }
 
-const PatientsTable: React.FC<PatientsTableProps> = ({ patients, onEdit }) => {
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A';
-    try {
-      return new Date(dateString).toLocaleDateString();
-    } catch {
-      return 'N/A';
-    }
-  };
+const PatientsTable: React.FC<PatientsTableProps> = ({ patients, onDeletePatient }) => {
+  const navigate = useNavigate();
 
-  const getCategoryBadgeStyle = (category: string | null) => {
-    if (!category) return 'bg-gray-100 text-gray-800';
-    
-    switch (category.toLowerCase()) {
-      case 'paid':
-        return 'bg-green-100 text-green-800';
-      case 'free':
-        return 'bg-blue-100 text-blue-800';
-      case 'thalassemic':
-        return 'bg-purple-100 text-purple-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const formatAge = (patient: Patient) => {
+    if (patient.age_years || patient.age_months || patient.age_days) {
+      const parts = [];
+      if (patient.age_years && patient.age_years > 0) parts.push(`${patient.age_years}y`);
+      if (patient.age_months && patient.age_months > 0) parts.push(`${patient.age_months}m`);
+      if (patient.age_days && patient.age_days > 0) parts.push(`${patient.age_days}d`);
+      return parts.join(' ') || 'N/A';
     }
+    return patient.age ? `${patient.age}y` : 'N/A';
   };
-
-  if (!patients || patients.length === 0) {
-    return (
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Age</TableHead>
-              <TableHead>Gender</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Phone Number</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead>Registration Date</TableHead>
-              {onEdit && <TableHead>Actions</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow>
-              <TableCell colSpan={onEdit ? 9 : 8} className="text-center py-8">
-                No patients found
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
-    );
-  }
 
   return (
-    <div className="border rounded-lg overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>ID</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Age</TableHead>
-            <TableHead>Gender</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Phone Number</TableHead>
-            <TableHead>Address</TableHead>
-            <TableHead>Registration Date</TableHead>
-            {onEdit && <TableHead>Actions</TableHead>}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+    <div className="overflow-x-auto">
+      <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+              Patient ID
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+              Name
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+              Age
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+              Gender
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+              Phone
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+              CNIC
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+              Category
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+              Registration Date
+            </th>
+            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200">
           {patients.map((patient) => (
-            <TableRow key={patient.id}>
-              <TableCell className="font-mono">{patient.patient_id || 'N/A'}</TableCell>
-              <TableCell className="font-medium">{patient.name || 'N/A'}</TableCell>
-              <TableCell>{patient.age || 'N/A'}</TableCell>
-              <TableCell className="capitalize">{patient.gender || 'N/A'}</TableCell>
-              <TableCell>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryBadgeStyle(patient.category)}`}>
+            <tr key={patient.id} className="hover:bg-gray-50">
+              <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                {patient.patient_id}
+              </td>
+              <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                {patient.name}
+              </td>
+              <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                {formatAge(patient)}
+              </td>
+              <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                {patient.gender}
+              </td>
+              <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                {patient.phone_number || 'N/A'}
+              </td>
+              <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                {patient.cnic || 'N/A'}
+              </td>
+              <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                  patient.category === 'Paid' ? 'bg-green-100 text-green-800' :
+                  patient.category === 'Free' ? 'bg-blue-100 text-blue-800' :
+                  patient.category === 'Thalassemic' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
                   {patient.category || 'N/A'}
                 </span>
-              </TableCell>
-              <TableCell>{patient.phone_number || 'N/A'}</TableCell>
-              <TableCell className="max-w-xs truncate">{patient.address || 'N/A'}</TableCell>
-              <TableCell>{formatDate(patient.registration_date)}</TableCell>
-              {onEdit && (
-                <TableCell>
+              </td>
+              <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                {new Date(patient.registration_date).toLocaleDateString()}
+              </td>
+              <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <div className="flex justify-end space-x-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onEdit(patient.id)}
-                    className="flex items-center space-x-1"
+                    onClick={() => navigate(`/patients/${patient.id}/edit`)}
                   >
-                    <Edit className="h-3 w-3" />
-                    <span>Edit</span>
+                    <Edit className="h-4 w-4" />
                   </Button>
-                </TableCell>
-              )}
-            </TableRow>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onDeletePatient(patient.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </td>
+            </tr>
           ))}
-        </TableBody>
-      </Table>
+        </tbody>
+      </table>
     </div>
   );
 };

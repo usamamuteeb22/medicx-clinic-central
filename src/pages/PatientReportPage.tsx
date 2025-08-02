@@ -10,6 +10,7 @@ import ReportVitals from '@/components/report/ReportVitals';
 import MedicinePrescriptionSection from '@/components/report/MedicinePrescriptionSection';
 import ReportMedicalHistory from '@/components/report/ReportMedicalHistory';
 import ReportActionButtons from '@/components/report/ReportActionButtons';
+import LatestReceptionReport from '@/components/report/LatestReceptionReport';
 import { usePatientReportForm } from '@/hooks/usePatientReportForm';
 import NotesSection from '@/components/report/NotesSection';
 
@@ -53,6 +54,9 @@ const PatientReportPage = () => {
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       <PatientReportHeader onNewReport={resetForm} />
+
+      {/* Latest Reception Report Auto-Display */}
+      <LatestReceptionReport onReportSelect={handleReceptionReportSelect} />
 
       {/* Enhanced Search for Reception Reports */}
       <PatientReportSearchBar onReportSelect={handleReceptionReportSelect} />

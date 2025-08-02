@@ -255,11 +255,13 @@ export type Database = {
       }
       patients: {
         Row: {
-          address: string | null
           age: number
+          age_days: number | null
+          age_months: number | null
+          age_years: number | null
           category: string | null
+          cnic: string | null
           created_by: string | null
-          description: string | null
           gender: string
           id: string
           name: string
@@ -269,11 +271,13 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          address?: string | null
           age: number
+          age_days?: number | null
+          age_months?: number | null
+          age_years?: number | null
           category?: string | null
+          cnic?: string | null
           created_by?: string | null
-          description?: string | null
           gender: string
           id?: string
           name: string
@@ -283,11 +287,13 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          address?: string | null
           age?: number
+          age_days?: number | null
+          age_months?: number | null
+          age_years?: number | null
           category?: string | null
+          cnic?: string | null
           created_by?: string | null
-          description?: string | null
           gender?: string
           id?: string
           name?: string
@@ -360,6 +366,7 @@ export type Database = {
         | "gel"
         | "infusion"
         | "transfusion"
+        | "Capsule"
       user_role: "admin" | "doctor" | "reception" | "pharmacy"
     }
     CompositeTypes: {
@@ -501,6 +508,7 @@ export const Constants = {
         "gel",
         "infusion",
         "transfusion",
+        "Capsule",
       ],
       user_role: ["admin", "doctor", "reception", "pharmacy"],
     },

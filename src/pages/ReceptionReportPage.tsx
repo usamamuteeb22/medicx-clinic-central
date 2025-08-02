@@ -1,68 +1,39 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Patient } from '@/types/reportTypes';
+import { toast } from '@/hooks/use-toast';
+import PatientSelector from '@/components/PatientSelector';
+
+interface Patient {
+  id: string;
+  patient_id: number;
+  name: string;
+  age: number;
+  gender: string;
+  phone_number: string;
+}
 
 const ReceptionReportPage = () => {
   const { user } = useAuth();
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [formData, setFormData] = useState({
     blood_pressure: '',
     temperature: '',
     weight: '',
     bsr: '',
     saturation: '',
-    clinical_complaint: '',
+    clinical_complaint: ''
   });
-  const [saving, setSaving] = useState(false);
-  const [completing, setCompleting] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchPatients();
-  }, []);
-
-  const fetchPatients = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('patients')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      setPatients(data || []);
-    } catch (error: any) {
-      console.error('Error fetching patients:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch patients"
-      });
-    }
-  };
-
-  const handlePatientSelect = (patient: Patient) => {
-    setSelectedPatient(patient);
-    // Reset form data when a new patient is selected
-    setFormData({
-      blood_pressure: '',
-      temperature: '',
-      weight: '',
-      bsr: '',
-      saturation: '',
-      clinical_complaint: '',
-    });
-  };
-
-  const handleSave = async (completeReport: boolean) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!selectedPatient) {
       toast({
         variant: "destructive",
@@ -72,122 +43,73 @@ const ReceptionReportPage = () => {
       return;
     }
 
-    if (completeReport && !formData.clinical_complaint) {
+    if (!user) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Clinical Complaint is required to complete the report"
+        description: "You must be logged in to create reports"
       });
       return;
     }
 
+    setLoading(true);
     try {
-      if (completeReport) {
-        setCompleting(true);
-      } else {
-        setSaving(true);
-      }
-
-      // Check if there's an existing reception report for the selected patient
-      const { data: existingReport, error: checkError } = await supabase
+      const { data, error } = await supabase
         .from('patient_reports')
-        .select('*')
-        .eq('patient_id', selectedPatient.id)
-        .eq('created_by_role', 'reception')
-        .is('reception_completed_at', null)
+        .insert({
+          patient_id: selectedPatient.id,
+          blood_pressure: formData.blood_pressure || null,
+          temperature: formData.temperature ? parseFloat(formData.temperature) : null,
+          weight: formData.weight ? parseFloat(formData.weight) : null,
+          bsr: formData.bsr ? parseFloat(formData.bsr) : null,
+          saturation: formData.saturation ? parseFloat(formData.saturation) : null,
+          clinical_complaint: formData.clinical_complaint || null,
+          created_by: user.id,
+          created_by_role: 'reception',
+          reception_completed_at: new Date().toISOString()
+        })
+        .select()
         .single();
 
-      if (existingReport && !checkError) {
-        // Pre-fill form with existing data (remove hemoglobin, wbc, platelets references)
-        setFormData({
-          bsr: existingReport.bsr?.toString() || '',
-          saturation: existingReport.saturation?.toString() || '',
-          blood_pressure: existingReport.blood_pressure || '',
-          temperature: existingReport.temperature?.toString() || '',
-          weight: existingReport.weight?.toString() || '',
-          clinical_complaint: existingReport.clinical_complaint || '',
-        });
+      if (error) throw error;
 
-        // Update the existing report
-        const { error: updateError } = await supabase
-          .from('patient_reports')
-          .update({
-            bsr: formData.bsr ? parseFloat(formData.bsr) : null,
-            saturation: formData.saturation ? parseFloat(formData.saturation) : null,
-            blood_pressure: formData.blood_pressure || null,
-            temperature: formData.temperature ? parseFloat(formData.temperature) : null,
-            weight: formData.weight ? parseFloat(formData.weight) : null,
-            clinical_complaint: formData.clinical_complaint || null,
-            reception_completed_at: completeReport ? new Date().toISOString() : null,
-            created_by: user?.id,
-            created_by_role: 'reception'
-          })
-          .eq('id', existingReport.id);
+      toast({
+        title: "Success",
+        description: "Reception report created successfully!"
+      });
 
-        if (updateError) throw updateError;
-
-        toast({
-          title: "Success",
-          description: `Reception report ${completeReport ? 'completed' : 'saved'} successfully!`
-        });
-      } else {
-        // Create a new reception report
-        const { error: insertError } = await supabase
-          .from('patient_reports')
-          .insert({
-            patient_id: selectedPatient.id,
-            bsr: formData.bsr ? parseFloat(formData.bsr) : null,
-            saturation: formData.saturation ? parseFloat(formData.saturation) : null,
-            blood_pressure: formData.blood_pressure || null,
-            temperature: formData.temperature ? parseFloat(formData.temperature) : null,
-            weight: formData.weight ? parseFloat(formData.weight) : null,
-            clinical_complaint: formData.clinical_complaint || null,
-            reception_completed_at: completeReport ? new Date().toISOString() : null,
-            created_by: user?.id,
-            created_by_role: 'reception'
-          });
-
-        if (insertError) throw insertError;
-
-        toast({
-          title: "Success",
-          description: `Reception report ${completeReport ? 'created and completed' : 'created and saved'} successfully!`
-        });
-      }
-
-      // Reset form and selected patient after successful save
-      if (completeReport) {
-        setSelectedPatient(null);
-        setFormData({
-          blood_pressure: '',
-          temperature: '',
-          weight: '',
-          bsr: '',
-          saturation: '',
-          clinical_complaint: '',
-        });
-      }
+      // Reset form
+      setFormData({
+        blood_pressure: '',
+        temperature: '',
+        weight: '',
+        bsr: '',
+        saturation: '',
+        clinical_complaint: ''
+      });
+      setSelectedPatient(null);
 
     } catch (error: any) {
-      console.error('Error saving reception report:', error);
+      console.error('Error creating report:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to save reception report"
+        description: error.message || "Failed to create reception report"
       });
     } finally {
-      setSaving(false);
-      setCompleting(false);
+      setLoading(false);
     }
   };
 
-  if (!user?.id) {
+  const canAccessPage = user?.role === 'admin' || user?.role === 'reception';
+
+  if (!canAccessPage) {
     return (
       <div className="max-w-7xl mx-auto p-6">
         <Card>
           <CardContent className="text-center py-8">
             <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
-            <p className="text-gray-600">Please log in to access this page.</p>
+            <p className="text-gray-600">Only Admin and Reception users can access this page.</p>
           </CardContent>
         </Card>
       </div>
@@ -195,113 +117,113 @@ const ReceptionReportPage = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="max-w-4xl mx-auto p-6 space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Reception Report</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Patient Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="patient">Select Patient</Label>
-            <Select onValueChange={(value) => {
-              const patient = patients.find(p => p.id === value);
-              if (patient) {
-                handlePatientSelect(patient);
-              }
-            }}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a patient" />
-              </SelectTrigger>
-              <SelectContent>
-                {patients.map((patient) => (
-                  <SelectItem key={patient.id} value={patient.id}>
-                    {patient.name} (ID: {patient.patient_id})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Patient Selection */}
+            <div className="space-y-2">
+              <Label>Select Patient *</Label>
+              <PatientSelector
+                selectedPatient={selectedPatient}
+                onPatientSelect={setSelectedPatient}
+              />
+            </div>
 
-          {selectedPatient && (
-            <>
-              {/* Medical Vitals */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="blood_pressure">Blood Pressure</Label>
-                  <Input
-                    type="text"
-                    id="blood_pressure"
-                    placeholder="e.g., 120/80"
-                    value={formData.blood_pressure}
-                    onChange={(e) => setFormData({ ...formData, blood_pressure: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="temperature">Temperature</Label>
-                  <Input
-                    type="text"
-                    id="temperature"
-                    placeholder="e.g., 36.5"
-                    value={formData.temperature}
-                    onChange={(e) => setFormData({ ...formData, temperature: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="weight">Weight</Label>
-                  <Input
-                    type="text"
-                    id="weight"
-                    placeholder="e.g., 70.5"
-                    value={formData.weight}
-                    onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="bsr">BSR</Label>
-                  <Input
-                    type="text"
-                    id="bsr"
-                    placeholder="e.g., 15.2"
-                    value={formData.bsr}
-                    onChange={(e) => setFormData({ ...formData, bsr: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="saturation">Saturation</Label>
-                  <Input
-                    type="text"
-                    id="saturation"
-                    placeholder="e.g., 98.5"
-                    value={formData.saturation}
-                    onChange={(e) => setFormData({ ...formData, saturation: e.target.value })}
-                  />
-                </div>
-              </div>
+            {selectedPatient && (
+              <>
+                {/* Medical Vitals */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Medical Vitals</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="blood_pressure">Blood Pressure</Label>
+                        <Input
+                          id="blood_pressure"
+                          value={formData.blood_pressure}
+                          onChange={(e) => setFormData({ ...formData, blood_pressure: e.target.value })}
+                          placeholder="e.g., 120/80"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="temperature">Temperature (°F)</Label>
+                        <Input
+                          id="temperature"
+                          type="number"
+                          step="0.1"
+                          value={formData.temperature}
+                          onChange={(e) => setFormData({ ...formData, temperature: e.target.value })}
+                          placeholder="e.g., 98.6"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="weight">Weight (kg)</Label>
+                        <Input
+                          id="weight"
+                          type="number"
+                          step="0.1"
+                          value={formData.weight}
+                          onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                          placeholder="e.g., 70.5"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="bsr">BSR</Label>
+                        <Input
+                          id="bsr"
+                          type="number"
+                          value={formData.bsr}
+                          onChange={(e) => setFormData({ ...formData, bsr: e.target.value })}
+                          placeholder="e.g., 15"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="saturation">Saturation (%)</Label>
+                        <Input
+                          id="saturation"
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={formData.saturation}
+                          onChange={(e) => setFormData({ ...formData, saturation: e.target.value })}
+                          placeholder="e.g., 98"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              {/* Clinical Complaint */}
-              <div className="space-y-2">
-                <Label htmlFor="clinical_complaint">Clinical Complaint</Label>
-                <Textarea
-                  id="clinical_complaint"
-                  placeholder="Describe the patient's complaints and symptoms..."
-                  value={formData.clinical_complaint}
-                  onChange={(e) => setFormData({ ...formData, clinical_complaint: e.target.value })}
-                  rows={3}
-                />
-              </div>
+                {/* Clinical Complaint */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Clinical Details</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Label htmlFor="clinical_complaint">Clinical Complaint</Label>
+                      <Textarea
+                        id="clinical_complaint"
+                        value={formData.clinical_complaint}
+                        onChange={(e) => setFormData({ ...formData, clinical_complaint: e.target.value })}
+                        rows={4}
+                        placeholder="Enter patient's clinical complaint details..."
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
 
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-2">
-                <Button variant="secondary" onClick={() => handleSave(false)} disabled={saving || completing}>
-                  {saving ? 'Saving...' : 'Save'}
+                <Button type="submit" disabled={loading} className="w-full">
+                  {loading ? 'Creating Report...' : 'Create Reception Report'}
                 </Button>
-                <Button onClick={() => handleSave(true)} disabled={saving || completing}>
-                  {completing ? 'Completing...' : 'Save & Complete'}
-                </Button>
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </form>
         </CardContent>
       </Card>
     </div>

@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -16,11 +15,14 @@ interface Patient {
   id: string;
   patient_id: number;
   name: string;
-  age: number;
+  age?: number;
+  age_years?: number;
+  age_months?: number;
+  age_days?: number;
   gender: string;
   phone_number: string;
-  address: string;
-  description: string;
+  cnic?: string;
+  category?: string;
 }
 
 const PatientEditPage = () => {
@@ -30,11 +32,13 @@ const PatientEditPage = () => {
 
   const [formData, setFormData] = useState({
     name: '',
-    age: '',
+    age_years: '',
+    age_months: '',
+    age_days: '',
     gender: '',
     phone_number: '',
-    address: '',
-    description: '',
+    cnic: '',
+    category: ''
   });
 
   const { data: patient, isLoading } = useQuery({
@@ -56,11 +60,13 @@ const PatientEditPage = () => {
     if (patient) {
       setFormData({
         name: patient.name,
-        age: patient.age.toString(),
+        age_years: patient.age_years?.toString() || patient.age?.toString() || '',
+        age_months: patient.age_months?.toString() || '',
+        age_days: patient.age_days?.toString() || '',
         gender: patient.gender,
         phone_number: patient.phone_number || '',
-        address: patient.address || '',
-        description: patient.description || '',
+        cnic: patient.cnic || '',
+        category: patient.category || ''
       });
     }
   }, [patient]);
@@ -96,13 +102,21 @@ const PatientEditPage = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Calculate total age for backward compatibility
+    const totalYears = parseInt(formData.age_years || '0') + 
+                      (parseInt(formData.age_months || '0') / 12) + 
+                      (parseInt(formData.age_days || '0') / 365);
+
     const updatedData = {
       name: formData.name,
-      age: parseInt(formData.age),
+      age: Math.floor(totalYears),
+      age_years: parseInt(formData.age_years || '0'),
+      age_months: parseInt(formData.age_months || '0'),
+      age_days: parseInt(formData.age_days || '0'),
       gender: formData.gender,
       phone_number: formData.phone_number || null,
-      address: formData.address || null,
-      description: formData.description || null,
+      cnic: formData.cnic || null,
+      category: formData.category || null,
       updated_at: new Date().toISOString()
     };
 
@@ -158,16 +172,60 @@ const PatientEditPage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="age">Age *</Label>
+                <Label htmlFor="cnic">CNIC</Label>
                 <Input
-                  id="age"
-                  type="number"
-                  value={formData.age}
-                  onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                  required
+                  id="cnic"
+                  value={formData.cnic}
+                  onChange={(e) => setFormData({ ...formData, cnic: e.target.value })}
+                  placeholder="e.g., 12345-1234567-1"
                 />
               </div>
+            </div>
 
+            {/* Age Fields */}
+            <div className="space-y-2">
+              <Label>Age</Label>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <Label htmlFor="age_years" className="text-sm">Years</Label>
+                  <Input
+                    id="age_years"
+                    type="number"
+                    min="0"
+                    max="150"
+                    value={formData.age_years}
+                    onChange={(e) => setFormData({ ...formData, age_years: e.target.value })}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="age_months" className="text-sm">Months</Label>
+                  <Input
+                    id="age_months"
+                    type="number"
+                    min="0"
+                    max="11"
+                    value={formData.age_months}
+                    onChange={(e) => setFormData({ ...formData, age_months: e.target.value })}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="age_days" className="text-sm">Days</Label>
+                  <Input
+                    id="age_days"
+                    type="number"
+                    min="0"
+                    max="30"
+                    value={formData.age_days}
+                    onChange={(e) => setFormData({ ...formData, age_days: e.target.value })}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="gender">Gender *</Label>
                 <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
@@ -193,22 +251,17 @@ const PatientEditPage = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-              />
+              <Label htmlFor="category">Category</Label>
+              <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Paid">Paid</SelectItem>
+                  <SelectItem value="Free">Free</SelectItem>
+                  <SelectItem value="Thalassemic">Thalassemic</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex justify-end space-x-2">

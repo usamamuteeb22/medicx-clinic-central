@@ -6,26 +6,40 @@ interface Patient {
   id: string;
   patient_id: number;
   name: string;
-  age: number;
+  age?: number;
+  age_years?: number;
+  age_months?: number;
+  age_days?: number;
   gender: string;
   phone_number: string;
-  address: string;
+  cnic?: string;
+  category?: string;
   registration_date: string;
-  description: string;
 }
 
 export const generatePatientsExcel = (patients: Patient[]) => {
   try {
+    const formatAge = (patient: Patient) => {
+      if (patient.age_years || patient.age_months || patient.age_days) {
+        const parts = [];
+        if (patient.age_years && patient.age_years > 0) parts.push(`${patient.age_years} years`);
+        if (patient.age_months && patient.age_months > 0) parts.push(`${patient.age_months} months`);
+        if (patient.age_days && patient.age_days > 0) parts.push(`${patient.age_days} days`);
+        return parts.join(', ') || 'N/A';
+      }
+      return patient.age ? `${patient.age} years` : 'N/A';
+    };
+
     // Prepare data for Excel
     const worksheetData = patients.map(patient => ({
       'Patient ID': patient.patient_id,
       'Name': patient.name || 'N/A',
-      'Age': patient.age,
+      'Age': formatAge(patient),
       'Gender': patient.gender || 'N/A',
       'Phone': patient.phone_number || 'N/A',
-      'Address': patient.address || 'N/A',
-      'Registration Date': patient.registration_date ? format(new Date(patient.registration_date), 'MMM dd, yyyy') : 'N/A',
-      'Description': patient.description || 'N/A'
+      'CNIC': patient.cnic || 'N/A',
+      'Category': patient.category || 'N/A',
+      'Registration Date': patient.registration_date ? format(new Date(patient.registration_date), 'MMM dd, yyyy') : 'N/A'
     }));
 
     // Create workbook and worksheet
@@ -36,12 +50,12 @@ export const generatePatientsExcel = (patients: Patient[]) => {
     const columnWidths = [
       { wch: 12 }, // Patient ID
       { wch: 20 }, // Name
-      { wch: 8 },  // Age
+      { wch: 15 }, // Age
       { wch: 10 }, // Gender
       { wch: 15 }, // Phone
-      { wch: 25 }, // Address
-      { wch: 18 }, // Registration Date
-      { wch: 30 }  // Description
+      { wch: 18 }, // CNIC
+      { wch: 15 }, // Category
+      { wch: 18 }  // Registration Date
     ];
     worksheet['!cols'] = columnWidths;
 

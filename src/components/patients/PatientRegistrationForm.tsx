@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,12 +17,13 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
-    age: '',
+    age_years: '',
+    age_months: '',
+    age_days: '',
     gender: '',
     phone_number: '',
-    address: '',
-    category: '',
-    description: ''
+    cnic: '',
+    category: ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -40,16 +40,21 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
 
     setLoading(true);
     try {
-      // Prepare the data payload with proper category handling
+      // Calculate total age in years for backward compatibility
+      const totalYears = parseInt(formData.age_years || '0') + 
+                        (parseInt(formData.age_months || '0') / 12) + 
+                        (parseInt(formData.age_days || '0') / 365);
+
       const payload = {
         name: formData.name,
-        age: parseInt(formData.age),
+        age: Math.floor(totalYears), // Keep for backward compatibility
+        age_years: parseInt(formData.age_years || '0'),
+        age_months: parseInt(formData.age_months || '0'),
+        age_days: parseInt(formData.age_days || '0'),
         gender: formData.gender,
         phone_number: formData.phone_number || null,
-        address: formData.address || null,
-        // Ensure category is null if empty string, otherwise use the selected value
+        cnic: formData.cnic || null,
         category: formData.category === '' ? null : formData.category,
-        description: formData.description || null,
         created_by: user.id
       };
 
@@ -76,12 +81,13 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
       // Reset form
       setFormData({
         name: '',
-        age: '',
+        age_years: '',
+        age_months: '',
+        age_days: '',
         gender: '',
         phone_number: '',
-        address: '',
-        category: '',
-        description: ''
+        cnic: '',
+        category: ''
       });
 
       onPatientAdded();
@@ -115,16 +121,56 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="age">Age *</Label>
+              <Label htmlFor="cnic">CNIC</Label>
               <Input
-                id="age"
-                type="number"
-                min="0"
-                max="150"
-                value={formData.age}
-                onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                required
+                id="cnic"
+                value={formData.cnic}
+                onChange={(e) => setFormData({ ...formData, cnic: e.target.value })}
+                placeholder="e.g., 12345-1234567-1"
               />
+            </div>
+          </div>
+
+          {/* Age Fields */}
+          <div className="space-y-2">
+            <Label>Age</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label htmlFor="age_years" className="text-sm">Years</Label>
+                <Input
+                  id="age_years"
+                  type="number"
+                  min="0"
+                  max="150"
+                  value={formData.age_years}
+                  onChange={(e) => setFormData({ ...formData, age_years: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="age_months" className="text-sm">Months</Label>
+                <Input
+                  id="age_months"
+                  type="number"
+                  min="0"
+                  max="11"
+                  value={formData.age_months}
+                  onChange={(e) => setFormData({ ...formData, age_months: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="age_days" className="text-sm">Days</Label>
+                <Input
+                  id="age_days"
+                  type="number"
+                  min="0"
+                  max="30"
+                  value={formData.age_days}
+                  onChange={(e) => setFormData({ ...formData, age_days: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
             </div>
           </div>
 
@@ -174,26 +220,6 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPat
                 <SelectItem value="Thalassemic">Thalassemic</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Textarea
-              id="address"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              rows={2}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description/Notes</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-            />
           </div>
 
           <Button type="submit" disabled={loading} className="w-full">
