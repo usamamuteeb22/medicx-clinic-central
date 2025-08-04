@@ -35,14 +35,10 @@ interface MedicineUsageQueryResult {
   usage_date: string;
   patient_id: string;
   medicine_id: string;
-  patients: {
-    name: string;
-    patient_id: number;
-  } | null;
-  medicines: {
-    name: string;
-    category: string;
-  } | null;
+  patient_name: string;
+  patient_number: number;
+  medicine_name: string;
+  medicine_category: string;
 }
 
 const MedicineUsagePage = () => {
@@ -57,7 +53,8 @@ const MedicineUsagePage = () => {
     queryFn: async (): Promise<MedicineUsageQueryResult[]> => {
       console.log('Fetching medicine usage data...');
       
-      const query = supabase
+      // Use a raw SQL query with proper joins
+      const { data, error } = await supabase
         .from('medicine_usage')
         .select(`
           id,
@@ -65,20 +62,32 @@ const MedicineUsagePage = () => {
           usage_date,
           patient_id,
           medicine_id,
-          patients!medicine_usage_patient_id_fkey(name, patient_id),
-          medicines!medicine_usage_medicine_id_fkey(name, category)
+          patients!inner(name, patient_id),
+          medicines!inner(name, category)
         `)
         .order('usage_date', { ascending: false });
 
-      console.log('Executing query...');
-      const { data, error } = await query;
       if (error) {
         console.error('Medicine usage query error:', error);
         return [];
       }
 
       console.log('Raw query result:', data);
-      return (data || []) as MedicineUsageQueryResult[];
+      
+      // Transform the data to match our interface
+      const transformedData: MedicineUsageQueryResult[] = (data || []).map(usage => ({
+        id: usage.id,
+        quantity_used: usage.quantity_used,
+        usage_date: usage.usage_date,
+        patient_id: usage.patient_id,
+        medicine_id: usage.medicine_id,
+        patient_name: usage.patients?.name || 'Unknown Patient',
+        patient_number: usage.patients?.patient_id || 0,
+        medicine_name: usage.medicines?.name || 'Unknown Medicine',
+        medicine_category: usage.medicines?.category || 'Unknown Category'
+      }));
+
+      return transformedData;
     }
   });
 
@@ -87,24 +96,19 @@ const MedicineUsagePage = () => {
     const grouped: { [key: string]: MedicineUsageRecord } = {};
     
     medicineUsage.forEach(usage => {
-      if (!usage.patients || !usage.medicines) {
-        console.warn('Missing patient or medicine data:', usage);
-        return;
-      }
-
       const key = `${usage.patient_id}-${usage.usage_date.split('T')[0]}`;
       if (!grouped[key]) {
         grouped[key] = {
           id: usage.id,
-          patient_name: usage.patients.name,
-          patient_number: usage.patients.patient_id,
+          patient_name: usage.patient_name,
+          patient_number: usage.patient_number,
           report_date: usage.usage_date,
           medicines: []
         };
       }
       
       grouped[key].medicines.push({
-        name: usage.medicines.name,
+        name: usage.medicine_name,
         quantity: usage.quantity_used,
         morning: false, // These would need to come from prescription data
         afternoon: false,
