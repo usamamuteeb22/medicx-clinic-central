@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Search, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -46,7 +45,6 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
   const [days, setDays] = useState<number>(1);
-  const [dosagePerDay, setDosagePerDay] = useState<number>(1);
   const [morning, setMorning] = useState(false);
   const [afternoon, setAfternoon] = useState(false);
   const [evening, setEvening] = useState(false);
@@ -55,6 +53,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
   const [afterMeal, setAfterMeal] = useState(false);
   const [fasting, setFasting] = useState(false);
   const [note, setNote] = useState('');
+  const [calculatedQuantity, setCalculatedQuantity] = useState(0);
 
   const { data: medicines = [], isLoading } = useQuery({
     queryKey: ['medicines', searchTerm],
@@ -75,6 +74,13 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
     }
   });
 
+  // Calculate quantity automatically based on selected timings and days
+  useEffect(() => {
+    const selectedTimings = [morning, afternoon, evening, night].filter(Boolean).length;
+    const calculatedQty = days * selectedTimings;
+    setCalculatedQuantity(calculatedQty);
+  }, [days, morning, afternoon, evening, night]);
+
   const handleAddMedicine = () => {
     if (!selectedMedicine) {
       toast({
@@ -85,11 +91,11 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
       return;
     }
 
-    if (days <= 0 || dosagePerDay <= 0) {
+    if (days <= 0) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Days and dosage per day must be greater than 0"
+        description: "Days must be greater than 0"
       });
       return;
     }
@@ -103,9 +109,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
       return;
     }
 
-    const totalQuantity = days * dosagePerDay;
-
-    if (totalQuantity > selectedMedicine.total_quantity) {
+    if (calculatedQuantity > selectedMedicine.total_quantity) {
       toast({
         variant: "destructive",
         title: "Insufficient Stock",
@@ -127,7 +131,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
     const prescribedMedicine: PrescribedMedicine = {
       id: `temp_${Date.now()}`,
       medicine: selectedMedicine,
-      quantity: totalQuantity,
+      quantity: calculatedQuantity,
       days,
       morning,
       afternoon,
@@ -145,7 +149,6 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
     setSelectedMedicine(null);
     setSearchTerm('');
     setDays(1);
-    setDosagePerDay(1);
     setMorning(false);
     setAfternoon(false);
     setEvening(false);
@@ -233,27 +236,15 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
               </Button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="days">Days</Label>
-                <Input
-                  id="days"
-                  type="number"
-                  min="1"
-                  value={days}
-                  onChange={(e) => setDays(parseInt(e.target.value) || 1)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="dosage">Dosage per Day</Label>
-                <Input
-                  id="dosage"
-                  type="number"
-                  min="1"
-                  value={dosagePerDay}
-                  onChange={(e) => setDosagePerDay(parseInt(e.target.value) || 1)}
-                />
-              </div>
+            <div>
+              <Label htmlFor="days">Days</Label>
+              <Input
+                id="days"
+                type="number"
+                min="1"
+                value={days}
+                onChange={(e) => setDays(parseInt(e.target.value) || 1)}
+              />
             </div>
 
             <div>
@@ -337,7 +328,10 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
 
             <div className="flex justify-between items-center pt-2">
               <div className="text-sm text-gray-600">
-                Total Quantity: {days * dosagePerDay} units
+                Calculated Quantity: {calculatedQuantity} units
+                <div className="text-xs text-gray-500">
+                  ({days} days × {[morning, afternoon, evening, night].filter(Boolean).length} times/day)
+                </div>
               </div>
               <Button onClick={handleAddMedicine} className="flex items-center space-x-2">
                 <Plus className="h-4 w-4" />

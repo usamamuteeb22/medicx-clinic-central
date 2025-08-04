@@ -7,15 +7,13 @@ const VitalsPrintStyles = () => (
       __html: `
       @media print {
         .medical-vitals-section {
-          width: 190mm;
-          border: 0.5mm solid #000;
-          padding: 3mm;
-          margin-bottom: 3mm;
+          width: 100%;
+          margin-bottom: 7mm;
           page-break-inside: avoid;
         }
         
         .medical-vitals-section h3 {
-          font-size: 12pt;
+          font-size: 14pt;
           font-weight: bold;
           margin: 0 0 4mm 0;
           color: #000;
@@ -24,7 +22,7 @@ const VitalsPrintStyles = () => (
         .vitals-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 4mm 6mm;
+          gap: 3mm;
           width: 100%;
         }
         
@@ -49,15 +47,13 @@ const VitalsPrintStyles = () => (
         }
         
         .clinical-complaint-section {
-          width: 190mm;
-          border: 0.5mm solid #000;
-          padding: 3mm;
-          margin-bottom: 3mm;
+          width: 100%;
+          margin-bottom: 7mm;
           page-break-inside: avoid;
         }
         
         .clinical-complaint-section h3 {
-          font-size: 12pt;
+          font-size: 14pt;
           font-weight: bold;
           margin: 0 0 4mm 0;
           color: #000;

@@ -12,7 +12,6 @@ const ReportHeader: React.FC<ReportHeaderProps> = ({ reportId, currentDate, curr
     <div className="report-header">
       <div className="clinic-info">
         <h1>Awam Dost Dispensary</h1>
-        <p>Comprehensive Medical Care</p>
       </div>
       
       <div className="report-info">

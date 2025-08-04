@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import PatientSelector from '@/components/PatientSelector';
 
@@ -27,8 +26,7 @@ const ReceptionReportPage = () => {
     temperature: '',
     weight: '',
     bsr: '',
-    saturation: '',
-    clinical_complaint: ''
+    saturation: ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -63,7 +61,6 @@ const ReceptionReportPage = () => {
           weight: formData.weight ? parseFloat(formData.weight) : null,
           bsr: formData.bsr ? parseFloat(formData.bsr) : null,
           saturation: formData.saturation ? parseFloat(formData.saturation) : null,
-          clinical_complaint: formData.clinical_complaint || null,
           created_by: user.id,
           created_by_role: 'reception',
           reception_completed_at: new Date().toISOString()
@@ -84,8 +81,7 @@ const ReceptionReportPage = () => {
         temperature: '',
         weight: '',
         bsr: '',
-        saturation: '',
-        clinical_complaint: ''
+        saturation: ''
       });
       setSelectedPatient(null);
 
@@ -195,25 +191,6 @@ const ReceptionReportPage = () => {
                           placeholder="e.g., 98"
                         />
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Clinical Complaint */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Clinical Details</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <Label htmlFor="clinical_complaint">Clinical Complaint</Label>
-                      <Textarea
-                        id="clinical_complaint"
-                        value={formData.clinical_complaint}
-                        onChange={(e) => setFormData({ ...formData, clinical_complaint: e.target.value })}
-                        rows={4}
-                        placeholder="Enter patient's clinical complaint details..."
-                      />
                     </div>
                   </CardContent>
                 </Card>

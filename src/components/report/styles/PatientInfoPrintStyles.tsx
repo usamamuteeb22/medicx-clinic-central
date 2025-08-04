@@ -7,16 +7,13 @@ const PatientInfoPrintStyles = () => (
       __html: `
       @media print {
         .patient-info-section {
-          width: 190mm;
-          border: 0.5mm solid #000;
-          padding: 3mm;
-          margin-top: 8mm;
-          margin-bottom: 3mm;
+          width: 100%;
+          margin-bottom: 7mm;
           page-break-inside: avoid;
         }
         
         .patient-info-section h3 {
-          font-size: 12pt;
+          font-size: 14pt;
           font-weight: bold;
           margin: 0 0 4mm 0;
           color: #000;
@@ -28,20 +25,22 @@ const PatientInfoPrintStyles = () => (
         
         .patient-info-content {
           display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
-          gap: 2mm 6mm;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 3mm;
+          width: 100%;
         }
         
         .patient-info-item {
           display: flex;
-          align-items: center;
+          flex-direction: column;
           font-size: 10pt;
-          min-height: 6mm;
+          min-height: 8mm;
+          max-width: 45mm;
         }
         
         .patient-info-label {
           font-weight: bold;
-          margin-right: 2mm;
+          margin-bottom: 1mm;
           color: #000;
           white-space: nowrap;
         }
@@ -49,6 +48,7 @@ const PatientInfoPrintStyles = () => (
         .patient-info-value {
           color: #000;
           word-wrap: break-word;
+          overflow-wrap: break-word;
         }
       }
       `,

@@ -36,6 +36,7 @@ const ReportPatientInfo: React.FC<ReportPatientInfoProps> = ({ patient }) => {
       <h3>Patient Information</h3>
       <div className="patient-info-grid">
         <div className="patient-info-content">
+          {/* Row 1 */}
           <div className="patient-info-item">
             <span className="patient-info-label">Patient ID:</span>
             <span className="patient-info-value">{patient.patient_id}</span>
@@ -52,6 +53,7 @@ const ReportPatientInfo: React.FC<ReportPatientInfoProps> = ({ patient }) => {
             <span className="patient-info-label">Gender:</span>
             <span className="patient-info-value">{patient.gender}</span>
           </div>
+          {/* Row 2 */}
           <div className="patient-info-item">
             <span className="patient-info-label">Phone:</span>
             <span className="patient-info-value">{patient.phone_number || 'N/A'}</span>
