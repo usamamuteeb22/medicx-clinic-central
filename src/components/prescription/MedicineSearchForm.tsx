@@ -263,7 +263,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
                   <Checkbox
                     id="morning"
                     checked={morning}
-                    onCheckedChange={setMorning}
+                    onCheckedChange={(checked) => setMorning(checked === true)}
                   />
                   <Label htmlFor="morning">Morning</Label>
                 </div>
@@ -271,7 +271,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
                   <Checkbox
                     id="afternoon"
                     checked={afternoon}
-                    onCheckedChange={setAfternoon}
+                    onCheckedChange={(checked) => setAfternoon(checked === true)}
                   />
                   <Label htmlFor="afternoon">Afternoon</Label>
                 </div>
@@ -279,7 +279,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
                   <Checkbox
                     id="evening"
                     checked={evening}
-                    onCheckedChange={setEvening}
+                    onCheckedChange={(checked) => setEvening(checked === true)}
                   />
                   <Label htmlFor="evening">Evening</Label>
                 </div>
@@ -287,7 +287,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
                   <Checkbox
                     id="night"
                     checked={night}
-                    onCheckedChange={setNight}
+                    onCheckedChange={(checked) => setNight(checked === true)}
                   />
                   <Label htmlFor="night">Night</Label>
                 </div>
@@ -301,7 +301,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
                   <Checkbox
                     id="before-meal"
                     checked={beforeMeal}
-                    onCheckedChange={setBeforeMeal}
+                    onCheckedChange={(checked) => setBeforeMeal(checked === true)}
                   />
                   <Label htmlFor="before-meal">Before Meal</Label>
                 </div>
@@ -309,7 +309,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
                   <Checkbox
                     id="after-meal"
                     checked={afterMeal}
-                    onCheckedChange={setAfterMeal}
+                    onCheckedChange={(checked) => setAfterMeal(checked === true)}
                   />
                   <Label htmlFor="after-meal">After Meal</Label>
                 </div>
@@ -317,7 +317,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
                   <Checkbox
                     id="fasting"
                     checked={fasting}
-                    onCheckedChange={setFasting}
+                    onCheckedChange={(checked) => setFasting(checked === true)}
                   />
                   <Label htmlFor="fasting">Fasting</Label>
                 </div>

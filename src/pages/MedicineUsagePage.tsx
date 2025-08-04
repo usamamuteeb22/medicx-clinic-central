@@ -5,12 +5,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { DatePickerWithRange } from '@/components/ui/date-range-picker';
-import { Download, Search, Trash2 } from 'lucide-react';
+import { Download, Search, Trash2, CalendarIcon } from 'lucide-react';
 import { format, parseISO, isWithinInterval } from 'date-fns';
-import { DateRange } from 'react-day-picker';
 import { generateMedicineUsageExcel } from '@/utils/medicineUsageExcelUtils';
 import { toast } from '@/hooks/use-toast';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 interface MedicineUsageRecord {
   id: string;
@@ -28,7 +29,7 @@ interface MedicineUsageRecord {
 }
 
 // Interface for the raw database query result
-interface RawMedicineUsage {
+interface MedicineUsageQueryResult {
   id: string;
   quantity_used: number;
   usage_date: string;
@@ -46,13 +47,14 @@ interface RawMedicineUsage {
 
 const MedicineUsagePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   const { data: medicineUsage = [], isLoading, error, refetch } = useQuery({
     queryKey: ['medicineUsage'],
-    queryFn: async (): Promise<RawMedicineUsage[]> => {
+    queryFn: async (): Promise<MedicineUsageQueryResult[]> => {
       console.log('Fetching medicine usage data...');
       
       const query = supabase
@@ -63,8 +65,8 @@ const MedicineUsagePage = () => {
           usage_date,
           patient_id,
           medicine_id,
-          patients(name, patient_id),
-          medicines(name, category)
+          patients!medicine_usage_patient_id_fkey(name, patient_id),
+          medicines!medicine_usage_medicine_id_fkey(name, category)
         `)
         .order('usage_date', { ascending: false });
 
@@ -72,13 +74,11 @@ const MedicineUsagePage = () => {
       const { data, error } = await query;
       if (error) {
         console.error('Medicine usage query error:', error);
-        // Return empty array if there's an error to prevent crashes
         return [];
       }
 
       console.log('Raw query result:', data);
-      // Type assertion with proper error handling
-      return (data || []) as unknown as RawMedicineUsage[];
+      return (data || []) as MedicineUsageQueryResult[];
     }
   });
 
@@ -123,11 +123,9 @@ const MedicineUsagePage = () => {
       record.patient_number.toString().includes(searchTerm) ||
       record.medicines.some(med => med.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const matchesDateRange = !dateRange?.from || !dateRange?.to || 
-      isWithinInterval(parseISO(record.report_date), {
-        start: dateRange.from,
-        end: dateRange.to
-      });
+    const recordDate = parseISO(record.report_date);
+    const matchesDateRange = (!startDate || recordDate >= startDate) && 
+                            (!endDate || recordDate <= endDate);
 
     return matchesSearch && matchesDateRange;
   });
@@ -225,7 +223,7 @@ const MedicineUsagePage = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Input
                 placeholder="Search by patient name, ID, or medicine..."
@@ -234,10 +232,52 @@ const MedicineUsagePage = () => {
               />
             </div>
             <div>
-              <DatePickerWithRange
-                date={dateRange}
-                onDateChange={setDateRange}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "PPP") : "Start date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "PPP") : "End date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </CardContent>
@@ -305,7 +345,7 @@ const MedicineUsagePage = () => {
           )}
           
           {totalPages > 1 && (
-            <div className="flex justify-center items-center space-x-2">
+            <div className="flex justify-center items-center space-x-2 mt-4">
               <Button
                 variant="outline"
                 disabled={currentPage === 1}
