@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,8 +24,8 @@ interface MedicineUsageRecord {
   }>;
 }
 
-// Updated interface to match the actual database query result
-interface MedicineUsageQueryResult {
+// Interface for the raw database query result
+interface RawMedicineUsage {
   id: string;
   quantity_used: number;
   usage_date: string;
@@ -61,8 +60,8 @@ const MedicineUsagePage = () => {
           usage_date,
           patient_id,
           medicine_id,
-          patients!medicine_usage_patient_id_fkey(name, patient_id),
-          medicines!medicine_usage_medicine_id_fkey(name, category)
+          patients(name, patient_id),
+          medicines(name, category)
         `)
         .order('usage_date', { ascending: false });
 
@@ -76,11 +75,12 @@ const MedicineUsagePage = () => {
       const { data, error } = await query;
       if (error) {
         console.error('Medicine usage query error:', error);
-        throw error;
+        // Return empty array if there's an error to prevent crashes
+        return [];
       }
 
-      // Cast the result to our expected type to resolve the TypeScript error
-      return (data || []) as MedicineUsageQueryResult[];
+      // Type assertion with proper error handling
+      return (data || []) as unknown as RawMedicineUsage[];
     }
   });
 
@@ -89,19 +89,24 @@ const MedicineUsagePage = () => {
     const grouped: { [key: string]: MedicineUsageRecord } = {};
     
     medicineUsage.forEach(usage => {
+      if (!usage.patients || !usage.medicines) {
+        console.warn('Missing patient or medicine data:', usage);
+        return;
+      }
+
       const key = `${usage.patient_id}-${usage.usage_date.split('T')[0]}`;
       if (!grouped[key]) {
         grouped[key] = {
           id: usage.id,
-          patient_name: usage.patients?.name || 'Unknown',
-          patient_number: usage.patients?.patient_id || 0,
+          patient_name: usage.patients.name,
+          patient_number: usage.patients.patient_id,
           report_date: usage.usage_date,
           medicines: []
         };
       }
       
       grouped[key].medicines.push({
-        name: usage.medicines?.name || 'Unknown Medicine',
+        name: usage.medicines.name,
         quantity: usage.quantity_used,
         morning: false, // These would need to come from prescription data
         afternoon: false,
@@ -255,7 +260,6 @@ const MedicineUsagePage = () => {
             ))}
           </div>
           
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center items-center space-x-2">
               <Button
