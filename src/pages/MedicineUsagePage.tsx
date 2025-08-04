@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,7 +25,8 @@ interface MedicineUsageRecord {
   }>;
 }
 
-interface MedicineUsage {
+// Updated interface to match the actual database query result
+interface MedicineUsageQueryResult {
   id: string;
   quantity_used: number;
   usage_date: string;
@@ -72,9 +74,13 @@ const MedicineUsagePage = () => {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('Medicine usage query error:', error);
+        throw error;
+      }
 
-      return data as MedicineUsage[];
+      // Cast the result to our expected type to resolve the TypeScript error
+      return (data || []) as MedicineUsageQueryResult[];
     }
   });
 
