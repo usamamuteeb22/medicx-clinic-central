@@ -10,6 +10,8 @@ const VitalsPrintStyles = () => (
           width: 100%;
           margin-bottom: 7mm;
           page-break-inside: avoid;
+          border: 1pt solid #000;
+          padding: 4mm;
         }
         
         .medical-vitals-section h3 {
@@ -50,6 +52,8 @@ const VitalsPrintStyles = () => (
           width: 100%;
           margin-bottom: 7mm;
           page-break-inside: avoid;
+          border: 1pt solid #000;
+          padding: 4mm;
         }
         
         .clinical-complaint-section h3 {

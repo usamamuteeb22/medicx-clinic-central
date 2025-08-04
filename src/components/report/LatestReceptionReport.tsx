@@ -10,7 +10,14 @@ interface Patient {
   id: string;
   patient_id: number;
   name: string;
+  age?: number;
+  age_years?: number;
+  age_months?: number;
+  age_days?: number;
+  gender: string;
   phone_number: string;
+  cnic?: string;
+  category?: string;
 }
 
 interface ReceptionReport {
@@ -49,10 +56,10 @@ const LatestReceptionReport: React.FC<LatestReceptionReportProps> = ({ onReportS
         throw error;
       }
 
-      // Fetch patient data separately
+      // Fetch complete patient data including all required fields
       const { data: patientData, error: patientError } = await supabase
         .from('patients')
-        .select('id, patient_id, name, phone_number')
+        .select('id, patient_id, name, age, age_years, age_months, age_days, gender, phone_number, cnic, category')
         .eq('id', data.patient_id)
         .single();
 

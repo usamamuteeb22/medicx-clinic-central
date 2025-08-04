@@ -74,12 +74,16 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
     }
   });
 
-  // Calculate quantity automatically based on selected timings and days
+  // Calculate quantity automatically based on selected dosage timings AND meal timings
   useEffect(() => {
-    const selectedTimings = [morning, afternoon, evening, night].filter(Boolean).length;
-    const calculatedQty = days * selectedTimings;
+    const dosageTimings = [morning, afternoon, evening, night].filter(Boolean).length;
+    const mealTimings = [beforeMeal, afterMeal, fasting].filter(Boolean).length;
+    
+    // Total timings is the sum of dosage timings and meal timings
+    const totalTimings = dosageTimings + mealTimings;
+    const calculatedQty = days * totalTimings;
     setCalculatedQuantity(calculatedQty);
-  }, [days, morning, afternoon, evening, night]);
+  }, [days, morning, afternoon, evening, night, beforeMeal, afterMeal, fasting]);
 
   const handleAddMedicine = () => {
     if (!selectedMedicine) {
@@ -328,9 +332,9 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
 
             <div className="flex justify-between items-center pt-2">
               <div className="text-sm text-gray-600">
-                Calculated Quantity: {calculatedQuantity} units
+                <div>Calculated Quantity: {calculatedQuantity} units</div>
                 <div className="text-xs text-gray-500">
-                  ({days} days × {[morning, afternoon, evening, night].filter(Boolean).length} times/day)
+                  ({days} days × {[morning, afternoon, evening, night].filter(Boolean).length} dosage times × {[beforeMeal, afterMeal, fasting].filter(Boolean).length} meal times)
                 </div>
               </div>
               <Button onClick={handleAddMedicine} className="flex items-center space-x-2">
