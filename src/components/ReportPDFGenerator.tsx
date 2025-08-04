@@ -10,7 +10,7 @@ import ReportMedicineTable from './report/ReportMedicineTable';
 import ReportMedicalHistory from './report/ReportMedicalHistory';
 import ReportFooter from './report/ReportFooter';
 import ReportPrintStyles from './report/ReportPrintStyles';
-import NotesSection from './report/NotesSection';
+import PrintNotesSection from './report/PrintNotesSection';
 
 interface Patient {
   id: string;
@@ -40,6 +40,7 @@ interface PrescribedMedicine {
   before_meal: boolean;
   after_meal: boolean;
   fasting: boolean;
+  note?: string;
 }
 
 interface ReportData {
@@ -52,8 +53,7 @@ interface ReportData {
   medical_history: string;
   observations: string;
   recommendations: string;
-  medicine_notes: string;
-  test_advice: string;
+  patient_history: string;
 }
 
 interface ReportPDFGeneratorProps {
@@ -143,10 +143,7 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
                 onFormDataChange={handleFormDataChange}
               />
               <ReportMedicineTable prescribedMedicines={prescribedMedicines} />
-              <NotesSection
-                formData={reportData}
-                onFormDataChange={handleFormDataChange}
-              />
+              <PrintNotesSection />
               <ReportMedicalHistory 
                 formData={reportData} 
                 onFormDataChange={handleFormDataChange}
@@ -156,6 +153,14 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
             <ReportFooter />
           </div>
         </div>
+
+        {/* Patient History Preview (only visible in preview, not print) */}
+        {reportData.patient_history && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg print:hidden">
+            <h3 className="font-semibold text-lg mb-2">Patient History (Preview Only)</h3>
+            <p className="text-sm text-gray-700">{reportData.patient_history}</p>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

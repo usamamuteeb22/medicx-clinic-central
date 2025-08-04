@@ -1,13 +1,16 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Download } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+import { Download, Search, Trash2 } from 'lucide-react';
+import { format, parseISO, isWithinInterval } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 import { generateMedicineUsageExcel } from '@/utils/medicineUsageExcelUtils';
+import { toast } from '@/hooks/use-toast';
 
 interface MedicineUsageRecord {
   id: string;
@@ -42,17 +45,17 @@ interface RawMedicineUsage {
 }
 
 const MedicineUsagePage = () => {
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredRecords, setFilteredRecords] = useState<MedicineUsageRecord[]>([]);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
+  const itemsPerPage = 10;
 
-  const { data: medicineUsage = [], isLoading } = useQuery({
-    queryKey: ['medicineUsage', startDate, endDate],
-    queryFn: async () => {
-      let query = supabase
+  const { data: medicineUsage = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['medicineUsage'],
+    queryFn: async (): Promise<RawMedicineUsage[]> => {
+      console.log('Fetching medicine usage data...');
+      
+      const query = supabase
         .from('medicine_usage')
         .select(`
           id,
@@ -65,13 +68,7 @@ const MedicineUsagePage = () => {
         `)
         .order('usage_date', { ascending: false });
 
-      if (startDate) {
-        query = query.gte('usage_date', startDate);
-      }
-      if (endDate) {
-        query = query.lte('usage_date', endDate);
-      }
-
+      console.log('Executing query...');
       const { data, error } = await query;
       if (error) {
         console.error('Medicine usage query error:', error);
@@ -79,13 +76,14 @@ const MedicineUsagePage = () => {
         return [];
       }
 
+      console.log('Raw query result:', data);
       // Type assertion with proper error handling
       return (data || []) as unknown as RawMedicineUsage[];
     }
   });
 
-  useEffect(() => {
-    // Group by patient and date
+  // Transform the data
+  const medicineUsageRecords: MedicineUsageRecord[] = React.useMemo(() => {
     const grouped: { [key: string]: MedicineUsageRecord } = {};
     
     medicineUsage.forEach(usage => {
@@ -114,183 +112,221 @@ const MedicineUsagePage = () => {
         night: false
       });
     });
+    
+    return Object.values(grouped);
+  }, [medicineUsage]);
 
-    let filtered = Object.values(grouped);
+  // Apply filters
+  const filteredRecords = medicineUsageRecords.filter(record => {
+    const matchesSearch = searchTerm === '' || 
+      record.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.patient_number.toString().includes(searchTerm) ||
+      record.medicines.some(med => med.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    if (searchTerm) {
-      filtered = filtered.filter(record =>
-        record.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.patient_number.toString().includes(searchTerm) ||
-        record.medicines.some(med => med.name.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
+    const matchesDateRange = !dateRange?.from || !dateRange?.to || 
+      isWithinInterval(parseISO(record.report_date), {
+        start: dateRange.from,
+        end: dateRange.to
+      });
 
-    setFilteredRecords(filtered);
-    setCurrentPage(1);
-  }, [medicineUsage, searchTerm]);
+    return matchesSearch && matchesDateRange;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
+  const paginatedRecords = filteredRecords.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const handleExportExcel = () => {
     try {
       generateMedicineUsageExcel(filteredRecords);
       toast({
         title: "Export Successful",
-        description: "Medicine usage data has been exported to Excel successfully."
+        description: `Exported ${filteredRecords.length} medicine usage records to Excel`
       });
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Export Failed",
-        description: "Failed to export medicine usage data to Excel."
+        description: "Failed to generate Excel file"
       });
     }
   };
 
-  const paginatedRecords = filteredRecords.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const handleDeleteUsage = async (usageId: string) => {
+    try {
+      const { error } = await supabase
+        .from('medicine_usage')
+        .delete()
+        .eq('id', usageId);
 
-  const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Medicine usage record deleted successfully"
+      });
+
+      refetch();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to delete medicine usage record"
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto p-6">
+        <Card>
+          <CardContent className="text-center py-8">
+            Loading medicine usage data...
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto p-6">
+        <Card>
+          <CardContent className="text-center py-8">
+            <p className="text-red-600">Error loading medicine usage data</p>
+            <Button onClick={() => refetch()} className="mt-2">
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Medicine Usage Reports</h1>
-      </div>
-
-      {/* Date Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Date Range Filter</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endDate">End Date</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Search Filter */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Search Filter</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="search">Search by Patient Name, ID, or Medicine</Label>
-            <Input
-              id="search"
-              type="text"
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Export Button */}
-      <div className="flex justify-end">
+        <h1 className="text-3xl font-bold text-gray-900">Medicine Usage History</h1>
         <Button onClick={handleExportExcel} className="flex items-center space-x-2">
           <Download className="h-4 w-4" />
-          <span>Download Excel</span>
+          <span>Export to Excel</span>
         </Button>
       </div>
 
-      {/* Usage Cards */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : filteredRecords.length > 0 ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginatedRecords.map((record) => (
-              <Card key={record.id} className="shadow-md hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold text-lg">{record.patient_name}</h3>
-                        <p className="text-sm text-gray-600">Patient ID: {record.patient_number}</p>
-                      </div>
-                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                        {new Date(record.report_date).toLocaleDateString()}
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm text-gray-700">Medicines Used:</h4>
-                      {record.medicines.map((medicine, index) => (
-                        <div key={index} className="flex justify-between items-center text-sm">
-                          <span className="truncate">{medicine.name}</span>
-                          <span className="bg-gray-100 px-2 py-1 rounded text-xs">
-                            Qty: {medicine.quantity}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Search className="h-5 w-5" />
+            <span>Filter Medicine Usage</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Input
+                placeholder="Search by patient name, ID, or medicine..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div>
+              <DatePickerWithRange
+                date={dateRange}
+                onDateChange={setDateRange}
+              />
+            </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Results */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Medicine Usage Records ({filteredRecords.length} total)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {paginatedRecords.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border border-gray-300 px-4 py-2 text-left">Patient ID</th>
+                    <th className="border border-gray-300 px-4 py-2 text-left">Patient Name</th>
+                    <th className="border border-gray-300 px-4 py-2 text-left">Date</th>
+                    <th className="border border-gray-300 px-4 py-2 text-left">Medicines Used</th>
+                    <th className="border border-gray-300 px-4 py-2 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedRecords.map((record, index) => (
+                    <tr key={record.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="border border-gray-300 px-4 py-2">{record.patient_number}</td>
+                      <td className="border border-gray-300 px-4 py-2">{record.patient_name}</td>
+                      <td className="border border-gray-300 px-4 py-2">
+                        {format(parseISO(record.report_date), 'MMM dd, yyyy')}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2">
+                        <div className="space-y-1">
+                          {record.medicines.map((medicine, medIndex) => (
+                            <div key={medIndex} className="text-sm">
+                              <span className="font-medium">{medicine.name}</span> - 
+                              <span className="text-gray-600 ml-1">Qty: {medicine.quantity}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-center">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteUsage(record.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500 mb-4">No medicine usage records found</p>
+              <p className="text-sm text-gray-400">
+                Medicine usage records are automatically created when patient reports are saved with prescribed medicines.
+              </p>
+            </div>
+          )}
           
           {totalPages > 1 && (
             <div className="flex justify-center items-center space-x-2">
               <Button
                 variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
               >
                 Previous
               </Button>
-              <span className="text-sm">
+              <span className="text-sm text-gray-600">
                 Page {currentPage} of {totalPages}
               </span>
               <Button
                 variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
               >
                 Next
               </Button>
             </div>
           )}
-        </>
-      ) : (
-        <Card>
-          <CardContent className="text-center py-8">
-            <p className="text-gray-500">No medicine usage records found for the selected criteria.</p>
-          </CardContent>
-        </Card>
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

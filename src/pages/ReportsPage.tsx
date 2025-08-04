@@ -27,8 +27,7 @@ const ReportsPage = () => {
     medical_history: '',
     observations: '',
     recommendations: '',
-    medicine_notes: '',
-    test_advice: ''
+    patient_history: ''
   });
   const [prescribedMedicines, setPrescribedMedicines] = useState<PrescribedMedicine[]>([]);
 
@@ -37,21 +36,21 @@ const ReportsPage = () => {
       setLoading(true);
       console.log('Fetching reports...');
 
-      // First fetch reports
+      // First fetch reports with doctor completion
       const { data: reportsData, error: reportsError } = await supabase
         .from('patient_reports')
         .select('*')
-        .eq('created_by_role', 'doctor')
+        .not('created_by_role', 'is', null)
         .order('created_at', { ascending: false });
 
       if (reportsError) throw reportsError;
 
       // Then fetch patients separately and join manually
-      const reportIds = reportsData?.map(r => r.patient_id) || [];
+      const patientIds = [...new Set(reportsData?.map(r => r.patient_id) || [])];
       const { data: patientsData, error: patientsError } = await supabase
         .from('patients')
         .select('*')
-        .in('id', reportIds);
+        .in('id', patientIds);
 
       if (patientsError) throw patientsError;
 
@@ -61,8 +60,8 @@ const ReportsPage = () => {
       // Combine reports with patient data
       const reportsWithPatients: PatientReport[] = reportsData?.map(report => ({
         ...report,
-        patient: patientMap.get(report.patient_id) || null
-      })) || [];
+        patient: patientMap.get(report.patient_id) || undefined
+      })).filter(report => report.patient) || [];
 
       console.log('Reports data:', reportsWithPatients);
       setReports(reportsWithPatients);
@@ -116,12 +115,11 @@ const ReportsPage = () => {
         medical_history: report.medical_history || '',
         observations: report.observations || '',
         recommendations: report.recommendations || '',
-        medicine_notes: report.medicine_notes || '',
-        test_advice: report.test_advice || ''
+        patient_history: report.patient_history || ''
       };
       setReportFormData(reportFormData);
 
-      // Load medicine prescriptions
+      // Load medicine prescriptions with notes
       const { data: prescriptionsData, error: prescriptionsError } = await supabase
         .from('medicine_prescriptions')
         .select('*')
@@ -155,6 +153,7 @@ const ReportsPage = () => {
           before_meal: p.before_meal || false,
           after_meal: p.after_meal || false,
           fasting: p.fasting || false,
+          note: p.note || undefined
         };
       }) || [];
       setPrescribedMedicines(prescriptions);
@@ -314,14 +313,12 @@ const ReportsPage = () => {
                     <Label>Recommendations:</Label>
                     <p>{selectedReport.recommendations || 'N/A'}</p>
                   </div>
-                  <div>
-                    <Label>Medicine Notes:</Label>
-                    <p>{selectedReport.medicine_notes || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label>Test Advice:</Label>
-                    <p>{selectedReport.test_advice || 'N/A'}</p>
-                  </div>
+                  {reportFormData.patient_history && (
+                    <div>
+                      <Label>Patient History:</Label>
+                      <p>{reportFormData.patient_history}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -346,6 +343,9 @@ const ReportsPage = () => {
                         </th>
                         <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                           Meal Timing
+                        </th>
+                        <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Note
                         </th>
                       </tr>
                     </thead>
@@ -375,6 +375,9 @@ const ReportsPage = () => {
                               medicine.after_meal && 'After Meal',
                               medicine.fasting && 'Fasting'
                             ].filter(Boolean).join(', ') || 'Not specified'}
+                          </td>
+                          <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                            {medicine.note || '-'}
                           </td>
                         </tr>
                       ))}

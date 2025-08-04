@@ -1,13 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Search, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Search } from 'lucide-react';
 
 interface Medicine {
   id: string;
@@ -28,6 +31,7 @@ interface PrescribedMedicine {
   before_meal: boolean;
   after_meal: boolean;
   fasting: boolean;
+  note?: string;
 }
 
 interface MedicineSearchFormProps {
@@ -39,304 +43,309 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
   prescribedMedicines,
   onAddMedicine
 }) => {
-  const [medicines, setMedicines] = useState<Medicine[]>([]);
-  const [filteredMedicines, setFilteredMedicines] = useState<Medicine[]>([]);
-  const [medicineSearchTerm, setMedicineSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
-  const [days, setDays] = useState('1');
-  const [dosageTiming, setDosageTiming] = useState({
-    morning: false,
-    afternoon: false,
-    evening: false,
-    night: false,
-    before_meal: false,
-    after_meal: false,
-    fasting: false
-  });
+  const [days, setDays] = useState<number>(1);
+  const [dosagePerDay, setDosagePerDay] = useState<number>(1);
+  const [morning, setMorning] = useState(false);
+  const [afternoon, setAfternoon] = useState(false);
+  const [evening, setEvening] = useState(false);
+  const [night, setNight] = useState(false);
+  const [beforeMeal, setBeforeMeal] = useState(false);
+  const [afterMeal, setAfterMeal] = useState(false);
+  const [fasting, setFasting] = useState(false);
+  const [note, setNote] = useState('');
 
-  // Calculate quantity based on days and selected dosage timings
-  const calculateQuantity = () => {
-    const timingCount = Object.values(dosageTiming).filter(Boolean).length;
-    return parseInt(days) * timingCount;
-  };
-
-  const quantity = calculateQuantity();
-
-  useEffect(() => {
-    fetchMedicines();
-  }, []);
-
-  useEffect(() => {
-    // Filter medicines based on search term
-    const filtered = medicines.filter(medicine =>
-      medicine.name.toLowerCase().includes(medicineSearchTerm.toLowerCase()) ||
-      medicine.category.toLowerCase().includes(medicineSearchTerm.toLowerCase())
-    );
-    setFilteredMedicines(filtered);
-  }, [medicines, medicineSearchTerm]);
-
-  const fetchMedicines = async () => {
-    try {
-      const { data, error } = await supabase
+  const { data: medicines = [], isLoading } = useQuery({
+    queryKey: ['medicines', searchTerm],
+    queryFn: async () => {
+      let query = supabase
         .from('medicines')
         .select('*')
         .gt('total_quantity', 0)
         .order('name');
 
-      if (error) throw error;
-      setMedicines(data || []);
-      setFilteredMedicines(data || []);
-    } catch (error) {
-      console.error('Error fetching medicines:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch medicines"
-      });
-    }
-  };
+      if (searchTerm.trim()) {
+        query = query.ilike('name', `%${searchTerm}%`);
+      }
 
-  const handleMedicineSelect = (medicine: Medicine) => {
-    setSelectedMedicine(medicine);
-    setMedicineSearchTerm(medicine.name);
-  };
+      const { data, error } = await query.limit(20);
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
   const handleAddMedicine = () => {
-    if (!selectedMedicine || !days || quantity === 0) {
+    if (!selectedMedicine) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Please select a medicine, enter days, and select at least one dosage timing"
+        description: "Please select a medicine first"
       });
       return;
     }
 
-    if (quantity > selectedMedicine.total_quantity) {
+    if (days <= 0 || dosagePerDay <= 0) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: `Insufficient stock. Available: ${selectedMedicine.total_quantity}, Required: ${quantity}`
+        description: "Days and dosage per day must be greater than 0"
       });
       return;
     }
 
-    // Check if medicine already prescribed
-    if (prescribedMedicines.some(pm => pm.medicine.id === selectedMedicine.id)) {
+    if (!morning && !afternoon && !evening && !night) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Medicine already prescribed"
+        description: "Please select at least one dosage time"
       });
       return;
     }
 
-    const newPrescription: PrescribedMedicine = {
-      id: crypto.randomUUID(),
+    const totalQuantity = days * dosagePerDay;
+
+    if (totalQuantity > selectedMedicine.total_quantity) {
+      toast({
+        variant: "destructive",
+        title: "Insufficient Stock",
+        description: `Only ${selectedMedicine.total_quantity} units available`
+      });
+      return;
+    }
+
+    const alreadyPrescribed = prescribedMedicines.find(pm => pm.medicine.id === selectedMedicine.id);
+    if (alreadyPrescribed) {
+      toast({
+        variant: "destructive",
+        title: "Medicine Already Added",
+        description: "This medicine is already in the prescription list"
+      });
+      return;
+    }
+
+    const prescribedMedicine: PrescribedMedicine = {
+      id: `temp_${Date.now()}`,
       medicine: selectedMedicine,
-      quantity: quantity,
-      days: parseInt(days),
-      morning: dosageTiming.morning,
-      afternoon: dosageTiming.afternoon,
-      evening: dosageTiming.evening,
-      night: dosageTiming.night,
-      before_meal: dosageTiming.before_meal,
-      after_meal: dosageTiming.after_meal,
-      fasting: dosageTiming.fasting
+      quantity: totalQuantity,
+      days,
+      morning,
+      afternoon,
+      evening,
+      night,
+      before_meal: beforeMeal,
+      after_meal: afterMeal,
+      fasting,
+      note: note.trim() || undefined
     };
 
-    onAddMedicine(newPrescription);
+    onAddMedicine(prescribedMedicine);
 
     // Reset form
     setSelectedMedicine(null);
-    setDays('1');
-    setMedicineSearchTerm('');
-    setDosageTiming({
-      morning: false,
-      afternoon: false,
-      evening: false,
-      night: false,
-      before_meal: false,
-      after_meal: false,
-      fasting: false
+    setSearchTerm('');
+    setDays(1);
+    setDosagePerDay(1);
+    setMorning(false);
+    setAfternoon(false);
+    setEvening(false);
+    setNight(false);
+    setBeforeMeal(false);
+    setAfterMeal(false);
+    setFasting(false);
+    setNote('');
+
+    toast({
+      title: "Medicine Added",
+      description: `${selectedMedicine.name} has been added to the prescription`
     });
   };
 
+  const filteredMedicines = medicines.filter(medicine => 
+    !prescribedMedicines.find(pm => pm.medicine.id === medicine.id)
+  );
+
   return (
-    <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+    <Card>
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2 text-emerald-700">
-          <Plus className="h-4 w-4" />
-          <span>Add Medicine Prescription</span>
+        <CardTitle className="flex items-center space-x-2">
+          <Search className="h-4 w-4" />
+          <span>Add Medicine to Prescription</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Medicine Search Field */}
+        {/* Medicine Search */}
         <div className="space-y-2">
-          <Label className="text-emerald-700">Search Medicines</Label>
-          <div className="relative">
-            <div className="flex items-center space-x-2">
-              <Search className="h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search medicines by name or category..."
-                value={medicineSearchTerm}
-                onChange={(e) => {
-                  setMedicineSearchTerm(e.target.value);
-                  setSelectedMedicine(null);
-                }}
-                className="flex-1 border-green-200 focus:border-green-400"
-              />
-            </div>
-            
-            {/* Search Results Dropdown */}
-            {medicineSearchTerm && !selectedMedicine && filteredMedicines.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-green-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                {filteredMedicines.slice(0, 10).map((medicine) => (
+          <Label htmlFor="medicine-search">Search Medicine</Label>
+          <Input
+            id="medicine-search"
+            type="text"
+            placeholder="Type medicine name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          
+          {searchTerm && (
+            <div className="max-h-48 overflow-y-auto border rounded-md">
+              {isLoading ? (
+                <div className="p-2 text-center text-gray-500">Searching...</div>
+              ) : filteredMedicines.length > 0 ? (
+                filteredMedicines.map((medicine) => (
                   <div
                     key={medicine.id}
-                    onClick={() => handleMedicineSelect(medicine)}
-                    className="p-3 hover:bg-green-50 cursor-pointer border-b last:border-b-0"
+                    className="p-2 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
+                    onClick={() => {
+                      setSelectedMedicine(medicine);
+                      setSearchTerm('');
+                    }}
                   >
-                    <div className="font-medium text-gray-900">{medicine.name}</div>
+                    <div className="font-medium">{medicine.name}</div>
                     <div className="text-sm text-gray-500">
                       Category: {medicine.category} | Stock: {medicine.total_quantity}
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-            
-            {medicineSearchTerm && filteredMedicines.length === 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-green-200 rounded-md shadow-lg p-3">
-                <p className="text-sm text-gray-500">No medicines found matching your search.</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label className="text-emerald-700">Selected Medicine</Label>
-            <div className="p-3 bg-white border border-green-200 rounded-md">
-              {selectedMedicine ? (
-                <div>
-                  <div className="font-medium">{selectedMedicine.name}</div>
-                  <div className="text-sm text-gray-500">
-                    Category: {selectedMedicine.category} | Available: {selectedMedicine.total_quantity}
-                  </div>
-                </div>
+                ))
               ) : (
-                <div className="text-gray-500">Search and select a medicine above</div>
+                <div className="p-2 text-center text-gray-500">No medicines found</div>
               )}
             </div>
-          </div>
+          )}
+        </div>
 
-          <div className="space-y-2">
-            <Label className="text-emerald-700">Days</Label>
-            <Input
-              type="number"
-              value={days}
-              onChange={(e) => setDays(e.target.value)}
-              placeholder="Enter days"
-              min="1"
-              className="border-green-200 focus:border-green-400"
-            />
-          </div>
+        {selectedMedicine && (
+          <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium">{selectedMedicine.name}</h3>
+                <p className="text-sm text-gray-600">
+                  Available Stock: {selectedMedicine.total_quantity} | Category: {selectedMedicine.category}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedMedicine(null);
+                  setSearchTerm('');
+                }}
+              >
+                Change
+              </Button>
+            </div>
 
-          <div className="space-y-2">
-            <Label className="text-emerald-700">Auto-calculated Quantity</Label>
-            <div className="p-3 bg-white border border-green-200 rounded-md">
-              <div className="font-medium text-blue-600">{quantity}</div>
-              <div className="text-xs text-gray-500">
-                {days} days × {Object.values(dosageTiming).filter(Boolean).length} timings
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="days">Days</Label>
+                <Input
+                  id="days"
+                  type="number"
+                  min="1"
+                  value={days}
+                  onChange={(e) => setDays(parseInt(e.target.value) || 1)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="dosage">Dosage per Day</Label>
+                <Input
+                  id="dosage"
+                  type="number"
+                  min="1"
+                  value={dosagePerDay}
+                  onChange={(e) => setDosagePerDay(parseInt(e.target.value) || 1)}
+                />
               </div>
             </div>
-          </div>
-        </div>
 
-        <div className="space-y-2">
-          <Label className="text-emerald-700">Dosage Timing</Label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="morning"
-                checked={dosageTiming.morning}
-                onCheckedChange={(checked) => 
-                  setDosageTiming({...dosageTiming, morning: !!checked})
-                }
-              />
-              <Label htmlFor="morning">Morning</Label>
+            <div>
+              <Label className="text-sm font-medium">Dosage Times</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="morning"
+                    checked={morning}
+                    onCheckedChange={setMorning}
+                  />
+                  <Label htmlFor="morning">Morning</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="afternoon"
+                    checked={afternoon}
+                    onCheckedChange={setAfternoon}
+                  />
+                  <Label htmlFor="afternoon">Afternoon</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="evening"
+                    checked={evening}
+                    onCheckedChange={setEvening}
+                  />
+                  <Label htmlFor="evening">Evening</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="night"
+                    checked={night}
+                    onCheckedChange={setNight}
+                  />
+                  <Label htmlFor="night">Night</Label>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="afternoon"
-                checked={dosageTiming.afternoon}
-                onCheckedChange={(checked) => 
-                  setDosageTiming({...dosageTiming, afternoon: !!checked})
-                }
-              />
-              <Label htmlFor="afternoon">Afternoon</Label>
+
+            <div>
+              <Label className="text-sm font-medium">Meal Timing</Label>
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="before-meal"
+                    checked={beforeMeal}
+                    onCheckedChange={setBeforeMeal}
+                  />
+                  <Label htmlFor="before-meal">Before Meal</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="after-meal"
+                    checked={afterMeal}
+                    onCheckedChange={setAfterMeal}
+                  />
+                  <Label htmlFor="after-meal">After Meal</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="fasting"
+                    checked={fasting}
+                    onCheckedChange={setFasting}
+                  />
+                  <Label htmlFor="fasting">Fasting</Label>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="evening"
-                checked={dosageTiming.evening}
-                onCheckedChange={(checked) => 
-                  setDosageTiming({...dosageTiming, evening: !!checked})
-                }
+
+            <div>
+              <Label htmlFor="medicine-note">Note (Optional)</Label>
+              <Textarea
+                id="medicine-note"
+                placeholder="Add any special instructions for this medicine..."
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={2}
               />
-              <Label htmlFor="evening">Evening</Label>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="night"
-                checked={dosageTiming.night}
-                onCheckedChange={(checked) => 
-                  setDosageTiming({...dosageTiming, night: !!checked})
-                }
-              />
-              <Label htmlFor="night">Night</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="before_meal"
-                checked={dosageTiming.before_meal}
-                onCheckedChange={(checked) => 
-                  setDosageTiming({...dosageTiming, before_meal: !!checked})
-                }
-              />
-              <Label htmlFor="before_meal">Before Meal</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="after_meal"
-                checked={dosageTiming.after_meal}
-                onCheckedChange={(checked) => 
-                  setDosageTiming({...dosageTiming, after_meal: !!checked})
-                }
-              />
-              <Label htmlFor="after_meal">After Meal</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="fasting"
-                checked={dosageTiming.fasting}
-                onCheckedChange={(checked) => 
-                  setDosageTiming({...dosageTiming, fasting: !!checked})
-                }
-              />
-              <Label htmlFor="fasting">Fasting</Label>
+
+            <div className="flex justify-between items-center pt-2">
+              <div className="text-sm text-gray-600">
+                Total Quantity: {days * dosagePerDay} units
+              </div>
+              <Button onClick={handleAddMedicine} className="flex items-center space-x-2">
+                <Plus className="h-4 w-4" />
+                <span>Add to Prescription</span>
+              </Button>
             </div>
           </div>
-        </div>
-
-        <Button 
-          onClick={handleAddMedicine} 
-          className="w-full bg-emerald-600 hover:bg-emerald-700"
-          disabled={!selectedMedicine || !days || quantity === 0}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Medicine (Qty: {quantity})
-        </Button>
+        )}
       </CardContent>
     </Card>
   );

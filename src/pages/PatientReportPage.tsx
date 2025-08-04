@@ -11,8 +11,8 @@ import MedicinePrescriptionSection from '@/components/report/MedicinePrescriptio
 import ReportMedicalHistory from '@/components/report/ReportMedicalHistory';
 import ReportActionButtons from '@/components/report/ReportActionButtons';
 import LatestReceptionReport from '@/components/report/LatestReceptionReport';
+import PatientHistorySection from '@/components/report/PatientHistorySection';
 import { usePatientReportForm } from '@/hooks/usePatientReportForm';
-import NotesSection from '@/components/report/NotesSection';
 
 const PatientReportPage = () => {
   const { user } = useAuth();
@@ -81,8 +81,8 @@ const PatientReportPage = () => {
             onPrescribedMedicinesChange={setPrescribedMedicines}
           />
 
-          {/* Notes Section */}
-          <NotesSection
+          {/* Patient History Section - Only visible in preview */}
+          <PatientHistorySection
             formData={formData}
             onFormDataChange={setFormData}
           />

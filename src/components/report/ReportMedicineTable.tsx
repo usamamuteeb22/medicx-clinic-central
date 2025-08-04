@@ -20,6 +20,7 @@ interface PrescribedMedicine {
   before_meal: boolean;
   after_meal: boolean;
   fasting: boolean;
+  note?: string;
 }
 
 interface ReportMedicineTableProps {
@@ -70,14 +71,23 @@ const ReportMedicineTable: React.FC<ReportMedicineTableProps> = ({
         </thead>
         <tbody>
           {activeMedicines.map((medicine, index) => (
-            <tr key={index}>
-              <td>{medicine.medicine.name}</td>
-              <td className="capitalize">{medicine.medicine.category}</td>
-              <td>{medicine.days}</td>
-              <td>{medicine.quantity}</td>
-              <td>{getDosageText(medicine)}</td>
-              <td>{getMealTimingText(medicine)}</td>
-            </tr>
+            <React.Fragment key={index}>
+              <tr>
+                <td>{medicine.medicine.name}</td>
+                <td className="capitalize">{medicine.medicine.category}</td>
+                <td>{medicine.days}</td>
+                <td>{medicine.quantity}</td>
+                <td>{getDosageText(medicine)}</td>
+                <td>{getMealTimingText(medicine)}</td>
+              </tr>
+              {medicine.note && (
+                <tr className="medicine-note-row">
+                  <td colSpan={6} className="medicine-note">
+                    {medicine.note}
+                  </td>
+                </tr>
+              )}
+            </React.Fragment>
           ))}
         </tbody>
       </table>

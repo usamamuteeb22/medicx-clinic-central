@@ -27,6 +27,7 @@ export interface PrescribedMedicine {
   before_meal: boolean;
   after_meal: boolean;
   fasting: boolean;
+  note?: string; // New field for per-medicine notes
 }
 
 export interface FormData {
@@ -39,8 +40,7 @@ export interface FormData {
   medical_history: string;
   observations: string;
   recommendations: string;
-  medicine_notes: string;
-  test_advice: string;
+  patient_history: string; // New field to replace medicine_notes and test_advice
 }
 
 export interface PatientReport {
@@ -55,8 +55,7 @@ export interface PatientReport {
   medical_history: string | null;
   observations: string | null;
   recommendations: string | null;
-  medicine_notes: string | null;
-  test_advice: string | null;
+  patient_history: string | null;
   created_at: string;
   created_by: string | null;
   created_by_role: string | null;

@@ -27,6 +27,7 @@ export type Database = {
           medicine_id: string | null
           morning: boolean | null
           night: boolean | null
+          note: string | null
           patient_report_id: string | null
           quantity: number
         }
@@ -42,6 +43,7 @@ export type Database = {
           medicine_id?: string | null
           morning?: boolean | null
           night?: boolean | null
+          note?: string | null
           patient_report_id?: string | null
           quantity: number
         }
@@ -57,6 +59,7 @@ export type Database = {
           medicine_id?: string | null
           morning?: boolean | null
           night?: boolean | null
+          note?: string | null
           patient_report_id?: string | null
           quantity?: number
         }
@@ -190,15 +193,14 @@ export type Database = {
           doctor_completed_at: string | null
           id: string
           medical_history: string | null
-          medicine_notes: string | null
           observations: string | null
+          patient_history: string | null
           patient_id: string
           reception_completed_at: string | null
           recommendations: string | null
           report_date: string | null
           saturation: number | null
           temperature: number | null
-          test_advice: string | null
           weight: number | null
         }
         Insert: {
@@ -211,15 +213,14 @@ export type Database = {
           doctor_completed_at?: string | null
           id?: string
           medical_history?: string | null
-          medicine_notes?: string | null
           observations?: string | null
+          patient_history?: string | null
           patient_id: string
           reception_completed_at?: string | null
           recommendations?: string | null
           report_date?: string | null
           saturation?: number | null
           temperature?: number | null
-          test_advice?: string | null
           weight?: number | null
         }
         Update: {
@@ -232,15 +233,14 @@ export type Database = {
           doctor_completed_at?: string | null
           id?: string
           medical_history?: string | null
-          medicine_notes?: string | null
           observations?: string | null
+          patient_history?: string | null
           patient_id?: string
           reception_completed_at?: string | null
           recommendations?: string | null
           report_date?: string | null
           saturation?: number | null
           temperature?: number | null
-          test_advice?: string | null
           weight?: number | null
         }
         Relationships: [

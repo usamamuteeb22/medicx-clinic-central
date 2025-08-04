@@ -24,6 +24,7 @@ interface PrescribedMedicine {
   before_meal: boolean;
   after_meal: boolean;
   fasting: boolean;
+  note?: string;
 }
 
 interface PrescribedMedicinesListProps {
@@ -74,6 +75,7 @@ const PrescribedMedicinesList: React.FC<PrescribedMedicinesListProps> = ({
                   <TableHead>Quantity</TableHead>
                   <TableHead>Dosage Timing</TableHead>
                   <TableHead>Meal Timing</TableHead>
+                  <TableHead>Note</TableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
@@ -86,6 +88,15 @@ const PrescribedMedicinesList: React.FC<PrescribedMedicinesListProps> = ({
                     <TableCell>{medicine.quantity}</TableCell>
                     <TableCell>{getDosageText(medicine)}</TableCell>
                     <TableCell>{getMealTimingText(medicine)}</TableCell>
+                    <TableCell className="max-w-xs">
+                      {medicine.note ? (
+                        <div className="text-sm text-gray-600 truncate" title={medicine.note}>
+                          {medicine.note}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Button
                         variant="destructive"

@@ -32,6 +32,7 @@ interface PrescribedMedicine {
   before_meal: boolean;
   after_meal: boolean;
   fasting: boolean;
+  note?: string;
 }
 
 interface ReceptionReport {
@@ -55,8 +56,7 @@ export const usePatientReportForm = () => {
     medical_history: '',
     observations: '',
     recommendations: '',
-    medicine_notes: '',
-    test_advice: ''
+    patient_history: ''
   });
   const [prescribedMedicines, setPrescribedMedicines] = useState<PrescribedMedicine[]>([]);
   const [loading, setLoading] = useState(false);
@@ -98,9 +98,9 @@ export const usePatientReportForm = () => {
           medical_history: formData.medical_history || null,
           observations: formData.observations || null,
           recommendations: formData.recommendations || null,
-          medicine_notes: formData.medicine_notes || null,
-          test_advice: formData.test_advice || null,
-          created_by: user?.id
+          patient_history: formData.patient_history || null,
+          created_by: user?.id,
+          created_by_role: 'doctor'
         })
         .select()
         .single();
@@ -122,7 +122,8 @@ export const usePatientReportForm = () => {
             night: med.night,
             before_meal: med.before_meal,
             after_meal: med.after_meal,
-            fasting: med.fasting
+            fasting: med.fasting,
+            note: med.note
           })
       );
 
@@ -201,8 +202,7 @@ export const usePatientReportForm = () => {
       medical_history: '',
       observations: '',
       recommendations: '',
-      medicine_notes: '',
-      test_advice: ''
+      patient_history: ''
     });
     setPrescribedMedicines([]);
     setSavedReportId(null);
