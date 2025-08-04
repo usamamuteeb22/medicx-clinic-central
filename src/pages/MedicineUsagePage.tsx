@@ -53,41 +53,75 @@ const MedicineUsagePage = () => {
     queryFn: async (): Promise<MedicineUsageQueryResult[]> => {
       console.log('Fetching medicine usage data...');
       
-      // Use a raw SQL query with proper joins
-      const { data, error } = await supabase
-        .from('medicine_usage')
-        .select(`
-          id,
-          quantity_used,
-          usage_date,
-          patient_id,
-          medicine_id,
-          patients!inner(name, patient_id),
-          medicines!inner(name, category)
-        `)
-        .order('usage_date', { ascending: false });
+      try {
+        // First get medicine usage records
+        const { data: usageData, error: usageError } = await supabase
+          .from('medicine_usage')
+          .select('*')
+          .order('usage_date', { ascending: false });
 
-      if (error) {
-        console.error('Medicine usage query error:', error);
+        if (usageError) {
+          console.error('Medicine usage query error:', usageError);
+          return [];
+        }
+
+        if (!usageData || usageData.length === 0) {
+          console.log('No medicine usage data found');
+          return [];
+        }
+
+        // Get unique patient IDs and medicine IDs
+        const patientIds = [...new Set(usageData.map(u => u.patient_id).filter(Boolean))];
+        const medicineIds = [...new Set(usageData.map(u => u.medicine_id).filter(Boolean))];
+
+        // Fetch patients data
+        const { data: patientsData, error: patientsError } = await supabase
+          .from('patients')
+          .select('id, name, patient_id')
+          .in('id', patientIds);
+
+        if (patientsError) {
+          console.error('Patients query error:', patientsError);
+        }
+
+        // Fetch medicines data
+        const { data: medicinesData, error: medicinesError } = await supabase
+          .from('medicines')
+          .select('id, name, category')
+          .in('id', medicineIds);
+
+        if (medicinesError) {
+          console.error('Medicines query error:', medicinesError);
+        }
+
+        // Create lookup maps
+        const patientsMap = new Map((patientsData || []).map(p => [p.id, p]));
+        const medicinesMap = new Map((medicinesData || []).map(m => [m.id, m]));
+
+        // Transform the data
+        const transformedData: MedicineUsageQueryResult[] = usageData.map(usage => {
+          const patient = patientsMap.get(usage.patient_id);
+          const medicine = medicinesMap.get(usage.medicine_id);
+
+          return {
+            id: usage.id,
+            quantity_used: usage.quantity_used,
+            usage_date: usage.usage_date,
+            patient_id: usage.patient_id,
+            medicine_id: usage.medicine_id,
+            patient_name: patient?.name || 'Unknown Patient',
+            patient_number: patient?.patient_id || 0,
+            medicine_name: medicine?.name || 'Unknown Medicine',
+            medicine_category: medicine?.category || 'Unknown Category'
+          };
+        });
+
+        console.log('Transformed data:', transformedData);
+        return transformedData;
+      } catch (error) {
+        console.error('Error fetching medicine usage data:', error);
         return [];
       }
-
-      console.log('Raw query result:', data);
-      
-      // Transform the data to match our interface
-      const transformedData: MedicineUsageQueryResult[] = (data || []).map(usage => ({
-        id: usage.id,
-        quantity_used: usage.quantity_used,
-        usage_date: usage.usage_date,
-        patient_id: usage.patient_id,
-        medicine_id: usage.medicine_id,
-        patient_name: usage.patients?.name || 'Unknown Patient',
-        patient_number: usage.patients?.patient_id || 0,
-        medicine_name: usage.medicines?.name || 'Unknown Medicine',
-        medicine_category: usage.medicines?.category || 'Unknown Category'
-      }));
-
-      return transformedData;
     }
   });
 
