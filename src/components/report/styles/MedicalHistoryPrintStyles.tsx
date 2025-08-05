@@ -1,46 +1,58 @@
 
 import React from 'react';
 
-const MedicalHistoryPrintStyles = () => {
-  return (
-    <style dangerouslySetInnerHTML={{
+const MedicalHistoryPrintStyles = () => (
+  <style
+    dangerouslySetInnerHTML={{
       __html: `
       @media print {
-        .medical-history-print {
-          width: 190mm;
-          border: 0.5mm solid #000;
-          padding: 3mm;
-          margin-bottom: 5mm;
+        .medical-history-section {
+          width: calc(100% + 20px);
+          margin-left: -10px;
+          margin-right: -10px;
+          margin-bottom: 3mm;
           page-break-inside: avoid;
+          border: 1pt solid #000;
+          padding: 4mm;
         }
-
-        .medical-history-print h3 {
-          font-size: 12pt;
+        
+        .medical-history-section h3 {
+          font-size: 14pt;
           font-weight: bold;
           margin: 0 0 4mm 0;
           color: #000;
         }
-
-        .medical-history-print .space-y-3 > div {
-          margin-bottom: 3mm;
+        
+        .history-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 3mm;
+          width: 100%;
         }
-
-        .medical-history-print .font-bold {
-          font-weight: bold;
-          color: #000;
-          margin-bottom: 1mm;
-        }
-
-        .medical-history-print .text-sm {
+        
+        .history-item {
+          display: flex;
+          flex-direction: column;
           font-size: 10pt;
-          line-height: 1.3;
+          min-height: 8mm;
+        }
+        
+        .history-label {
+          font-weight: bold;
+          margin-bottom: 1mm;
           color: #000;
+        }
+        
+        .history-text {
+          color: #000;
+          line-height: 1.4;
           word-wrap: break-word;
+          white-space: pre-wrap;
         }
       }
-      `
-    }} />
-  );
-};
+      `,
+    }}
+  />
+);
 
 export default MedicalHistoryPrintStyles;

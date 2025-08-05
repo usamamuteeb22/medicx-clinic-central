@@ -7,8 +7,10 @@ const PatientInfoPrintStyles = () => (
       __html: `
       @media print {
         .patient-info-section {
-          width: 100%;
-          margin-bottom: 7mm;
+          width: calc(100% + 20px);
+          margin-left: -10px;
+          margin-right: -10px;
+          margin-bottom: 3mm;
           page-break-inside: avoid;
           border: 1pt solid #000;
           padding: 4mm;

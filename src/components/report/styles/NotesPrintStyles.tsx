@@ -6,28 +6,30 @@ const NotesPrintStyles = () => (
     dangerouslySetInnerHTML={{
       __html: `
       @media print {
-        .print-notes-section {
-          width: 100%;
-          margin-bottom: 7mm;
+        .notes-section {
+          width: calc(100% + 20px);
+          margin-left: -10px;
+          margin-right: -10px;
+          margin-bottom: 3mm;
           page-break-inside: avoid;
-          flex: 1;
+          border: 1pt solid #000;
+          padding: 4mm;
         }
         
-        .print-notes-section h3 {
+        .notes-section h3 {
           font-size: 14pt;
           font-weight: bold;
           margin: 0 0 4mm 0;
           color: #000;
         }
         
-        .notes-blank-area {
-          min-height: 30mm;
-          border: none;
-          background: white;
-          width: 100%;
+        .notes-content {
           font-size: 10pt;
-          line-height: 1.4;
           color: #000;
+          line-height: 1.4;
+          word-wrap: break-word;
+          white-space: pre-wrap;
+          min-height: 20mm;
         }
       }
       `,
