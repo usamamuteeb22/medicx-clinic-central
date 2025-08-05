@@ -31,13 +31,13 @@ const PatientInfoPrintStyles = () => (
         .patient-info-content {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 3mm;
+          gap: 1mm;
           width: 100%;
         }
         
         .patient-info-item {
           display: flex;
-          flex-direction: column;
+          flex-direction: row;
           font-size: 10pt;
           min-height: 8mm;
           max-width: 45mm;
