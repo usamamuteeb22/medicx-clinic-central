@@ -47,7 +47,7 @@ const BasePrintStyles = () => (
         .medicines-section,
         .notes-section,
         .medical-history-section {
-          margin-bottom: 3mm;
+          margin-bottom: 0.5mm;
         }
         
         .footer {
@@ -59,7 +59,6 @@ const BasePrintStyles = () => (
           display: flex;
           justify-content: space-around;
           align-items: center;
-          text-align: center;
           font-size: 9pt;
           color: #000;
           border-top: 1pt solid #000;
