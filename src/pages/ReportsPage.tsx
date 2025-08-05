@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Eye, Calendar, User, Phone, FileText, Printer } from 'lucide-react';
+import { Search, Eye, Calendar, User, Phone, FileText, Printer, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { Patient, PatientReport, FormData, PrescribedMedicine } from '@/types/reportTypes';
@@ -96,7 +96,6 @@ const ReportsPage = () => {
         report.patient?.name?.toLowerCase().includes(searchTerm) ||
         report.patient?.patient_id?.toString().includes(searchTerm) ||
         report.patient?.phone_number?.toLowerCase().includes(searchTerm) ||
-        report.patient?.cnic?.toLowerCase().includes(searchTerm) ||
         report.patient?.age?.toString().includes(searchTerm) ||
         report.blood_pressure?.toLowerCase().includes(searchTerm) ||
         report.clinical_complaint?.toLowerCase().includes(searchTerm)
@@ -226,43 +225,54 @@ const ReportsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="max-w-7xl mx-auto p-6 space-y-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Patient Reports</h1>
-            <p className="text-gray-600">View and manage all patient medical reports</p>
-          </div>
-          <div className="bg-white px-4 py-2 rounded-lg shadow-sm border">
-            <div className="text-sm text-gray-500">Total Reports</div>
-            <div className="text-2xl font-bold text-blue-600">{reports.length}</div>
+        {/* Header Section */}
+        <div className="text-center space-y-4">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            Patient Reports
+          </h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Comprehensive view of all patient medical reports with advanced search and preview capabilities
+          </p>
+          <div className="flex items-center justify-center space-x-8 pt-4">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600">{reports.length}</div>
+              <div className="text-sm text-gray-500">Total Reports</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600">{filteredReports.length}</div>
+              <div className="text-sm text-gray-500">Filtered Results</div>
+            </div>
           </div>
         </div>
 
         {/* Enhanced Search Section */}
-        <Card className="shadow-lg border-0 bg-white">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
-            <CardTitle className="flex items-center space-x-3 text-gray-800">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Search className="h-5 w-5 text-blue-600" />
+        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
+            <CardTitle className="flex items-center space-x-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Search className="h-6 w-6" />
               </div>
-              <span className="text-lg">Search Reports</span>
+              <span className="text-xl">Advanced Search</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent className="p-8">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-6 w-6" />
               <Input
                 type="text"
-                placeholder="Search by patient name, age, CNIC, phone number, or report details..."
+                placeholder="🔍 Search by patient name, age, phone number, or report details..."
                 value={search}
                 onChange={handleSearchChange}
-                className="pl-12 py-3 text-base border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded-lg"
+                className="pl-12 py-4 text-lg border-2 border-gray-200 focus:ring-4 focus:ring-blue-200 focus:border-blue-500 rounded-xl shadow-sm"
               />
             </div>
             {search && (
-              <div className="mt-3 text-sm text-gray-600">
-                Found {filteredReports.length} report{filteredReports.length !== 1 ? 's' : ''} matching "{search}"
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="text-blue-800 font-medium">
+                  🎯 Found {filteredReports.length} report{filteredReports.length !== 1 ? 's' : ''} matching "{search}"
+                </div>
               </div>
             )}
           </CardContent>
@@ -270,10 +280,10 @@ const ReportsPage = () => {
 
         {/* Reports Grid */}
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600 text-lg">Loading reports...</p>
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent mx-auto"></div>
+              <p className="text-xl text-gray-600">Loading reports...</p>
             </div>
           </div>
         ) : filteredReports.length > 0 ? (
@@ -281,61 +291,69 @@ const ReportsPage = () => {
             {filteredReports.map(report => {
               const { dateStr, timeStr } = formatDateTime(report.created_at);
               return (
-                <Card key={report.id} className="group hover:shadow-xl transition-all duration-300 border-0 shadow-md bg-white rounded-xl overflow-hidden cursor-pointer transform hover:-translate-y-1">
-                  <CardHeader className="pb-3 bg-gradient-to-br from-gray-50 to-blue-50">
+                <Card key={report.id} className="group hover:shadow-2xl transition-all duration-300 border-0 shadow-lg bg-white rounded-2xl overflow-hidden cursor-pointer transform hover:-translate-y-2 hover:scale-105">
+                  <CardHeader className="pb-3 bg-gradient-to-br from-gray-50 to-blue-50 relative">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <User className="h-5 w-5 text-blue-600" />
+                        <div className="p-3 bg-blue-100 rounded-xl shadow-sm">
+                          <User className="h-6 w-6 text-blue-600" />
                         </div>
                         <div>
-                          <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                          <CardTitle className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
                             {report.patient?.name || 'Unknown Patient'}
                           </CardTitle>
-                          <div className="text-sm text-gray-500">ID: {report.patient?.patient_id || 'N/A'}</div>
+                          <div className="text-sm text-gray-500 font-medium">ID: {report.patient?.patient_id || 'N/A'}</div>
                         </div>
                       </div>
                     </div>
+                    <div className="absolute top-4 right-4 bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-medium">
+                      NEW
+                    </div>
                   </CardHeader>
-                  <CardContent className="p-5 space-y-4">
+                  <CardContent className="p-6 space-y-4">
                     <div className="space-y-3">
-                      <div className="flex items-center space-x-3">
-                        <Calendar className="h-4 w-4 text-gray-400" />
+                      <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
+                        <Calendar className="h-5 w-5 text-gray-500" />
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{dateStr}</div>
-                          <div className="text-xs text-gray-500">{timeStr}</div>
+                          <div className="text-sm font-semibold text-gray-900">{dateStr}</div>
+                          <div className="text-xs text-gray-500 flex items-center">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {timeStr}
+                          </div>
                         </div>
                       </div>
                       
                       {report.patient?.phone_number && (
-                        <div className="flex items-center space-x-3">
-                          <Phone className="h-4 w-4 text-gray-400" />
-                          <div className="text-sm text-gray-600">{report.patient.phone_number}</div>
+                        <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
+                          <Phone className="h-5 w-5 text-gray-500" />
+                          <div className="text-sm text-gray-700 font-medium">{report.patient.phone_number}</div>
                         </div>
                       )}
 
                       {report.patient?.age && (
-                        <div className="flex items-center space-x-3">
-                          <User className="h-4 w-4 text-gray-400" />
-                          <div className="text-sm text-gray-600">Age: {report.patient.age}</div>
+                        <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
+                          <User className="h-5 w-5 text-gray-500" />
+                          <div className="text-sm text-gray-700">
+                            <span className="font-medium">Age:</span> {report.patient.age} years
+                          </div>
                         </div>
                       )}
 
                       {report.clinical_complaint && (
-                        <div className="flex items-start space-x-3">
-                          <FileText className="h-4 w-4 text-gray-400 mt-0.5" />
-                          <div className="text-sm text-gray-600 line-clamp-2">{report.clinical_complaint}</div>
+                        <div className="flex items-start space-x-3 p-2 bg-gray-50 rounded-lg">
+                          <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
+                          <div className="text-sm text-gray-700 line-clamp-2">{report.clinical_complaint}</div>
                         </div>
                       )}
                     </div>
 
-                    <div className="pt-3 border-t border-gray-100">
+                    <div className="pt-4 border-t border-gray-100">
                       <Button 
                         onClick={() => handleShowReport(report)} 
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl"
                       >
-                        <Eye className="h-4 w-4" />
-                        <span>View Report</span>
+                        <Eye className="h-5 w-5" />
+                        <span>View Full Report</span>
                       </Button>
                     </div>
                   </CardContent>
@@ -344,15 +362,28 @@ const ReportsPage = () => {
             })}
           </div>
         ) : (
-          <Card className="shadow-lg border-0">
-            <CardContent className="text-center py-16">
-              <div className="p-4 bg-gray-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <FileText className="h-8 w-8 text-gray-400" />
+          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+            <CardContent className="text-center py-20">
+              <div className="space-y-6">
+                <div className="p-6 bg-gray-100 rounded-full w-24 h-24 mx-auto flex items-center justify-center">
+                  <FileText className="h-12 w-12 text-gray-400" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-bold text-gray-900">No Reports Found</h3>
+                  <p className="text-gray-600 text-lg max-w-md mx-auto">
+                    {search ? `No reports match your search for "${search}"` : 'No patient reports available yet.'}
+                  </p>
+                </div>
+                {search && (
+                  <Button 
+                    onClick={() => setSearch('')}
+                    variant="outline"
+                    className="mt-4"
+                  >
+                    Clear Search
+                  </Button>
+                )}
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Reports Found</h3>
-              <p className="text-gray-600">
-                {search ? `No reports match your search for "${search}"` : 'No patient reports available yet.'}
-              </p>
             </CardContent>
           </Card>
         )}
