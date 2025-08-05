@@ -10,10 +10,11 @@ const VitalsPrintStyles = () => (
           width: calc(100% + 20px);
           margin-left: -10px;
           margin-right: -10px;
-          margin-bottom: 3mm;
+          margin-top: 0mm;
+          margin-botton : 0mm;
           page-break-inside: avoid;
           border: 1pt solid #000;
-          padding: 4mm;
+          padding: 1mm;
         }
         
         .medical-vitals-section h3 {
