@@ -57,7 +57,7 @@ const BasePrintStyles = () => (
           right: 10mm;
           height: 20mm;
           display: flex;
-          justify-content: center;
+          justify-content: space-around;
           align-items: center;
           text-align: center;
           font-size: 9pt;
