@@ -122,7 +122,7 @@ const ReceptionReportPage = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Patient Selection */}
             <div className="space-y-2">
-              <Label>Select Patient *</Label>
+              {/* <Label>Select Patient *</Label> */}
               <PatientSelector
                 selectedPatient={selectedPatient}
                 onPatientSelect={setSelectedPatient}
