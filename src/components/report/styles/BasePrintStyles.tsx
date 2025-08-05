@@ -29,7 +29,7 @@ const BasePrintStyles = () => (
         
         .report-container {
           width: 100%;
-          max-width: 190mm;
+          max-width: 210mm;
           margin: 0 auto;
           padding: 0;
           position: relative;
@@ -37,7 +37,7 @@ const BasePrintStyles = () => (
         }
         
         .content {
-          padding-bottom: 25mm;
+          padding-bottom: 5mm;
         }
         
         /* Section spacing - reduced to 3mm */
