@@ -14,7 +14,7 @@ const BasePrintStyles = () => (
         
         @page {
           size: A4;
-          margin: 10mm 10mm 20mm 10mm;
+          margin: 5mm 5mm 2mm 5mm;
         }
         
         body {
@@ -29,7 +29,7 @@ const BasePrintStyles = () => (
         
         .report-container {
           width: 100%;
-          max-width: 210mm;
+          max-width: 190mm;
           margin: 0 auto;
           padding: 0;
           position: relative;
