@@ -20,7 +20,7 @@ const VitalsPrintStyles = () => (
         .medical-vitals-section h3 {
           font-size: 14pt;
           font-weight: bold;
-          margin: 0 0 4mm 0;
+          margin: 0 0 2mm 0;
           color: #000;
         }
         
@@ -35,7 +35,7 @@ const VitalsPrintStyles = () => (
           display: flex;
           align-items: center;
           font-size: 10pt;
-          min-height: 6mm;
+          min-height: 3mm;
         }
         
         .vital-label {

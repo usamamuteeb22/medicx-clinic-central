@@ -20,7 +20,7 @@ const PatientInfoPrintStyles = () => (
         .patient-info-section h3 {
           font-size: 14pt;
           font-weight: bold;
-          margin: 0 0 4mm 0;
+          margin: 0 0 2mm 0;
           color: #000;
         }
         
@@ -31,7 +31,7 @@ const PatientInfoPrintStyles = () => (
         .patient-info-content {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 1mm;
+          gap: 2mm;
           width: 100%;
         }
         
@@ -48,6 +48,7 @@ const PatientInfoPrintStyles = () => (
           margin-bottom: 1mm;
           color: #000;
           white-space: nowrap;
+          margin-right: 3px;
         }
         
         .patient-info-value {
