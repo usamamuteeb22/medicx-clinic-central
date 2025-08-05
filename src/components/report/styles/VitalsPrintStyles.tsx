@@ -14,7 +14,7 @@ const VitalsPrintStyles = () => (
           margin-botton : 0mm;
           page-break-inside: avoid;
           border: 1pt solid #000;
-          padding: 1mm;
+          padding: 1mm 4mm;
         }
         
         .medical-vitals-section h3 {

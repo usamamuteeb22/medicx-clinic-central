@@ -14,7 +14,7 @@ const PatientInfoPrintStyles = () => (
           margin-top: 0mm;
           page-break-inside: avoid;
           border: 1pt solid #000;
-          padding: 0mm;
+          padding:1mm 4mm;
         }
         
         .patient-info-section h3 {
