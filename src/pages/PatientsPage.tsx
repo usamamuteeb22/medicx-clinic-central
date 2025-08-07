@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +12,7 @@ import { generatePatientsExcel } from '@/utils/patientsExcelUtils';
 import { Tables } from '@/integrations/supabase/types';
 import PatientSearchFilters from '@/components/patients/PatientSearchFilters';
 import PatientsTable from '@/components/patients/PatientsTable';
+import PatientsPagination from '@/components/patients/PatientsPagination';
 
 type Patient = Tables<'patients'>;
 
@@ -26,9 +28,13 @@ interface DateFilters {
   endDate: string;
 }
 
+const PATIENTS_PER_PAGE = 50;
+
 const PatientsPage = () => {
   const navigate = useNavigate();
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [totalPatients, setTotalPatients] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({
     id: '',
     name: '',
@@ -44,7 +50,7 @@ const PatientsPage = () => {
 
   useEffect(() => {
     fetchPatients();
-  }, []);
+  }, [currentPage, searchFilters, dateFilters]);
 
   const fetchPatients = async () => {
     try {
@@ -52,10 +58,39 @@ const PatientsPage = () => {
       setError(null);
       console.log('Fetching patients...');
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('patients')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('patient_id', { ascending: false });
+
+      // Apply search filters
+      if (searchFilters.id) {
+        query = query.eq('patient_id', parseInt(searchFilters.id));
+      }
+      if (searchFilters.name) {
+        query = query.ilike('name', `%${searchFilters.name}%`);
+      }
+      if (searchFilters.phone) {
+        query = query.ilike('phone_number', `%${searchFilters.phone}%`);
+      }
+      if (searchFilters.category && searchFilters.category !== 'all') {
+        query = query.eq('category', searchFilters.category);
+      }
+
+      // Apply date filters
+      if (dateFilters.startDate) {
+        query = query.gte('registration_date', dateFilters.startDate);
+      }
+      if (dateFilters.endDate) {
+        query = query.lte('registration_date', dateFilters.endDate);
+      }
+
+      // Apply pagination
+      const from = (currentPage - 1) * PATIENTS_PER_PAGE;
+      const to = from + PATIENTS_PER_PAGE - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
 
       if (error) {
         console.error('Error fetching patients:', error);
@@ -64,6 +99,7 @@ const PatientsPage = () => {
       
       console.log('Patients fetched successfully:', data?.length || 0, 'records');
       setPatients(data || []);
+      setTotalPatients(count || 0);
     } catch (error: any) {
       console.error('Error in fetchPatients:', error);
       setError(error.message || 'Failed to fetch patients');
@@ -77,49 +113,43 @@ const PatientsPage = () => {
     }
   };
 
-  const filteredPatients = patients.filter(patient => {
-    if (!patient) return false;
-    
-    // Search filters
-    const matchesId = !searchFilters.id || 
-      patient.patient_id?.toString().includes(searchFilters.id);
-    const matchesName = !searchFilters.name || 
-      patient.name?.toLowerCase().includes(searchFilters.name.toLowerCase());
-    const matchesPhone = !searchFilters.phone || 
-      (patient.phone_number && patient.phone_number.includes(searchFilters.phone));
-    const matchesCategory = !searchFilters.category || 
-      searchFilters.category === 'all' ||
-      (patient.category && patient.category.toLowerCase() === searchFilters.category.toLowerCase());
-    
-    // Date filters
-    let matchesDateRange = true;
-    if (dateFilters.startDate || dateFilters.endDate) {
-      const registrationDate = patient.registration_date ? new Date(patient.registration_date) : null;
-      if (registrationDate) {
-        const startDate = dateFilters.startDate ? new Date(dateFilters.startDate) : null;
-        const endDate = dateFilters.endDate ? new Date(dateFilters.endDate) : null;
-        
-        if (startDate && registrationDate < startDate) {
-          matchesDateRange = false;
-        }
-        if (endDate && registrationDate > new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1)) {
-          matchesDateRange = false;
-        }
-      } else if (dateFilters.startDate || dateFilters.endDate) {
-        // If date filters are set but patient has no registration date, exclude
-        matchesDateRange = false;
-      }
-    }
-    
-    return matchesId && matchesName && matchesPhone && matchesCategory && matchesDateRange;
-  });
-
-  const handleDownloadExcel = () => {
+  const handleDownloadExcel = async () => {
     try {
-      generatePatientsExcel(filteredPatients);
+      // Fetch all patients for export (not just current page)
+      let query = supabase
+        .from('patients')
+        .select('*')
+        .order('patient_id', { ascending: false });
+
+      // Apply same filters for export
+      if (searchFilters.id) {
+        query = query.eq('patient_id', parseInt(searchFilters.id));
+      }
+      if (searchFilters.name) {
+        query = query.ilike('name', `%${searchFilters.name}%`);
+      }
+      if (searchFilters.phone) {
+        query = query.ilike('phone_number', `%${searchFilters.phone}%`);
+      }
+      if (searchFilters.category && searchFilters.category !== 'all') {
+        query = query.eq('category', searchFilters.category);
+      }
+
+      if (dateFilters.startDate) {
+        query = query.gte('registration_date', dateFilters.startDate);
+      }
+      if (dateFilters.endDate) {
+        query = query.lte('registration_date', dateFilters.endDate);
+      }
+
+      const { data: allPatients, error } = await query;
+      
+      if (error) throw error;
+
+      generatePatientsExcel(allPatients || []);
       toast({
         title: "Success",
-        description: `Excel file downloaded with ${filteredPatients.length} filtered patients`
+        description: `Excel file downloaded with ${allPatients?.length || 0} patients`
       });
     } catch (error: any) {
       toast({
@@ -163,9 +193,21 @@ const PatientsPage = () => {
       startDate: '',
       endDate: ''
     });
+    setCurrentPage(1);
   };
 
-  if (loading) {
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleFiltersChange = (newFilters: SearchFilters) => {
+    setSearchFilters(newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const totalPages = Math.ceil(totalPatients / PATIENTS_PER_PAGE);
+
+  if (loading && patients.length === 0) {
     return (
       <div className="container mx-auto p-6">
         <div className="text-center">
@@ -201,7 +243,7 @@ const PatientsPage = () => {
             className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
           >
             <Download className="h-4 w-4 mr-2" />
-            Download Excel ({filteredPatients.length} patients)
+            Download Excel ({totalPatients} patients)
           </Button>
         </div>
       </div>
@@ -265,17 +307,25 @@ const PatientsPage = () => {
           <div className="space-y-4">
             <PatientSearchFilters 
               searchFilters={searchFilters}
-              onFiltersChange={setSearchFilters}
+              onFiltersChange={handleFiltersChange}
             />
             
             <PatientsTable 
-              patients={filteredPatients}
+              patients={patients}
               onDeletePatient={handleDeletePatient}
             />
 
-            <div className="text-sm text-gray-500 mt-4">
-              Showing {filteredPatients.length} of {patients.length} patients
-              {(dateFilters.startDate || dateFilters.endDate) && " (filtered by date range)"}
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-gray-500">
+                Showing {((currentPage - 1) * PATIENTS_PER_PAGE) + 1} to {Math.min(currentPage * PATIENTS_PER_PAGE, totalPatients)} of {totalPatients} patients
+                {(dateFilters.startDate || dateFilters.endDate) && " (filtered by date range)"}
+              </div>
+              
+              <PatientsPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
             </div>
           </div>
         </CardContent>
