@@ -125,29 +125,33 @@ const MedicineUsagePage = () => {
 
       // Transform the data to ensure proper typing
       const transformedData: MedicineUsage[] = (data || []).map(item => {
-        // Extract medicine data safely
-        const medicineData = item.medicine && 
-          typeof item.medicine === 'object' && 
-          item.medicine !== null &&
-          'name' in item.medicine && 
-          'category' in item.medicine
-          ? {
-              name: (item.medicine as { name: string; category: string }).name,
-              category: (item.medicine as { name: string; category: string }).category
-            }
-          : null;
+        // Extract medicine data safely with proper null checks
+        let medicineData: { name: string; category: string } | null = null;
+        if (item.medicine && 
+            typeof item.medicine === 'object' && 
+            item.medicine !== null &&
+            'name' in item.medicine && 
+            'category' in item.medicine) {
+          const medicine = item.medicine as { name: string; category: string };
+          medicineData = {
+            name: medicine.name,
+            category: medicine.category
+          };
+        }
 
-        // Extract patient data safely
-        const patientData = item.patient && 
-          typeof item.patient === 'object' && 
-          item.patient !== null &&
-          'name' in item.patient && 
-          'patient_id' in item.patient
-          ? {
-              name: (item.patient as { name: string; patient_id: number }).name,
-              patient_id: (item.patient as { name: string; patient_id: number }).patient_id
-            }
-          : null;
+        // Extract patient data safely with proper null checks
+        let patientData: { name: string; patient_id: number } | null = null;
+        if (item.patient && 
+            typeof item.patient === 'object' && 
+            item.patient !== null &&
+            'name' in item.patient && 
+            'patient_id' in item.patient) {
+          const patient = item.patient as { name: string; patient_id: number };
+          patientData = {
+            name: patient.name,
+            patient_id: patient.patient_id
+          };
+        }
 
         return {
           id: item.id,
