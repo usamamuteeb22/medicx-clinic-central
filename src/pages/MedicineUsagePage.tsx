@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -127,13 +126,27 @@ const MedicineUsagePage = () => {
       // Transform the data to ensure proper typing
       const transformedData: MedicineUsage[] = (data || []).map(item => {
         // Extract medicine data safely
-        const medicineData = item.medicine && typeof item.medicine === 'object' && item.medicine !== null && 'name' in item.medicine && 'category' in item.medicine
-          ? item.medicine as { name: string; category: string }
+        const medicineData = item.medicine && 
+          typeof item.medicine === 'object' && 
+          item.medicine !== null &&
+          'name' in item.medicine && 
+          'category' in item.medicine
+          ? {
+              name: (item.medicine as { name: string; category: string }).name,
+              category: (item.medicine as { name: string; category: string }).category
+            }
           : null;
 
         // Extract patient data safely
-        const patientData = item.patient && typeof item.patient === 'object' && item.patient !== null && 'name' in item.patient && 'patient_id' in item.patient
-          ? item.patient as { name: string; patient_id: number }
+        const patientData = item.patient && 
+          typeof item.patient === 'object' && 
+          item.patient !== null &&
+          'name' in item.patient && 
+          'patient_id' in item.patient
+          ? {
+              name: (item.patient as { name: string; patient_id: number }).name,
+              patient_id: (item.patient as { name: string; patient_id: number }).patient_id
+            }
           : null;
 
         return {
@@ -143,8 +156,8 @@ const MedicineUsagePage = () => {
           quantity_used: item.quantity_used,
           usage_date: item.usage_date,
           created_by: item.created_by,
-          medicine: medicineData ? { name: medicineData.name, category: medicineData.category } : null,
-          patient: patientData ? { name: patientData.name, patient_id: patientData.patient_id } : null
+          medicine: medicineData,
+          patient: patientData
         };
       });
 
