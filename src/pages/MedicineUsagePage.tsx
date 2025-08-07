@@ -132,11 +132,11 @@ const MedicineUsagePage = () => {
         quantity_used: item.quantity_used,
         usage_date: item.usage_date,
         created_by: item.created_by,
-        medicine: item.medicine && typeof item.medicine === 'object' && 'name' in item.medicine 
-          ? { name: item.medicine.name, category: item.medicine.category }
+        medicine: item.medicine && typeof item.medicine === 'object' && item.medicine !== null && 'name' in item.medicine && 'category' in item.medicine
+          ? { name: item.medicine.name as string, category: item.medicine.category as string }
           : null,
-        patient: item.patient && typeof item.patient === 'object' && 'name' in item.patient 
-          ? { name: item.patient.name, patient_id: item.patient.patient_id }
+        patient: item.patient && typeof item.patient === 'object' && item.patient !== null && 'name' in item.patient && 'patient_id' in item.patient
+          ? { name: item.patient.name as string, patient_id: item.patient.patient_id as number }
           : null
       }));
 
