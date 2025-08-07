@@ -22,26 +22,38 @@ interface MedicineUsage {
   medicine?: {
     name: string;
     category: string;
-  };
+  } | null;
   patient?: {
     name: string;
     patient_id: number;
-  };
+  } | null;
+}
+
+interface MedicineUsageRecord {
+  id: string;
+  patient_name: string;
+  patient_number: number;
+  report_date: string;
+  medicines: {
+    name: string;
+    quantity: number;
+    morning: boolean;
+    afternoon: boolean;
+    evening: boolean;
+    night: boolean;
+  }[];
 }
 
 const ITEMS_PER_PAGE = 20;
 
 const MedicineUsagePage = () => {
-  const [filters, setFilters] = useState({
-    medicine_id: '',
-    patient_name: '',
-    start_date: '',
-    end_date: ''
-  });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
 
   const { data: usageData, isLoading, refetch } = useQuery({
-    queryKey: ['medicine-usage', filters, currentPage],
+    queryKey: ['medicine-usage', searchTerm, startDate, endDate, currentPage],
     queryFn: async () => {
       let query = supabase
         .from('medicine_usage')
@@ -52,16 +64,12 @@ const MedicineUsagePage = () => {
         `)
         .order('usage_date', { ascending: false });
 
-      // Apply filters
-      if (filters.medicine_id) {
-        query = query.eq('medicine_id', filters.medicine_id);
-      }
-
-      if (filters.patient_name) {
+      // Apply patient name search filter
+      if (searchTerm) {
         const { data: patients } = await supabase
           .from('patients')
           .select('id')
-          .ilike('name', `%${filters.patient_name}%`);
+          .ilike('name', `%${searchTerm}%`);
         
         if (patients && patients.length > 0) {
           const patientIds = patients.map(p => p.id);
@@ -71,18 +79,41 @@ const MedicineUsagePage = () => {
         }
       }
 
-      if (filters.start_date) {
-        query = query.gte('usage_date', filters.start_date);
+      // Apply date filters
+      if (startDate) {
+        query = query.gte('usage_date', startDate.toISOString().split('T')[0]);
       }
 
-      if (filters.end_date) {
-        query = query.lte('usage_date', filters.end_date);
+      if (endDate) {
+        query = query.lte('usage_date', endDate.toISOString().split('T')[0]);
       }
 
       // Get total count for pagination
-      const { count } = await supabase
+      let countQuery = supabase
         .from('medicine_usage')
         .select('*', { count: 'exact', head: true });
+
+      if (searchTerm) {
+        const { data: patients } = await supabase
+          .from('patients')
+          .select('id')
+          .ilike('name', `%${searchTerm}%`);
+        
+        if (patients && patients.length > 0) {
+          const patientIds = patients.map(p => p.id);
+          countQuery = countQuery.in('patient_id', patientIds);
+        }
+      }
+
+      if (startDate) {
+        countQuery = countQuery.gte('usage_date', startDate.toISOString().split('T')[0]);
+      }
+
+      if (endDate) {
+        countQuery = countQuery.lte('usage_date', endDate.toISOString().split('T')[0]);
+      }
+
+      const { count } = await countQuery;
 
       // Apply pagination
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -93,27 +124,36 @@ const MedicineUsagePage = () => {
 
       if (error) throw error;
 
-      return { data: data as MedicineUsage[], count: count || 0 };
+      return { data: (data || []) as MedicineUsage[], count: count || 0 };
     }
   });
 
-  const handleFilterChange = (newFilters: typeof filters) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-  };
-
   const handleClearDates = () => {
-    const clearedFilters = {
-      ...filters,
-      start_date: '',
-      end_date: ''
-    };
-    setFilters(clearedFilters);
+    setStartDate(undefined);
+    setEndDate(undefined);
     setCurrentPage(1);
     toast({
       title: "Filters Cleared",
       description: "Date filters have been cleared"
     });
+  };
+
+  // Transform data for export functions
+  const transformDataForExport = (data: MedicineUsage[]): MedicineUsageRecord[] => {
+    return data.map(usage => ({
+      id: usage.id,
+      patient_name: usage.patient?.name || 'Unknown Patient',
+      patient_number: usage.patient?.patient_id || 0,
+      report_date: usage.usage_date,
+      medicines: [{
+        name: usage.medicine?.name || 'Unknown Medicine',
+        quantity: usage.quantity_used,
+        morning: false,
+        afternoon: false,
+        evening: false,
+        night: false
+      }]
+    }));
   };
 
   const handleExportExcel = () => {
@@ -127,7 +167,8 @@ const MedicineUsagePage = () => {
     }
 
     try {
-      generateMedicineUsageExcel(usageData.data);
+      const exportData = transformDataForExport(usageData.data);
+      generateMedicineUsageExcel(exportData);
       toast({
         title: "Excel Export Successful",
         description: "Usage data has been exported to Excel"
@@ -152,7 +193,8 @@ const MedicineUsagePage = () => {
     }
 
     try {
-      generateMedicineUsagePDF(usageData.data);
+      const exportData = transformDataForExport(usageData.data);
+      generateMedicineUsagePDF(exportData);
       toast({
         title: "PDF Export Successful",
         description: "Usage data has been exported to PDF"
@@ -189,7 +231,7 @@ const MedicineUsagePage = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Usage Filters</CardTitle>
-            {(filters.start_date || filters.end_date) && (
+            {(startDate || endDate) && (
               <Button 
                 onClick={handleClearDates} 
                 variant="outline" 
@@ -204,8 +246,12 @@ const MedicineUsagePage = () => {
         </CardHeader>
         <CardContent>
           <MedicineUsageFilters
-            filters={filters}
-            onFiltersChange={handleFilterChange}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            startDate={startDate}
+            onStartDateChange={setStartDate}
+            endDate={endDate}
+            onEndDateChange={setEndDate}
           />
         </CardContent>
       </Card>
@@ -236,7 +282,18 @@ const MedicineUsagePage = () => {
                 {usageData.data.map((usage) => (
                   <MedicineUsageCard
                     key={usage.id}
-                    usage={usage}
+                    id={usage.id}
+                    patientName={usage.patient?.name || 'Unknown Patient'}
+                    patientNumber={usage.patient?.patient_id || 0}
+                    reportDate={usage.usage_date}
+                    medicines={[{
+                      name: usage.medicine?.name || 'Unknown Medicine',
+                      quantity: usage.quantity_used,
+                      morning: false,
+                      afternoon: false,
+                      evening: false,
+                      night: false
+                    }]}
                   />
                 ))}
               </div>
@@ -248,6 +305,8 @@ const MedicineUsagePage = () => {
                     currentPage={currentPage}
                     totalPages={totalPages}
                     onPageChange={setCurrentPage}
+                    totalRecords={usageData?.count || 0}
+                    recordsPerPage={ITEMS_PER_PAGE}
                   />
                 </div>
               )}

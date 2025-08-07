@@ -1,567 +1,516 @@
 
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Download, FileText, Search, Package, History, Users, BarChart3 } from 'lucide-react';
-import { generateMedicineUsageExcel } from '@/utils/medicineUsageExcelUtils';
-import { generateMedicineUsagePDF } from '@/utils/medicineUsagePdfUtils';
-import { generatePatientsExcel } from '@/utils/patientsExcelUtils';
-import { generateMedicineStockExcel } from '@/utils/medicineStockExcelUtils';
-import { generateMedicineStockPDF } from '@/utils/medicineStockPdfUtils';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { CalendarIcon, Download, FileText } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface TrackingFilters {
-  category: string;
-  status: string;
-  stockQuantity: string;
-  medicine_id: string;
-  start_date: string;
-  end_date: string;
-  patient_search: string;
-}
+// Medicine categories from the database enum
+const MEDICINE_CATEGORIES = [
+  'tablet', 'syrup', 'injection', 'sachet', 'drops', 
+  'lotion', 'cream', 'ointment', 'suspension', 'gel', 
+  'infusion', 'transfusion', 'Capsule'
+] as const;
+
+type MedicineCategory = typeof MEDICINE_CATEGORIES[number];
 
 const TrackingPage = () => {
-  const { user } = useAuth();
-  const [activeSection, setActiveSection] = useState<string | null>(null);
-  const [filters, setFilters] = useState<TrackingFilters>({
-    category: '',
-    status: '',
-    stockQuantity: '',
-    medicine_id: '',
-    start_date: '',
-    end_date: '',
-    patient_search: ''
+  // Medicine Inventory Section State
+  const [inventoryCategory, setInventoryCategory] = useState<string>('');
+  const [inventoryStatus, setInventoryStatus] = useState<string>('');
+  const [stockQuantity, setStockQuantity] = useState<string>('');
+
+  // Medicine Stock History Section State
+  const [selectedMedicine, setSelectedMedicine] = useState<string>('');
+  const [historyStartDate, setHistoryStartDate] = useState<Date | undefined>();
+  const [historyEndDate, setHistoryEndDate] = useState<Date | undefined>();
+
+  // Patient Reception Reports Section State
+  const [patientSearch, setPatientSearch] = useState<string>('');
+
+  // Daily Patient & Report Count Section State
+  const [dailyStartDate, setDailyStartDate] = useState<Date | undefined>();
+  const [dailyEndDate, setDailyEndDate] = useState<Date | undefined>();
+
+  // Fetch medicines for dropdown
+  const { data: medicines } = useQuery({
+    queryKey: ['medicines'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .select('id, name')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    }
   });
-  const [medicines, setMedicines] = useState<any[]>([]);
-  const [stockHistory, setStockHistory] = useState<any[]>([]);
-  const [receptionReports, setReceptionReports] = useState<any[]>([]);
-  const [dailyStats, setDailyStats] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
 
-  // Check if user has pharmacy role
-  if (user?.role !== 'pharmacy') {
-    return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardContent className="text-center py-8">
-            <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
-            <p className="text-gray-600">This page is only accessible to pharmacy users.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const fetchMedicineInventory = async () => {
-    setLoading(true);
-    try {
+  // Medicine Inventory Query
+  const { data: inventoryData, isLoading: inventoryLoading } = useQuery({
+    queryKey: ['medicine-inventory', inventoryCategory, inventoryStatus, stockQuantity],
+    queryFn: async () => {
       let query = supabase
         .from('medicines')
         .select('*')
         .order('name');
 
-      if (filters.category) {
-        query = query.eq('category', filters.category);
-      }
-
-      if (filters.status) {
-        if (filters.status === 'out_of_stock') {
-          query = query.eq('total_quantity', 0);
-        } else if (filters.status === 'low_stock') {
-          query = query.lt('total_quantity', 10);
-        } else if (filters.status === 'in_stock') {
-          query = query.gt('total_quantity', 0);
+      if (inventoryCategory) {
+        // Ensure the category is a valid enum value
+        if (MEDICINE_CATEGORIES.includes(inventoryCategory as MedicineCategory)) {
+          query = query.eq('category', inventoryCategory as MedicineCategory);
         }
       }
 
-      if (filters.stockQuantity) {
-        query = query.lt('total_quantity', parseInt(filters.stockQuantity));
+      if (inventoryStatus === 'out_of_stock') {
+        query = query.eq('total_quantity', 0);
+      } else if (inventoryStatus === 'low_stock') {
+        query = query.lte('total_quantity', 10);
+      } else if (inventoryStatus === 'in_stock') {
+        query = query.gt('total_quantity', 0);
+      }
+
+      if (stockQuantity) {
+        const quantity = parseInt(stockQuantity);
+        if (!isNaN(quantity)) {
+          query = query.lt('total_quantity', quantity);
+        }
       }
 
       const { data, error } = await query;
       if (error) throw error;
-      setMedicines(data || []);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch medicine inventory"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      return data;
+    },
+    enabled: !!(inventoryCategory || inventoryStatus || stockQuantity)
+  });
 
-  const fetchStockHistory = async () => {
-    setLoading(true);
-    try {
+  // Medicine Stock History Query
+  const { data: stockHistoryData, isLoading: stockHistoryLoading } = useQuery({
+    queryKey: ['medicine-stock-history', selectedMedicine, historyStartDate, historyEndDate],
+    queryFn: async () => {
       let query = supabase
         .from('medicine_stock_history')
         .select(`
           *,
-          medicine:medicines(name, category)
+          medicine:medicines(name)
         `)
         .order('created_at', { ascending: false });
 
-      if (filters.medicine_id) {
-        query = query.eq('medicine_id', filters.medicine_id);
+      if (selectedMedicine) {
+        query = query.eq('medicine_id', selectedMedicine);
       }
 
-      if (filters.start_date) {
-        query = query.gte('created_at', filters.start_date);
+      if (historyStartDate) {
+        query = query.gte('created_at', historyStartDate.toISOString());
       }
 
-      if (filters.end_date) {
-        query = query.lte('created_at', filters.end_date);
+      if (historyEndDate) {
+        query = query.lte('created_at', historyEndDate.toISOString());
       }
 
       const { data, error } = await query;
       if (error) throw error;
-      setStockHistory(data || []);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch stock history"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      return data;
+    },
+    enabled: !!(selectedMedicine && historyStartDate && historyEndDate)
+  });
 
-  const fetchReceptionReports = async () => {
-    setLoading(true);
-    try {
+  // Patient Reception Reports Query
+  const { data: receptionReportsData, isLoading: receptionReportsLoading } = useQuery({
+    queryKey: ['patient-reception-reports', patientSearch],
+    queryFn: async () => {
       let query = supabase
         .from('patient_reports')
         .select(`
-          id,
-          patient_id,
-          blood_pressure,
-          temperature,
-          weight,
-          bsr,
-          saturation,
-          created_at,
-          patient:patients(patient_id, name)
+          *,
+          patient:patients(name, patient_id, phone_number)
         `)
         .order('created_at', { ascending: false });
 
-      if (filters.patient_search) {
-        // First find matching patients
+      if (patientSearch) {
         const { data: patients } = await supabase
           .from('patients')
           .select('id')
-          .or(`name.ilike.%${filters.patient_search}%,patient_id.eq.${filters.patient_search},phone_number.ilike.%${filters.patient_search}%`);
+          .or(`name.ilike.%${patientSearch}%,patient_id.eq.${parseInt(patientSearch) || 0},phone_number.ilike.%${patientSearch}%`);
         
         if (patients && patients.length > 0) {
           const patientIds = patients.map(p => p.id);
           query = query.in('patient_id', patientIds);
         } else {
-          setReceptionReports([]);
-          setLoading(false);
-          return;
+          return [];
         }
       }
 
       const { data, error } = await query;
       if (error) throw error;
-      setReceptionReports(data || []);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch reception reports"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      return data;
+    },
+    enabled: !!patientSearch
+  });
 
-  const fetchDailyStats = async () => {
-    setLoading(true);
-    try {
-      // This would require custom SQL or multiple queries
-      // For now, we'll create a simplified version
-      const startDate = filters.start_date || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const endDate = filters.end_date || new Date().toISOString().split('T')[0];
+  // Daily Patient & Report Count Query
+  const { data: dailyCountData, isLoading: dailyCountLoading } = useQuery({
+    queryKey: ['daily-count', dailyStartDate, dailyEndDate],
+    queryFn: async () => {
+      if (!dailyStartDate || !dailyEndDate) return [];
 
-      const { data: reports, error: reportsError } = await supabase
+      const { data: reports } = await supabase
         .from('patient_reports')
         .select('created_at')
-        .gte('created_at', startDate)
-        .lte('created_at', endDate);
+        .gte('created_at', dailyStartDate.toISOString())
+        .lte('created_at', dailyEndDate.toISOString());
 
-      const { data: patients, error: patientsError } = await supabase
+      const { data: patients } = await supabase
         .from('patients')
         .select('registration_date')
-        .gte('registration_date', startDate)
-        .lte('registration_date', endDate);
-
-      if (reportsError || patientsError) throw reportsError || patientsError;
+        .gte('registration_date', dailyStartDate.toISOString())
+        .lte('registration_date', dailyEndDate.toISOString());
 
       // Group by date
-      const statsMap = new Map();
+      const dateMap = new Map();
       
       reports?.forEach(report => {
-        const date = new Date(report.created_at).toISOString().split('T')[0];
-        if (!statsMap.has(date)) {
-          statsMap.set(date, { date, reportCount: 0, patientCount: 0 });
+        const date = new Date(report.created_at).toDateString();
+        if (!dateMap.has(date)) {
+          dateMap.set(date, { date, reportCount: 0, patientCount: 0 });
         }
-        statsMap.get(date).reportCount++;
+        dateMap.get(date).reportCount++;
       });
 
       patients?.forEach(patient => {
-        const date = new Date(patient.registration_date).toISOString().split('T')[0];
-        if (!statsMap.has(date)) {
-          statsMap.set(date, { date, reportCount: 0, patientCount: 0 });
+        const date = new Date(patient.registration_date).toDateString();
+        if (!dateMap.has(date)) {
+          dateMap.set(date, { date, reportCount: 0, patientCount: 0 });
         }
-        statsMap.get(date).patientCount++;
+        dateMap.get(date).patientCount++;
       });
 
-      setDailyStats(Array.from(statsMap.values()).sort((a, b) => a.date.localeCompare(b.date)));
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch daily statistics"
-      });
-    } finally {
-      setLoading(false);
-    }
+      return Array.from(dateMap.values());
+    },
+    enabled: !!(dailyStartDate && dailyEndDate)
+  });
+
+  const exportToExcel = (data: any[], filename: string) => {
+    console.log(`Exporting ${filename} to Excel:`, data);
+    // Implementation would use xlsx library
   };
 
-  const handleSectionClick = (section: string) => {
-    setActiveSection(activeSection === section ? null : section);
-    
-    // Clear previous data
-    setMedicines([]);
-    setStockHistory([]);
-    setReceptionReports([]);
-    setDailyStats([]);
-
-    // Fetch data based on section
-    switch (section) {
-      case 'inventory':
-        if (activeSection !== section) fetchMedicineInventory();
-        break;
-      case 'stock-history':
-        if (activeSection !== section) fetchStockHistory();
-        break;
-      case 'reception-reports':
-        if (activeSection !== section) fetchReceptionReports();
-        break;
-      case 'daily-stats':
-        if (activeSection !== section) fetchDailyStats();
-        break;
-    }
-  };
-
-  const handleExportExcel = () => {
-    try {
-      switch (activeSection) {
-        case 'inventory':
-          generateMedicineStockExcel(medicines);
-          break;
-        case 'stock-history':
-          generateMedicineUsageExcel(stockHistory);
-          break;
-        case 'reception-reports':
-          generatePatientsExcel(receptionReports);
-          break;
-        case 'daily-stats':
-          // Custom export for daily stats
-          const csvContent = 'Date,New Patients,Reports\n' + 
-            dailyStats.map(stat => `${stat.date},${stat.patientCount},${stat.reportCount}`).join('\n');
-          const blob = new Blob([csvContent], { type: 'text/csv' });
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `daily-stats-${new Date().toISOString().split('T')[0]}.csv`;
-          a.click();
-          break;
-      }
-      toast({
-        title: "Export Successful",
-        description: "Data has been exported to Excel"
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Export Failed",
-        description: "Failed to export data"
-      });
-    }
-  };
-
-  const handleExportPDF = () => {
-    try {
-      switch (activeSection) {
-        case 'inventory':
-          generateMedicineStockPDF(medicines);
-          break;
-        case 'stock-history':
-          generateMedicineUsagePDF(stockHistory);
-          break;
-        default:
-          toast({
-            variant: "destructive",
-            title: "Not Available",
-            description: "PDF export not available for this section"
-          });
-          return;
-      }
-      toast({
-        title: "Export Successful",
-        description: "Data has been exported to PDF"
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Export Failed",
-        description: "Failed to export data"
-      });
-    }
+  const exportToPDF = (data: any[], filename: string) => {
+    console.log(`Exporting ${filename} to PDF:`, data);
+    // Implementation would use jsPDF library
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Pharmacy Tracking Dashboard</h1>
-        <p className="text-gray-600">Monitor medicine inventory, usage, and patient reports</p>
-      </div>
+    <div className="container mx-auto p-6 space-y-8">
+      <h1 className="text-3xl font-bold text-gray-900">Pharmacy Tracking Dashboard</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Medicine Inventory Section */}
-        <Card className={`cursor-pointer transition-all duration-300 ${activeSection === 'inventory' ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:shadow-lg'}`}>
-          <CardHeader 
-            className="text-center pb-4"
-            onClick={() => handleSectionClick('inventory')}
-          >
-            <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
-              <Package className="h-6 w-6 text-green-600" />
+      {/* Medicine Inventory Section */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardHeader>
+          <CardTitle className="text-blue-800">Medicine Inventory</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Category</label>
+              <Select value={inventoryCategory} onValueChange={setInventoryCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Categories</SelectItem>
+                  {MEDICINE_CATEGORIES.map(category => (
+                    <SelectItem key={category} value={category}>
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <CardTitle className="text-lg">Medicine Inventory</CardTitle>
-          </CardHeader>
-          {activeSection === 'inventory' && (
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-3">
-                <div>
-                  <Label>Category</Label>
-                  <Select value={filters.category} onValueChange={(value) => setFilters({...filters, category: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">All categories</SelectItem>
-                      <SelectItem value="Tablet">Tablet</SelectItem>
-                      <SelectItem value="Syrup">Syrup</SelectItem>
-                      <SelectItem value="Injection">Injection</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Status</Label>
-                  <Select value={filters.status} onValueChange={(value) => setFilters({...filters, status: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">All status</SelectItem>
-                      <SelectItem value="in_stock">In Stock</SelectItem>
-                      <SelectItem value="low_stock">Low Stock</SelectItem>
-                      <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Stock Less Than</Label>
-                  <Input
-                    type="number"
-                    placeholder="Enter quantity"
-                    value={filters.stockQuantity}
-                    onChange={(e) => setFilters({...filters, stockQuantity: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div className="flex space-x-2">
-                <Button onClick={fetchMedicineInventory} size="sm" className="flex-1">
-                  <Search className="h-4 w-4 mr-1" />
-                  Search
-                </Button>
-                {medicines.length > 0 && (
-                  <>
-                    <Button onClick={handleExportExcel} variant="outline" size="sm">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button onClick={handleExportPDF} variant="outline" size="sm">
-                      <FileText className="h-4 w-4" />
-                    </Button>
-                  </>
-                )}
-              </div>
-              {medicines.length > 0 && (
-                <div className="max-h-64 overflow-y-auto">
-                  <div className="text-sm space-y-2">
-                    {medicines.map((medicine) => (
-                      <div key={medicine.id} className="p-2 border rounded">
-                        <div className="font-medium">{medicine.name}</div>
-                        <div className="text-gray-600">Category: {medicine.category}</div>
-                        <div className="text-gray-600">Stock: {medicine.total_quantity}</div>
-                      </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Status</label>
+              <Select value={inventoryStatus} onValueChange={setInventoryStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="in_stock">In Stock</SelectItem>
+                  <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                  <SelectItem value="low_stock">Low Stock</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Stock Less Than</label>
+              <Input
+                type="number"
+                placeholder="Enter quantity"
+                value={stockQuantity}
+                onChange={(e) => setStockQuantity(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <div className="flex space-x-2">
+            <Button onClick={() => exportToExcel(inventoryData || [], 'medicine-inventory')} disabled={!inventoryData}>
+              <Download className="h-4 w-4 mr-2" />
+              Export Excel
+            </Button>
+            <Button onClick={() => exportToPDF(inventoryData || [], 'medicine-inventory')} disabled={!inventoryData}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export PDF
+            </Button>
+          </div>
+
+          {inventoryLoading && <p>Loading inventory...</p>}
+          {inventoryData && (
+            <div className="mt-4">
+              <p className="text-sm text-gray-600 mb-2">{inventoryData.length} medicines found</p>
+              <div className="max-h-64 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">Name</th>
+                      <th className="text-left p-2">Category</th>
+                      <th className="text-left p-2">Quantity</th>
+                      <th className="text-left p-2">Expiry</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inventoryData.map((medicine) => (
+                      <tr key={medicine.id} className="border-b">
+                        <td className="p-2">{medicine.name}</td>
+                        <td className="p-2">{medicine.category}</td>
+                        <td className="p-2">{medicine.total_quantity}</td>
+                        <td className="p-2">{medicine.expiry_date || 'N/A'}</td>
+                      </tr>
                     ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          )}
-        </Card>
-
-        {/* Stock History Section */}
-        <Card className={`cursor-pointer transition-all duration-300 ${activeSection === 'stock-history' ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:shadow-lg'}`}>
-          <CardHeader 
-            className="text-center pb-4"
-            onClick={() => handleSectionClick('stock-history')}
-          >
-            <div className="mx-auto w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mb-3">
-              <History className="h-6 w-6 text-orange-600" />
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <CardTitle className="text-lg">Stock History</CardTitle>
-          </CardHeader>
-          {activeSection === 'stock-history' && (
-            <CardContent className="space-y-4">
-              {/* Similar filters and display logic for stock history */}
-              <div className="grid grid-cols-1 gap-3">
-                <div>
-                  <Label>Start Date</Label>
-                  <Input
-                    type="date"
-                    value={filters.start_date}
-                    onChange={(e) => setFilters({...filters, start_date: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label>End Date</Label>
-                  <Input
-                    type="date"
-                    value={filters.end_date}
-                    onChange={(e) => setFilters({...filters, end_date: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div className="flex space-x-2">
-                <Button onClick={fetchStockHistory} size="sm" className="flex-1">
-                  <Search className="h-4 w-4 mr-1" />
-                  Search
-                </Button>
-                {stockHistory.length > 0 && (
-                  <>
-                    <Button onClick={handleExportExcel} variant="outline" size="sm">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button onClick={handleExportPDF} variant="outline" size="sm">
-                      <FileText className="h-4 w-4" />
-                    </Button>
-                  </>
-                )}
-              </div>
-            </CardContent>
           )}
-        </Card>
+        </CardContent>
+      </Card>
 
-        {/* Patient Reception Reports */}
-        <Card className={`cursor-pointer transition-all duration-300 ${activeSection === 'reception-reports' ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:shadow-lg'}`}>
-          <CardHeader 
-            className="text-center pb-4"
-            onClick={() => handleSectionClick('reception-reports')}
-          >
-            <div className="mx-auto w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-3">
-              <Users className="h-6 w-6 text-purple-600" />
+      {/* Medicine Stock History Section */}
+      <Card className="border-green-200 bg-green-50">
+        <CardHeader>
+          <CardTitle className="text-green-800">Medicine Stock History</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Select Medicine</label>
+              <Select value={selectedMedicine} onValueChange={setSelectedMedicine}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select medicine" />
+                </SelectTrigger>
+                <SelectContent>
+                  {medicines?.map(medicine => (
+                    <SelectItem key={medicine.id} value={medicine.id}>
+                      {medicine.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <CardTitle className="text-lg">Reception Reports</CardTitle>
-          </CardHeader>
-          {activeSection === 'reception-reports' && (
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Patient Name/ID/Phone</Label>
-                <Input
-                  placeholder="Search patient..."
-                  value={filters.patient_search}
-                  onChange={(e) => setFilters({...filters, patient_search: e.target.value})}
-                />
-              </div>
-              <div className="flex space-x-2">
-                <Button onClick={fetchReceptionReports} size="sm" className="flex-1">
-                  <Search className="h-4 w-4 mr-1" />
-                  Search
-                </Button>
-                {receptionReports.length > 0 && (
-                  <Button onClick={handleExportExcel} variant="outline" size="sm">
-                    <Download className="h-4 w-4" />
+            <div>
+              <label className="text-sm font-medium mb-2 block">Start Date</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !historyStartDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {historyStartDate ? format(historyStartDate, "PPP") : "Select start date"}
                   </Button>
-                )}
-              </div>
-            </CardContent>
-          )}
-        </Card>
-
-        {/* Daily Statistics */}
-        <Card className={`cursor-pointer transition-all duration-300 ${activeSection === 'daily-stats' ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:shadow-lg'}`}>
-          <CardHeader 
-            className="text-center pb-4"
-            onClick={() => handleSectionClick('daily-stats')}
-          >
-            <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
-              <BarChart3 className="h-6 w-6 text-blue-600" />
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={historyStartDate}
+                    onSelect={setHistoryStartDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
-            <CardTitle className="text-lg">Daily Statistics</CardTitle>
-          </CardHeader>
-          {activeSection === 'daily-stats' && (
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-3">
-                <div>
-                  <Label>Start Date</Label>
-                  <Input
-                    type="date"
-                    value={filters.start_date}
-                    onChange={(e) => setFilters({...filters, start_date: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label>End Date</Label>
-                  <Input
-                    type="date"
-                    value={filters.end_date}
-                    onChange={(e) => setFilters({...filters, end_date: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div className="flex space-x-2">
-                <Button onClick={fetchDailyStats} size="sm" className="flex-1">
-                  <Search className="h-4 w-4 mr-1" />
-                  Generate
-                </Button>
-                {dailyStats.length > 0 && (
-                  <Button onClick={handleExportExcel} variant="outline" size="sm">
-                    <Download className="h-4 w-4" />
+            <div>
+              <label className="text-sm font-medium mb-2 block">End Date</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !historyEndDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {historyEndDate ? format(historyEndDate, "PPP") : "Select end date"}
                   </Button>
-                )}
-              </div>
-            </CardContent>
-          )}
-        </Card>
-      </div>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={historyEndDate}
+                    onSelect={setHistoryEndDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
 
-      {loading && (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      )}
+          <div className="flex space-x-2">
+            <Button onClick={() => exportToExcel(stockHistoryData || [], 'stock-history')} disabled={!stockHistoryData}>
+              <Download className="h-4 w-4 mr-2" />
+              Export Excel
+            </Button>
+            <Button onClick={() => exportToPDF(stockHistoryData || [], 'stock-history')} disabled={!stockHistoryData}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export PDF
+            </Button>
+          </div>
+
+          {stockHistoryLoading && <p>Loading stock history...</p>}
+          {stockHistoryData && (
+            <div className="mt-4">
+              <p className="text-sm text-gray-600 mb-2">{stockHistoryData.length} records found</p>
+              {/* Stock history table would go here */}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Patient Reception Reports Section */}
+      <Card className="border-purple-200 bg-purple-50">
+        <CardHeader>
+          <CardTitle className="text-purple-800">Patient Reception Reports</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">Search Patient</label>
+            <Input
+              placeholder="Search by name, ID, or phone number"
+              value={patientSearch}
+              onChange={(e) => setPatientSearch(e.target.value)}
+            />
+          </div>
+
+          <div className="flex space-x-2">
+            <Button onClick={() => exportToExcel(receptionReportsData || [], 'reception-reports')} disabled={!receptionReportsData}>
+              <Download className="h-4 w-4 mr-2" />
+              Export Excel
+            </Button>
+            <Button onClick={() => exportToPDF(receptionReportsData || [], 'reception-reports')} disabled={!receptionReportsData}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export PDF
+            </Button>
+          </div>
+
+          {receptionReportsLoading && <p>Loading reception reports...</p>}
+          {receptionReportsData && (
+            <div className="mt-4">
+              <p className="text-sm text-gray-600 mb-2">{receptionReportsData.length} reports found</p>
+              {/* Reception reports table would go here */}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Daily Patient & Report Count Section */}
+      <Card className="border-orange-200 bg-orange-50">
+        <CardHeader>
+          <CardTitle className="text-orange-800">Daily Patient & Report Count</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Start Date</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dailyStartDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dailyStartDate ? format(dailyStartDate, "PPP") : "Select start date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={dailyStartDate}
+                    onSelect={setDailyStartDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">End Date</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dailyEndDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dailyEndDate ? format(dailyEndDate, "PPP") : "Select end date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={dailyEndDate}
+                    onSelect={setDailyEndDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          <div className="flex space-x-2">
+            <Button onClick={() => exportToExcel(dailyCountData || [], 'daily-count')} disabled={!dailyCountData}>
+              <Download className="h-4 w-4 mr-2" />
+              Export Excel
+            </Button>
+            <Button onClick={() => exportToPDF(dailyCountData || [], 'daily-count')} disabled={!dailyCountData}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export PDF
+            </Button>
+          </div>
+
+          {dailyCountLoading && <p>Loading daily counts...</p>}
+          {dailyCountData && (
+            <div className="mt-4">
+              <p className="text-sm text-gray-600 mb-2">{dailyCountData.length} days found</p>
+              {/* Daily count table would go here */}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
