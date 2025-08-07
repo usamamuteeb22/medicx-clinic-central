@@ -124,7 +124,23 @@ const MedicineUsagePage = () => {
 
       if (error) throw error;
 
-      return { data: (data || []) as MedicineUsage[], count: count || 0 };
+      // Transform the data to ensure proper typing
+      const transformedData: MedicineUsage[] = (data || []).map(item => ({
+        id: item.id,
+        patient_id: item.patient_id,
+        medicine_id: item.medicine_id,
+        quantity_used: item.quantity_used,
+        usage_date: item.usage_date,
+        created_by: item.created_by,
+        medicine: item.medicine && typeof item.medicine === 'object' && 'name' in item.medicine 
+          ? { name: item.medicine.name, category: item.medicine.category }
+          : null,
+        patient: item.patient && typeof item.patient === 'object' && 'name' in item.patient 
+          ? { name: item.patient.name, patient_id: item.patient.patient_id }
+          : null
+      }));
+
+      return { data: transformedData, count: count || 0 };
     }
   });
 
