@@ -125,20 +125,28 @@ const MedicineUsagePage = () => {
       if (error) throw error;
 
       // Transform the data to ensure proper typing
-      const transformedData: MedicineUsage[] = (data || []).map(item => ({
-        id: item.id,
-        patient_id: item.patient_id,
-        medicine_id: item.medicine_id,
-        quantity_used: item.quantity_used,
-        usage_date: item.usage_date,
-        created_by: item.created_by,
-        medicine: item.medicine && typeof item.medicine === 'object' && item.medicine !== null && 'name' in item.medicine && 'category' in item.medicine
-          ? { name: item.medicine.name as string, category: item.medicine.category as string }
-          : null,
-        patient: item.patient && typeof item.patient === 'object' && item.patient !== null && 'name' in item.patient && 'patient_id' in item.patient
-          ? { name: item.patient.name as string, patient_id: item.patient.patient_id as number }
-          : null
-      }));
+      const transformedData: MedicineUsage[] = (data || []).map(item => {
+        // Extract medicine data safely
+        const medicineData = item.medicine && typeof item.medicine === 'object' && item.medicine !== null && 'name' in item.medicine && 'category' in item.medicine
+          ? item.medicine as { name: string; category: string }
+          : null;
+
+        // Extract patient data safely
+        const patientData = item.patient && typeof item.patient === 'object' && item.patient !== null && 'name' in item.patient && 'patient_id' in item.patient
+          ? item.patient as { name: string; patient_id: number }
+          : null;
+
+        return {
+          id: item.id,
+          patient_id: item.patient_id,
+          medicine_id: item.medicine_id,
+          quantity_used: item.quantity_used,
+          usage_date: item.usage_date,
+          created_by: item.created_by,
+          medicine: medicineData ? { name: medicineData.name, category: medicineData.category } : null,
+          patient: patientData ? { name: patientData.name, patient_id: patientData.patient_id } : null
+        };
+      });
 
       return { data: transformedData, count: count || 0 };
     }
