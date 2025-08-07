@@ -1,356 +1,406 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/hooks/use-toast';
-import MedicineUsageFilters from '@/components/usage/MedicineUsageFilters';
-import MedicineUsageCard from '@/components/usage/MedicineUsageCard';
-import MedicineUsagePagination from '@/components/usage/MedicineUsagePagination';
+import { Input } from '@/components/ui/input';
+import { Download, Search, Trash2, CalendarIcon } from 'lucide-react';
+import { format, parseISO, isWithinInterval } from 'date-fns';
 import { generateMedicineUsageExcel } from '@/utils/medicineUsageExcelUtils';
-import { generateMedicineUsagePDF } from '@/utils/medicineUsagePdfUtils';
-import { Download, FileText, X } from 'lucide-react';
-
-interface MedicineUsage {
-  id: string;
-  patient_id: string;
-  medicine_id: string;
-  quantity_used: number;
-  usage_date: string;
-  created_by: string;
-  medicine?: {
-    name: string;
-    category: string;
-  } | null;
-  patient?: {
-    name: string;
-    patient_id: number;
-  } | null;
-}
+import { toast } from '@/hooks/use-toast';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 interface MedicineUsageRecord {
   id: string;
   patient_name: string;
   patient_number: number;
   report_date: string;
-  medicines: {
+  medicines: Array<{
     name: string;
     quantity: number;
     morning: boolean;
     afternoon: boolean;
     evening: boolean;
     night: boolean;
-  }[];
+  }>;
 }
 
-const ITEMS_PER_PAGE = 20;
+// Interface for the raw database query result
+interface MedicineUsageQueryResult {
+  id: string;
+  quantity_used: number;
+  usage_date: string;
+  patient_id: string;
+  medicine_id: string;
+  patient_name: string;
+  patient_number: number;
+  medicine_name: string;
+  medicine_category: string;
+}
 
 const MedicineUsagePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
-  const { data: usageData, isLoading, refetch } = useQuery({
-    queryKey: ['medicine-usage', searchTerm, startDate, endDate, currentPage],
-    queryFn: async () => {
-      let query = supabase
-        .from('medicine_usage')
-        .select(`
-          *,
-          medicine:medicines(name, category),
-          patient:patients(name, patient_id)
-        `)
-        .order('usage_date', { ascending: false });
+  const { data: medicineUsage = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['medicineUsage'],
+    queryFn: async (): Promise<MedicineUsageQueryResult[]> => {
+      console.log('Fetching medicine usage data...');
+      
+      try {
+        // First get medicine usage records
+        const { data: usageData, error: usageError } = await supabase
+          .from('medicine_usage')
+          .select('*')
+          .order('usage_date', { ascending: false });
 
-      // Apply patient name search filter
-      if (searchTerm) {
-        const { data: patients } = await supabase
+        if (usageError) {
+          console.error('Medicine usage query error:', usageError);
+          return [];
+        }
+
+        if (!usageData || usageData.length === 0) {
+          console.log('No medicine usage data found');
+          return [];
+        }
+
+        // Get unique patient IDs and medicine IDs
+        const patientIds = [...new Set(usageData.map(u => u.patient_id).filter(Boolean))];
+        const medicineIds = [...new Set(usageData.map(u => u.medicine_id).filter(Boolean))];
+
+        // Fetch patients data
+        const { data: patientsData, error: patientsError } = await supabase
           .from('patients')
-          .select('id')
-          .ilike('name', `%${searchTerm}%`);
-        
-        if (patients && patients.length > 0) {
-          const patientIds = patients.map(p => p.id);
-          query = query.in('patient_id', patientIds);
-        } else {
-          return { data: [], count: 0 };
+          .select('id, name, patient_id')
+          .in('id', patientIds);
+
+        if (patientsError) {
+          console.error('Patients query error:', patientsError);
         }
-      }
 
-      // Apply date filters
-      if (startDate) {
-        query = query.gte('usage_date', startDate.toISOString().split('T')[0]);
-      }
+        // Fetch medicines data
+        const { data: medicinesData, error: medicinesError } = await supabase
+          .from('medicines')
+          .select('id, name, category')
+          .in('id', medicineIds);
 
-      if (endDate) {
-        query = query.lte('usage_date', endDate.toISOString().split('T')[0]);
-      }
-
-      // Get total count for pagination
-      let countQuery = supabase
-        .from('medicine_usage')
-        .select('*', { count: 'exact', head: true });
-
-      if (searchTerm) {
-        const { data: patients } = await supabase
-          .from('patients')
-          .select('id')
-          .ilike('name', `%${searchTerm}%`);
-        
-        if (patients && patients.length > 0) {
-          const patientIds = patients.map(p => p.id);
-          countQuery = countQuery.in('patient_id', patientIds);
+        if (medicinesError) {
+          console.error('Medicines query error:', medicinesError);
         }
-      }
 
-      if (startDate) {
-        countQuery = countQuery.gte('usage_date', startDate.toISOString().split('T')[0]);
-      }
+        // Create lookup maps
+        const patientsMap = new Map((patientsData || []).map(p => [p.id, p]));
+        const medicinesMap = new Map((medicinesData || []).map(m => [m.id, m]));
 
-      if (endDate) {
-        countQuery = countQuery.lte('usage_date', endDate.toISOString().split('T')[0]);
-      }
+        // Transform the data
+        const transformedData: MedicineUsageQueryResult[] = usageData.map(usage => {
+          const patient = patientsMap.get(usage.patient_id);
+          const medicine = medicinesMap.get(usage.medicine_id);
 
-      const { count } = await countQuery;
-
-      // Apply pagination
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-      query = query.range(from, to);
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      // Transform the data to ensure proper typing
-      const transformedData: MedicineUsage[] = (data || []).map(item => {
-        // Extract medicine data safely with proper null checks
-        let medicineData: { name: string; category: string } | null = null;
-        if (item.medicine && 
-            typeof item.medicine === 'object' && 
-            item.medicine !== null &&
-            'name' in item.medicine && 
-            'category' in item.medicine) {
-          const medicine = item.medicine as { name: string; category: string };
-          medicineData = {
-            name: medicine.name,
-            category: medicine.category
+          return {
+            id: usage.id,
+            quantity_used: usage.quantity_used,
+            usage_date: usage.usage_date,
+            patient_id: usage.patient_id,
+            medicine_id: usage.medicine_id,
+            patient_name: patient?.name || 'Unknown Patient',
+            patient_number: patient?.patient_id || 0,
+            medicine_name: medicine?.name || 'Unknown Medicine',
+            medicine_category: medicine?.category || 'Unknown Category'
           };
-        }
+        });
 
-        // Extract patient data safely with proper null checks
-        let patientData: { name: string; patient_id: number } | null = null;
-        if (item.patient && 
-            typeof item.patient === 'object' && 
-            item.patient !== null &&
-            'name' in item.patient && 
-            'patient_id' in item.patient) {
-          const patient = item.patient as { name: string; patient_id: number };
-          patientData = {
-            name: patient.name,
-            patient_id: patient.patient_id
-          };
-        }
-
-        return {
-          id: item.id,
-          patient_id: item.patient_id,
-          medicine_id: item.medicine_id,
-          quantity_used: item.quantity_used,
-          usage_date: item.usage_date,
-          created_by: item.created_by,
-          medicine: medicineData,
-          patient: patientData
-        };
-      });
-
-      return { data: transformedData, count: count || 0 };
+        console.log('Transformed data:', transformedData);
+        return transformedData;
+      } catch (error) {
+        console.error('Error fetching medicine usage data:', error);
+        return [];
+      }
     }
   });
 
-  const handleClearDates = () => {
-    setStartDate(undefined);
-    setEndDate(undefined);
-    setCurrentPage(1);
-    toast({
-      title: "Filters Cleared",
-      description: "Date filters have been cleared"
-    });
-  };
-
-  // Transform data for export functions
-  const transformDataForExport = (data: MedicineUsage[]): MedicineUsageRecord[] => {
-    return data.map(usage => ({
-      id: usage.id,
-      patient_name: usage.patient?.name || 'Unknown Patient',
-      patient_number: usage.patient?.patient_id || 0,
-      report_date: usage.usage_date,
-      medicines: [{
-        name: usage.medicine?.name || 'Unknown Medicine',
+  // Transform the data
+  const medicineUsageRecords: MedicineUsageRecord[] = React.useMemo(() => {
+    const grouped: { [key: string]: MedicineUsageRecord } = {};
+    
+    medicineUsage.forEach(usage => {
+      const key = `${usage.patient_id}-${usage.usage_date.split('T')[0]}`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          id: usage.id,
+          patient_name: usage.patient_name,
+          patient_number: usage.patient_number,
+          report_date: usage.usage_date,
+          medicines: []
+        };
+      }
+      
+      grouped[key].medicines.push({
+        name: usage.medicine_name,
         quantity: usage.quantity_used,
-        morning: false,
+        morning: false, // These would need to come from prescription data
         afternoon: false,
         evening: false,
         night: false
-      }]
-    }));
-  };
+      });
+    });
+    
+    return Object.values(grouped);
+  }, [medicineUsage]);
+
+  // Apply filters
+  const filteredRecords = medicineUsageRecords.filter(record => {
+    const matchesSearch = searchTerm === '' || 
+      record.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.patient_number.toString().includes(searchTerm) ||
+      record.medicines.some(med => med.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const recordDate = parseISO(record.report_date);
+    const matchesDateRange = (!startDate || recordDate >= startDate) && 
+                            (!endDate || recordDate <= endDate);
+
+    return matchesSearch && matchesDateRange;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
+  const paginatedRecords = filteredRecords.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const handleExportExcel = () => {
-    if (!usageData?.data || usageData.data.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "No Data",
-        description: "No usage data available to export"
-      });
-      return;
-    }
-
     try {
-      const exportData = transformDataForExport(usageData.data);
-      generateMedicineUsageExcel(exportData);
+      generateMedicineUsageExcel(filteredRecords);
       toast({
-        title: "Excel Export Successful",
-        description: "Usage data has been exported to Excel"
+        title: "Export Successful",
+        description: `Exported ${filteredRecords.length} medicine usage records to Excel`
       });
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Export Failed",
-        description: "Failed to export usage data to Excel"
+        description: "Failed to generate Excel file"
       });
     }
   };
 
-  const handleExportPDF = () => {
-    if (!usageData?.data || usageData.data.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "No Data",
-        description: "No usage data available to export"
-      });
-      return;
-    }
-
+  const handleDeleteUsage = async (usageId: string) => {
     try {
-      const exportData = transformDataForExport(usageData.data);
-      generateMedicineUsagePDF(exportData);
+      const { error } = await supabase
+        .from('medicine_usage')
+        .delete()
+        .eq('id', usageId);
+
+      if (error) throw error;
+
       toast({
-        title: "PDF Export Successful",
-        description: "Usage data has been exported to PDF"
+        title: "Success",
+        description: "Medicine usage record deleted successfully"
       });
-    } catch (error) {
+
+      refetch();
+    } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Export Failed",
-        description: "Failed to export usage data to PDF"
+        title: "Error",
+        description: error.message || "Failed to delete medicine usage record"
       });
     }
   };
 
-  const totalPages = usageData?.count ? Math.ceil(usageData.count / ITEMS_PER_PAGE) : 0;
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto p-6">
+        <Card>
+          <CardContent className="text-center py-8">
+            Loading medicine usage data...
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto p-6">
+        <Card>
+          <CardContent className="text-center py-8">
+            <p className="text-red-600">Error loading medicine usage data</p>
+            <Button onClick={() => refetch()} className="mt-2">
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Medicine Usage Tracking</h1>
-        <div className="flex space-x-2">
-          <Button onClick={handleExportExcel} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export Excel
-          </Button>
-          <Button onClick={handleExportPDF} variant="outline" size="sm">
-            <FileText className="h-4 w-4 mr-2" />
-            Export PDF
-          </Button>
-        </div>
+        <h1 className="text-3xl font-bold text-gray-900">Medicine Usage History</h1>
+        <Button onClick={handleExportExcel} className="flex items-center space-x-2">
+          <Download className="h-4 w-4" />
+          <span>Export to Excel</span>
+        </Button>
       </div>
 
-      {/* Filters Section */}
+      {/* Filters */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Usage Filters</CardTitle>
-            {(startDate || endDate) && (
-              <Button 
-                onClick={handleClearDates} 
-                variant="outline" 
-                size="sm"
-                className="flex items-center space-x-2"
-              >
-                <X className="h-4 w-4" />
-                <span>Clear Dates</span>
-              </Button>
-            )}
-          </div>
+          <CardTitle className="flex items-center space-x-2">
+            <Search className="h-5 w-5" />
+            <span>Filter Medicine Usage</span>
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <MedicineUsageFilters
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            startDate={startDate}
-            onStartDateChange={setStartDate}
-            endDate={endDate}
-            onEndDateChange={setEndDate}
-          />
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Input
+                placeholder="Search by patient name, ID, or medicine..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "PPP") : "Start date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "PPP") : "End date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Usage Results */}
+      {/* Results */}
       <Card>
         <CardHeader>
           <CardTitle>
-            Usage Records ({usageData?.count || 0} total)
+            Medicine Usage Records ({filteredRecords.length} total)
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-2">Loading usage data...</span>
-            </div>
-          ) : !usageData?.data || usageData.data.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <div className="mb-4">
-                <FileText className="h-12 w-12 mx-auto text-gray-300" />
-              </div>
-              <p>No usage records found matching your filters</p>
+          {paginatedRecords.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border border-gray-300 px-4 py-2 text-left">Patient ID</th>
+                    <th className="border border-gray-300 px-4 py-2 text-left">Patient Name</th>
+                    <th className="border border-gray-300 px-4 py-2 text-left">Date</th>
+                    <th className="border border-gray-300 px-4 py-2 text-left">Medicines Used</th>
+                    <th className="border border-gray-300 px-4 py-2 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedRecords.map((record, index) => (
+                    <tr key={record.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="border border-gray-300 px-4 py-2">{record.patient_number}</td>
+                      <td className="border border-gray-300 px-4 py-2">{record.patient_name}</td>
+                      <td className="border border-gray-300 px-4 py-2">
+                        {format(parseISO(record.report_date), 'MMM dd, yyyy')}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2">
+                        <div className="space-y-1">
+                          {record.medicines.map((medicine, medIndex) => (
+                            <div key={medIndex} className="text-sm">
+                              <span className="font-medium">{medicine.name}</span> - 
+                              <span className="text-gray-600 ml-1">Qty: {medicine.quantity}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-center">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteUsage(record.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="grid gap-4">
-                {usageData.data.map((usage) => (
-                  <MedicineUsageCard
-                    key={usage.id}
-                    id={usage.id}
-                    patientName={usage.patient?.name || 'Unknown Patient'}
-                    patientNumber={usage.patient?.patient_id || 0}
-                    reportDate={usage.usage_date}
-                    medicines={[{
-                      name: usage.medicine?.name || 'Unknown Medicine',
-                      quantity: usage.quantity_used,
-                      morning: false,
-                      afternoon: false,
-                      evening: false,
-                      night: false
-                    }]}
-                  />
-                ))}
-              </div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="mt-6">
-                  <MedicineUsagePagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                    totalRecords={usageData?.count || 0}
-                    recordsPerPage={ITEMS_PER_PAGE}
-                  />
-                </div>
-              )}
+            <div className="text-center py-8">
+              <p className="text-gray-500 mb-4">No medicine usage records found</p>
+              <p className="text-sm text-gray-400">
+                Medicine usage records are automatically created when patient reports are saved with prescribed medicines.
+              </p>
+            </div>
+          )}
+          
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center space-x-2 mt-4">
+              <Button
+                variant="outline"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                Next
+              </Button>
             </div>
           )}
         </CardContent>

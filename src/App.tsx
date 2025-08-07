@@ -1,67 +1,170 @@
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from '@/components/ui/toaster';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import Layout from '@/components/Layout';
-import LoginPage from '@/components/LoginPage';
-import HomePage from '@/pages/HomePage';
-import AddPatientPage from '@/pages/AddPatientPage';
-import PatientReportPage from '@/pages/PatientReportPage';
-import ReportsPage from '@/pages/ReportsPage';
-import MedicineStockPage from '@/pages/MedicineStockPage';
-import MedicineDetailPage from '@/pages/MedicineDetailPage';
-import MedicineUsagePage from '@/pages/MedicineUsagePage';
-import PatientsPage from '@/pages/PatientsPage';
-import PatientEditPage from '@/pages/PatientEditPage';
-import ReceptionReportPage from '@/pages/ReceptionReportPage';
-import TrackingPage from '@/pages/TrackingPage';
-import NotFound from '@/pages/NotFound';
-import Index from '@/pages/Index';
-import './App.css';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import LoginPage from "./components/LoginPage";
+import Layout from "./components/Layout";
+import HomePage from "./pages/HomePage";
+import AddPatientPage from "./pages/AddPatientPage";
+import PatientsPage from "./pages/PatientsPage";
+import PatientEditPage from "./pages/PatientEditPage";
+import MedicineStockPage from "./pages/MedicineStockPage";
+import MedicineDetailPage from "./pages/MedicineDetailPage";
+import PatientReportPage from "./pages/PatientReportPage";
+import ReceptionReportPage from "./pages/ReceptionReportPage";
+import ReportsPage from "./pages/ReportsPage";
+import MedicineUsagePage from "./pages/MedicineUsagePage";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-function AppContent() {
-  const { user } = useAuth();
-
-  if (!user) {
-    return <LoginPage />;
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <Layout>{children}</Layout>;
+};
 
-  return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/home" element={<HomePage />} />
-        <Route path="/add-patient" element={<AddPatientPage />} />
-        <Route path="/patient-reports" element={<PatientReportPage />} />
-        <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/reception-reports" element={<ReceptionReportPage />} />
-        <Route path="/medicine-stock" element={<MedicineStockPage />} />
-        <Route path="/medicine/:id" element={<MedicineDetailPage />} />
-        <Route path="/medicine-usage" element={<MedicineUsagePage />} />
-        <Route path="/all-patients" element={<PatientsPage />} />
-        <Route path="/patient/:id/edit" element={<PatientEditPage />} />
-        <Route path="/tracking" element={<TrackingPage />} />
-        <Route path="/404" element={<NotFound />} />
-        <Route path="*" element={<Navigate to="/404" replace />} />
-      </Routes>
-    </Layout>
-  );
-}
+const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return <>{children}</>;
+};
 
-function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
       <AuthProvider>
-        <Router>
-          <AppContent />
-          <Toaster />
-        </Router>
+        <BrowserRouter>
+          <Routes>
+            <Route 
+              path="/login" 
+              element={
+                <PublicRoute>
+                  <LoginPage />
+                </PublicRoute>
+              } 
+            />
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute>
+                  <HomePage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/patients" 
+              element={
+                <ProtectedRoute>
+                  <AddPatientPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/all-patients" 
+              element={
+                <ProtectedRoute>
+                  <PatientsPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/patient/:id/edit" 
+              element={
+                <ProtectedRoute>
+                  <PatientEditPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reception-reports" 
+              element={
+                <ProtectedRoute>
+                  <ReceptionReportPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/patient-reports" 
+              element={
+                <ProtectedRoute>
+                  <PatientReportPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reports" 
+              element={
+                <ProtectedRoute>
+                  <ReportsPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/medicine-usage" 
+              element={
+                <ProtectedRoute>
+                  <MedicineUsagePage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/medicines" 
+              element={
+                <ProtectedRoute>
+                  <MedicineStockPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/medicines/:id" 
+              element={
+                <ProtectedRoute>
+                  <MedicineDetailPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
       </AuthProvider>
-    </QueryClientProvider>
-  );
-}
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;
