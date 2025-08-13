@@ -111,7 +111,7 @@ const PatientsTable: React.FC<PatientsTableProps> = ({ patients, onDeletePatient
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => navigate(`/patients/${patient.id}/edit`)}
+                    onClick={() => navigate(`/patient/${patient.id}/edit`)}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>

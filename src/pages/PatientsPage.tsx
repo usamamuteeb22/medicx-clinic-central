@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -152,10 +153,6 @@ const PatientsPage = () => {
         description: "Failed to delete patient"
       });
     }
-  };
-
-  const handleEditPatient = (patientId: string) => {
-    navigate(`/patient/${patientId}/edit`);
   };
 
   const clearDateFilters = () => {
