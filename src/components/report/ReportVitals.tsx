@@ -24,43 +24,61 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData }) => {
   return (
     <div className="space-y-6">
       {/* Medical Vitals Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900">Medical Vitals</CardTitle>
+      <Card className="border border-gray-200 shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
+          <CardTitle className="text-xl font-bold text-gray-800 flex items-center space-x-2">
+            <div className="w-2 h-6 bg-blue-500 rounded-full"></div>
+            <span>Medical Vitals</span>
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <div className="text-sm font-medium text-gray-600 mb-1">Blood Pressure</div>
-              <div className="text-lg font-semibold text-gray-900">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-xl border border-red-200 hover:shadow-md transition-all duration-200">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-semibold text-red-700 uppercase tracking-wide">Blood Pressure</div>
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              </div>
+              <div className="text-2xl font-bold text-red-800">
                 {formData.blood_pressure || 'N/A'}
               </div>
             </div>
             
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <div className="text-sm font-medium text-gray-600 mb-1">Temperature</div>
-              <div className="text-lg font-semibold text-gray-900">
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl border border-orange-200 hover:shadow-md transition-all duration-200">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-semibold text-orange-700 uppercase tracking-wide">Temperature</div>
+                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+              </div>
+              <div className="text-2xl font-bold text-orange-800">
                 {formData.temperature ? `${formData.temperature}°F` : 'N/A'}
               </div>
             </div>
             
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <div className="text-sm font-medium text-gray-600 mb-1">Weight</div>
-              <div className="text-lg font-semibold text-gray-900">
+            <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200 hover:shadow-md transition-all duration-200">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-semibold text-green-700 uppercase tracking-wide">Weight</div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              </div>
+              <div className="text-2xl font-bold text-green-800">
                 {formData.weight ? `${formData.weight} kg` : 'N/A'}
               </div>
             </div>
             
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <div className="text-sm font-medium text-gray-600 mb-1">BSR</div>
-              <div className="text-lg font-semibold text-gray-900">
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200 hover:shadow-md transition-all duration-200">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-semibold text-purple-700 uppercase tracking-wide">BSR</div>
+                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+              </div>
+              <div className="text-2xl font-bold text-purple-800">
                 {formData.bsr ? `${formData.bsr} mg/dL` : 'N/A'}
               </div>
             </div>
             
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <div className="text-sm font-medium text-gray-600 mb-1">Saturation</div>
-              <div className="text-lg font-semibold text-gray-900">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200 hover:shadow-md transition-all duration-200">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-semibold text-blue-700 uppercase tracking-wide">Saturation</div>
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              </div>
+              <div className="text-2xl font-bold text-blue-800">
                 {formData.saturation ? `${formData.saturation}%` : 'N/A'}
               </div>
             </div>
@@ -70,13 +88,16 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData }) => {
 
       {/* Clinical Complaint Card */}
       {formData.clinical_complaint && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-900">Clinical Complaint</CardTitle>
+        <Card className="border border-gray-200 shadow-sm">
+          <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-100">
+            <CardTitle className="text-xl font-bold text-gray-800 flex items-center space-x-2">
+              <div className="w-2 h-6 bg-slate-500 rounded-full"></div>
+              <span>Clinical Complaint</span>
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-gray-900 leading-relaxed">
+          <CardContent className="p-6">
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 rounded-xl border border-slate-200">
+              <p className="text-gray-800 leading-relaxed text-lg">
                 {formData.clinical_complaint}
               </p>
             </div>
@@ -85,7 +106,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData }) => {
       )}
 
       {/* Print Styles for Medical Reports */}
-      <style jsx>{`
+      <style>{`
         @media print {
           .medical-vitals-section {
             width: calc(100% + 20px);
