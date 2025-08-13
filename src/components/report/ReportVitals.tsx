@@ -1,6 +1,9 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 interface FormData {
   blood_pressure: string;
@@ -20,7 +23,11 @@ interface ReportVitalsProps {
   onFormDataChange: (formData: FormData) => void;
 }
 
-const ReportVitals: React.FC<ReportVitalsProps> = ({ formData }) => {
+const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange }) => {
+  const handleInputChange = (field: keyof FormData, value: string) => {
+    onFormDataChange({ ...formData, [field]: value });
+  };
+
   return (
     <div className="space-y-6">
       {/* Medical Vitals Card */}
@@ -32,54 +39,67 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData }) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-xl border border-red-200 hover:shadow-md transition-all duration-200">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-semibold text-red-700 uppercase tracking-wide">Blood Pressure</div>
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+          <div className="medical-vitals-section">
+            <h3>Medical Vitals</h3>
+            <div className="vitals-grid">
+              <div className="vital-item">
+                <Label htmlFor="blood_pressure" className="vital-label">Blood Pressure:</Label>
+                <Input
+                  id="blood_pressure"
+                  type="text"
+                  value={formData.blood_pressure}
+                  onChange={(e) => handleInputChange('blood_pressure', e.target.value)}
+                  placeholder="e.g. 120/80"
+                  className="vital-value"
+                />
               </div>
-              <div className="text-2xl font-bold text-red-800">
-                {formData.blood_pressure || 'N/A'}
+              
+              <div className="vital-item">
+                <Label htmlFor="temperature" className="vital-label">Temperature:</Label>
+                <Input
+                  id="temperature"
+                  type="number"
+                  value={formData.temperature}
+                  onChange={(e) => handleInputChange('temperature', e.target.value)}
+                  placeholder="°F"
+                  className="vital-value"
+                />
               </div>
-            </div>
-            
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl border border-orange-200 hover:shadow-md transition-all duration-200">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-semibold text-orange-700 uppercase tracking-wide">Temperature</div>
-                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+              
+              <div className="vital-item">
+                <Label htmlFor="weight" className="vital-label">Weight:</Label>
+                <Input
+                  id="weight"
+                  type="number"
+                  value={formData.weight}
+                  onChange={(e) => handleInputChange('weight', e.target.value)}
+                  placeholder="kg"
+                  className="vital-value"
+                />
               </div>
-              <div className="text-2xl font-bold text-orange-800">
-                {formData.temperature ? `${formData.temperature}°F` : 'N/A'}
+              
+              <div className="vital-item">
+                <Label htmlFor="bsr" className="vital-label">BSR:</Label>
+                <Input
+                  id="bsr"
+                  type="number"
+                  value={formData.bsr}
+                  onChange={(e) => handleInputChange('bsr', e.target.value)}
+                  placeholder="mg/dL"
+                  className="vital-value"
+                />
               </div>
-            </div>
-            
-            <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200 hover:shadow-md transition-all duration-200">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-semibold text-green-700 uppercase tracking-wide">Weight</div>
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              </div>
-              <div className="text-2xl font-bold text-green-800">
-                {formData.weight ? `${formData.weight} kg` : 'N/A'}
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200 hover:shadow-md transition-all duration-200">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-semibold text-purple-700 uppercase tracking-wide">BSR</div>
-                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-              </div>
-              <div className="text-2xl font-bold text-purple-800">
-                {formData.bsr ? `${formData.bsr} mg/dL` : 'N/A'}
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200 hover:shadow-md transition-all duration-200">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-semibold text-blue-700 uppercase tracking-wide">Saturation</div>
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-              </div>
-              <div className="text-2xl font-bold text-blue-800">
-                {formData.saturation ? `${formData.saturation}%` : 'N/A'}
+              
+              <div className="vital-item">
+                <Label htmlFor="saturation" className="vital-label">Saturation:</Label>
+                <Input
+                  id="saturation"
+                  type="number"
+                  value={formData.saturation}
+                  onChange={(e) => handleInputChange('saturation', e.target.value)}
+                  placeholder="%"
+                  className="vital-value"
+                />
               </div>
             </div>
           </div>
@@ -87,23 +107,30 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData }) => {
       </Card>
 
       {/* Clinical Complaint Card */}
-      {formData.clinical_complaint && (
-        <Card className="border border-gray-200 shadow-sm">
-          <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-100">
-            <CardTitle className="text-xl font-bold text-gray-800 flex items-center space-x-2">
-              <div className="w-2 h-6 bg-slate-500 rounded-full"></div>
-              <span>Clinical Complaint</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 rounded-xl border border-slate-200">
-              <p className="text-gray-800 leading-relaxed text-lg">
-                {formData.clinical_complaint}
-              </p>
+      <Card className="border border-gray-200 shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-100">
+          <CardTitle className="text-xl font-bold text-gray-800 flex items-center space-x-2">
+            <div className="w-2 h-6 bg-slate-500 rounded-full"></div>
+            <span>Clinical Complaint</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="clinical-complaint-section">
+            <h3>Clinical Complaint</h3>
+            <div>
+              <Label htmlFor="clinical_complaint">Clinical Complaint</Label>
+              <Textarea
+                id="clinical_complaint"
+                value={formData.clinical_complaint}
+                onChange={(e) => handleInputChange('clinical_complaint', e.target.value)}
+                placeholder="Describe the patient's main complaint or symptoms"
+                rows={4}
+                className="clinical-complaint-text"
+              />
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Print Styles for Medical Reports */}
       <style>{`
@@ -140,6 +167,15 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData }) => {
             min-height: 3mm;
           }
           
+          .vital-item input {
+            border: none !important;
+            background: transparent !important;
+            outline: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          
           .vital-label {
             font-weight: bold;
             margin-right: 2mm;
@@ -168,6 +204,21 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData }) => {
             font-weight: bold;
             margin: 0 0 4mm 0;
             color: #000;
+          }
+          
+          .clinical-complaint-section textarea {
+            border: none !important;
+            background: transparent !important;
+            outline: none !important;
+            box-shadow: none !important;
+            resize: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            font-size: 10pt;
+            color: #000;
+            line-height: 1.3;
+            word-wrap: break-word;
+            width: 100% !important;
           }
           
           .clinical-complaint-text {
