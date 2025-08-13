@@ -197,6 +197,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
             page-break-inside: avoid;
             border: 1pt solid #000;
             padding: 4mm;
+            display:none;
           }
           
           .clinical-complaint-section h3 {
