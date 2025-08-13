@@ -3,7 +3,6 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 
 interface FormData {
   blood_pressure: string;
@@ -106,32 +105,6 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
         </CardContent>
       </Card>
 
-      {/* Clinical Complaint Card */}
-      <Card className="border border-gray-200 shadow-sm">
-        <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-100">
-          <CardTitle className="text-xl font-bold text-gray-800 flex items-center space-x-2">
-            <div className="w-2 h-6 bg-slate-500 rounded-full"></div>
-            <span>Clinical Complaint</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="clinical-complaint-section">
-            <h3>Clinical Complaint</h3>
-            <div>
-              <Label htmlFor="clinical_complaint">Clinical Complaint</Label>
-              <Textarea
-                id="clinical_complaint"
-                value={formData.clinical_complaint}
-                onChange={(e) => handleInputChange('clinical_complaint', e.target.value)}
-                placeholder="Describe the patient's main complaint or symptoms"
-                rows={4}
-                className="clinical-complaint-text"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Print Styles for Medical Reports */}
       <style>{`
         @media print {
@@ -186,46 +159,6 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
           
           .vital-value {
             color: #000;
-            word-wrap: break-word;
-          }
-          
-          .clinical-complaint-section {
-            width: calc(100% + 20px);
-            margin-left: -10px;
-            margin-right: -10px;
-            margin-bottom: 3mm;
-            page-break-inside: avoid;
-            border: 1pt solid #000;
-            padding: 4mm;
-            display:none;
-          }
-          
-          .clinical-complaint-section h3 {
-            font-size: 14pt;
-            font-weight: bold;
-            margin: 0 0 4mm 0;
-            color: #000;
-          }
-          
-          .clinical-complaint-section textarea {
-            border: none !important;
-            background: transparent !important;
-            outline: none !important;
-            box-shadow: none !important;
-            resize: none !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            font-size: 10pt;
-            color: #000;
-            line-height: 1.3;
-            word-wrap: break-word;
-            width: 100% !important;
-          }
-          
-          .clinical-complaint-text {
-            font-size: 10pt;
-            color: #000;
-            line-height: 1.3;
             word-wrap: break-word;
           }
         }

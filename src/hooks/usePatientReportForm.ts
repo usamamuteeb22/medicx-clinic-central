@@ -94,7 +94,6 @@ export const usePatientReportForm = () => {
           blood_pressure: formData.blood_pressure || null,
           temperature: formData.temperature ? parseFloat(formData.temperature) : null,
           weight: formData.weight ? parseFloat(formData.weight) : null,
-          clinical_complaint: formData.clinical_complaint || null,
           medical_history: formData.medical_history || null,
           observations: formData.observations || null,
           recommendations: formData.recommendations || null,
@@ -171,13 +170,12 @@ export const usePatientReportForm = () => {
         saturation: receptionReportData.saturation?.toString() || '',
         blood_pressure: receptionReportData.blood_pressure || '',
         temperature: receptionReportData.temperature?.toString() || '',
-        weight: receptionReportData.weight?.toString() || '',
-        clinical_complaint: receptionReportData.clinical_complaint || ''
+        weight: receptionReportData.weight?.toString() || ''
       }));
 
       toast({
         title: "Reception Report Loaded",
-        description: "Medical vitals and clinical details have been pre-filled from the reception report."
+        description: "Medical vitals have been pre-filled from the reception report."
       });
 
     } catch (error: any) {

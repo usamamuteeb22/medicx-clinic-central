@@ -11,7 +11,7 @@ const VitalsPrintStyles = () => (
           margin-left: -10px;
           margin-right: -10px;
           margin-top: 0mm;
-          margin-botton : 0mm;
+          margin-bottom: 0mm;
           page-break-inside: avoid;
           border: 1pt solid #000;
           padding: 1mm 4mm;
@@ -54,31 +54,6 @@ const VitalsPrintStyles = () => (
         /* Temperature unit display as °F */
         .vital-item:has(.vital-label:contains("Temperature")) .vital-value::after {
           content: "°F";
-        }
-        
-        .clinical-complaint-section {
-          width: calc(100% + 20px);
-          margin-left: -10px;
-          margin-right: -10px;
-          margin-bottom: 3mm;
-          page-break-inside: avoid;
-          border: 1pt solid #000;
-          padding: 4mm;
-          display:none;
-        }
-        
-        .clinical-complaint-section h3 {
-          font-size: 14pt;
-          font-weight: bold;
-          margin: 0 0 4mm 0;
-          color: #000;
-        }
-        
-        .clinical-complaint-text {
-          font-size: 10pt;
-          color: #000;
-          line-height: 1.3;
-          word-wrap: break-word;
         }
       }
       `,
