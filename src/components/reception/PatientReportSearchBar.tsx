@@ -46,31 +46,41 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
   const searchReports = async () => {
     setLoading(true);
     try {
-      // Always fetch the latest reception reports from database
-      const { data: reportsData, error } = await supabase
+      // First, get the latest reception reports
+      const { data: reportsData, error: reportsError } = await supabase
         .from('patient_reports')
-        .select(`
-          id,
-          patient_id,
-          created_at,
-          patients!inner (
-            id,
-            patient_id,
-            name,
-            age,
-            gender,
-            phone_number,
-            cnic
-          )
-        `)
+        .select('id, patient_id, created_at')
         .eq('created_by_role', 'reception')
         .order('created_at', { ascending: false })
         .limit(100);
 
-      if (error) throw error;
+      if (reportsError) throw reportsError;
+
+      if (!reportsData || reportsData.length === 0) {
+        setSearchResults([]);
+        return;
+      }
+
+      // Get unique patient IDs
+      const patientIds = [...new Set(reportsData.map(report => report.patient_id))];
+
+      // Fetch patient details for these IDs
+      const { data: patientsData, error: patientsError } = await supabase
+        .from('patients')
+        .select('id, patient_id, name, age, gender, phone_number, cnic')
+        .in('id', patientIds);
+
+      if (patientsError) throw patientsError;
+
+      // Create a map of patient data for quick lookup
+      const patientsMap = new Map(patientsData?.map(patient => [patient.id, patient]) || []);
 
       // Transform data and create sequential report IDs
       const reportsWithPatients = reportsData?.map((report, index) => {
+        const patient = patientsMap.get(report.patient_id);
+        
+        if (!patient) return null;
+
         // Sequential report ID starting from 2001 based on creation order (newest first)
         const reportId = 2001 + index;
 
@@ -80,16 +90,16 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
           patient_id: report.patient_id,
           created_at: report.created_at,
           patient: {
-            id: report.patients.id,
-            patient_id: report.patients.patient_id,
-            name: report.patients.name || 'Unknown Patient',
-            age: report.patients.age || 0,
-            gender: report.patients.gender || 'unknown',
-            phone_number: report.patients.phone_number || '',
-            cnic: report.patients.cnic || ''
+            id: patient.id,
+            patient_id: patient.patient_id,
+            name: patient.name || 'Unknown Patient',
+            age: patient.age || 0,
+            gender: patient.gender || 'unknown',
+            phone_number: patient.phone_number || '',
+            cnic: patient.cnic || ''
           }
         };
-      }) || [];
+      }).filter(report => report !== null) || [];
 
       // Filter results based on search term
       const filteredResults = reportsWithPatients.filter(report => {
