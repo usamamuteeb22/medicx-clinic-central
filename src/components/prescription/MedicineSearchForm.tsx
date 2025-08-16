@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,7 +43,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
-  const [days, setDays] = useState<number>(1);
+  const [days, setDays] = useState<number>(2);
   const [morning, setMorning] = useState(false);
   const [afternoon, setAfternoon] = useState(false);
   const [evening, setEvening] = useState(false);
@@ -74,12 +73,10 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
     }
   });
 
-  // Calculate quantity automatically based on selected dosage timings AND meal timings
   useEffect(() => {
     const dosageTimings = [morning, afternoon, evening, night].filter(Boolean).length;
     const mealTimings = [beforeMeal, afterMeal, fasting].filter(Boolean).length;
     
-    // Total timings is the sum of dosage timings and meal timings
     const totalTimings = dosageTimings + mealTimings;
     const calculatedQty = days * totalTimings;
     setCalculatedQuantity(calculatedQty);
@@ -149,10 +146,9 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
 
     onAddMedicine(prescribedMedicine);
 
-    // Reset form
     setSelectedMedicine(null);
     setSearchTerm('');
-    setDays(1);
+    setDays(2);
     setMorning(false);
     setAfternoon(false);
     setEvening(false);
@@ -181,7 +177,6 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Medicine Search */}
         <div className="space-y-2">
           <Label htmlFor="medicine-search">Search Medicine</Label>
           <Input
@@ -247,7 +242,7 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
                 type="number"
                 min="1"
                 value={days}
-                onChange={(e) => setDays(parseInt(e.target.value) || 1)}
+                onChange={(e) => setDays(parseInt(e.target.value) || 2)}
               />
             </div>
 
