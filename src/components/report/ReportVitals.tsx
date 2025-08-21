@@ -34,7 +34,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
         <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
           <CardTitle className="text-xl font-bold text-gray-800 flex items-center space-x-2">
             <div className="w-2 h-6 bg-blue-500 rounded-full"></div>
-            <span>Medical Vitals</span>
+            {/* <span>Medical Vitals</span> */}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
@@ -70,7 +70,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                 <Input
                   id="weight"
                   type="number"
-                  value={formData.weight}
+                  value={formData.weight + 'kg'} 
                   onChange={(e) => handleInputChange('weight', e.target.value)}
                   placeholder="kg"
                   className="vital-value"
