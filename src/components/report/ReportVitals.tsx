@@ -70,7 +70,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                 <Input
                   id="weight"
                   type="number"
-                  value={formData.weight + 'kg'} 
+                  value={formData.weight} 
                   onChange={(e) => handleInputChange('weight', e.target.value)}
                   placeholder="kg"
                   className="vital-value"
