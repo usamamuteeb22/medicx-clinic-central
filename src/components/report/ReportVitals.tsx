@@ -150,23 +150,23 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
           }
           
           /* Add units after vital values in print */
-          .vital-item[data-vital="blood_pressure"] .vital-value::after {
+          .vital-item[data-vital="blood_pressure"] input.vital-value::after {
             content: " mmHg";
           }
           
-          .vital-item[data-vital="temperature"] .vital-value::after {
+          .vital-item[data-vital="temperature"] input.vital-value::after {
             content: "°F";
           }
           
-          .vital-item[data-vital="weight"] .vital-value::after {
+          .vital-item[data-vital="weight"] input.vital-value::after {
             content: " kg";
           }
           
-          .vital-item[data-vital="bsr"] .vital-value::after {
+          .vital-item[data-vital="bsr"] input.vital-value::after {
             content: " mg/dL";
           }
           
-          .vital-item[data-vital="saturation"] .vital-value::after {
+          .vital-item[data-vital="saturation"] input.vital-value::after {
             content: "%";
           }
         }
