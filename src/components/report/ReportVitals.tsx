@@ -3,18 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
-interface FormData {
-  blood_pressure: string;
-  temperature: string;
-  weight: string;
-  bsr: string;
-  saturation: string;
-  medical_history: string;
-  observations: string;
-  recommendations: string;
-  patient_history: string;
-}
+import { FormData } from '@/types/reportTypes';
 
 interface ReportVitalsProps {
   formData: FormData;
