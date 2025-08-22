@@ -10,7 +10,6 @@ interface FormData {
   weight: string;
   bsr: string;
   saturation: string;
-  clinical_complaint: string;
   medical_history: string;
   observations: string;
   recommendations: string;
@@ -34,14 +33,13 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
         <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
           <CardTitle className="text-xl font-bold text-gray-800 flex items-center space-x-2">
             <div className="w-2 h-6 bg-blue-500 rounded-full"></div>
-            {/* <span>Medical Vitals</span> */}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <div className="medical-vitals-section">
             <h3>Medical Vitals</h3>
             <div className="vitals-grid">
-              <div className="vital-item">
+              <div className="vital-item" data-vital="blood_pressure">
                 <Label htmlFor="blood_pressure" className="vital-label">Blood Pressure:</Label>
                 <Input
                   id="blood_pressure"
@@ -53,7 +51,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                 />
               </div>
               
-              <div className="vital-item">
+              <div className="vital-item" data-vital="temperature">
                 <Label htmlFor="temperature" className="vital-label">Temperature:</Label>
                 <Input
                   id="temperature"
@@ -65,7 +63,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                 />
               </div>
               
-              <div className="vital-item">
+              <div className="vital-item" data-vital="weight">
                 <Label htmlFor="weight" className="vital-label">Weight:</Label>
                 <Input
                   id="weight"
@@ -77,7 +75,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                 />
               </div>
               
-              <div className="vital-item">
+              <div className="vital-item" data-vital="bsr">
                 <Label htmlFor="bsr" className="vital-label">BSR:</Label>
                 <Input
                   id="bsr"
@@ -89,7 +87,7 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                 />
               </div>
               
-              <div className="vital-item">
+              <div className="vital-item" data-vital="saturation">
                 <Label htmlFor="saturation" className="vital-label">Saturation:</Label>
                 <Input
                   id="saturation"
@@ -160,6 +158,27 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
           .vital-value {
             color: #000;
             word-wrap: break-word;
+          }
+          
+          /* Add units after vital values in print */
+          .vital-item[data-vital="blood_pressure"] .vital-value::after {
+            content: " mmHg";
+          }
+          
+          .vital-item[data-vital="temperature"] .vital-value::after {
+            content: "°F";
+          }
+          
+          .vital-item[data-vital="weight"] .vital-value::after {
+            content: " kg";
+          }
+          
+          .vital-item[data-vital="bsr"] .vital-value::after {
+            content: " mg/dL";
+          }
+          
+          .vital-item[data-vital="saturation"] .vital-value::after {
+            content: "%";
           }
         }
       `}</style>

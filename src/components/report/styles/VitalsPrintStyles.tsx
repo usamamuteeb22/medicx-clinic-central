@@ -38,6 +38,15 @@ const VitalsPrintStyles = () => (
           min-height: 3mm;
         }
         
+        .vital-item input {
+          border: none !important;
+          background: transparent !important;
+          outline: none !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+        
         .vital-label {
           font-weight: bold;
           margin-right: 2mm;
@@ -51,9 +60,25 @@ const VitalsPrintStyles = () => (
           word-wrap: break-word;
         }
         
-        /* Temperature unit display as °F */
-        .vital-item:has(.vital-label:contains("Temperature")) .vital-value::after {
+        /* Add units after vital values */
+        .vital-item[data-vital="blood_pressure"] .vital-value::after {
+          content: " mmHg";
+        }
+        
+        .vital-item[data-vital="temperature"] .vital-value::after {
           content: "°F";
+        }
+        
+        .vital-item[data-vital="weight"] .vital-value::after {
+          content: " kg";
+        }
+        
+        .vital-item[data-vital="bsr"] .vital-value::after {
+          content: " mg/dL";
+        }
+        
+        .vital-item[data-vital="saturation"] .vital-value::after {
+          content: "%";
         }
       }
       `,
