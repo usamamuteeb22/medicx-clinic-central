@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,13 +21,14 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
         <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
           <CardTitle className="text-xl font-bold text-gray-800 flex items-center space-x-2">
             <div className="w-2 h-6 bg-blue-500 rounded-full"></div>
+            <span>Medical Vitals</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <div className="medical-vitals-section">
-            <h3>Medical Vitals</h3>
             <div className="vitals-grid">
-              <div className="vital-item" data-vital="blood_pressure">
+              {/* Blood Pressure */}
+              <div className="vital-item">
                 <Label htmlFor="blood_pressure" className="vital-label">Blood Pressure:</Label>
                 <Input
                   id="blood_pressure"
@@ -36,11 +36,15 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                   value={formData.blood_pressure}
                   onChange={(e) => handleInputChange('blood_pressure', e.target.value)}
                   placeholder="e.g. 120/80"
-                  className="vital-value"
+                  className="vital-value screen-only"
                 />
+                <span className="print-only vital-text">
+                  {formData.blood_pressure ? `${formData.blood_pressure} mmHg` : ""}
+                </span>
               </div>
-              
-              <div className="vital-item" data-vital="temperature">
+
+              {/* Temperature */}
+              <div className="vital-item">
                 <Label htmlFor="temperature" className="vital-label">Temperature:</Label>
                 <Input
                   id="temperature"
@@ -48,23 +52,31 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                   value={formData.temperature}
                   onChange={(e) => handleInputChange('temperature', e.target.value)}
                   placeholder="°F"
-                  className="vital-value"
+                  className="vital-value screen-only"
                 />
+                <span className="print-only vital-text">
+                  {formData.temperature ? `${formData.temperature} °F` : ""}
+                </span>
               </div>
-              
-              <div className="vital-item" data-vital="weight">
+
+              {/* Weight */}
+              <div className="vital-item">
                 <Label htmlFor="weight" className="vital-label">Weight:</Label>
                 <Input
                   id="weight"
                   type="number"
-                  value={formData.weight} 
+                  value={formData.weight}
                   onChange={(e) => handleInputChange('weight', e.target.value)}
                   placeholder="kg"
-                  className="vital-value"
+                  className="vital-value screen-only"
                 />
+                <span className="print-only vital-text">
+                  {formData.weight ? `${formData.weight} kg` : ""}
+                </span>
               </div>
-              
-              <div className="vital-item" data-vital="bsr">
+
+              {/* BSR */}
+              <div className="vital-item">
                 <Label htmlFor="bsr" className="vital-label">BSR:</Label>
                 <Input
                   id="bsr"
@@ -72,11 +84,15 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                   value={formData.bsr}
                   onChange={(e) => handleInputChange('bsr', e.target.value)}
                   placeholder="mg/dL"
-                  className="vital-value"
+                  className="vital-value screen-only"
                 />
+                <span className="print-only vital-text">
+                  {formData.bsr ? `${formData.bsr} mg/dL` : ""}
+                </span>
               </div>
-              
-              <div className="vital-item" data-vital="saturation">
+
+              {/* Saturation */}
+              <div className="vital-item">
                 <Label htmlFor="saturation" className="vital-label">Saturation:</Label>
                 <Input
                   id="saturation"
@@ -84,8 +100,11 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
                   value={formData.saturation}
                   onChange={(e) => handleInputChange('saturation', e.target.value)}
                   placeholder="%"
-                  className="vital-value"
+                  className="vital-value screen-only"
                 />
+                <span className="print-only vital-text">
+                  {formData.saturation ? `${formData.saturation}%` : ""}
+                </span>
               </div>
             </div>
           </div>
@@ -99,75 +118,46 @@ const ReportVitals: React.FC<ReportVitalsProps> = ({ formData, onFormDataChange 
             width: calc(100% + 20px);
             margin-left: -10px;
             margin-right: -10px;
-            margin-top: 0mm;
-            margin-bottom: 0mm;
             page-break-inside: avoid;
             border: 1pt solid #000;
-            padding: 1mm 4mm;
+            padding: 4mm;
           }
-          
-          .medical-vitals-section h3 {
-            font-size: 14pt;
-            font-weight: bold;
-            margin: 0 0 2mm 0;
-            color: #000;
-          }
-          
+
           .vitals-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 3mm;
             width: 100%;
           }
-          
+
           .vital-item {
             display: flex;
             align-items: center;
-            font-size: 10pt;
-            min-height: 3mm;
+            font-size: 11pt;
+            min-height: 5mm;
           }
-          
-          .vital-item input {
-            border: none !important;
-            background: transparent !important;
-            outline: none !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-            margin: 0 !important;
-          }
-          
+
           .vital-label {
             font-weight: bold;
             margin-right: 2mm;
             color: #000;
             white-space: nowrap;
-            min-width: 30mm;
+            min-width: 35mm;
           }
-          
-          .vital-value {
+
+          .screen-only {
+            display: none !important;
+          }
+
+          .print-only {
+            display: inline !important;
             color: #000;
-            word-wrap: break-word;
           }
-          
-          /* Add units after vital values in print */
-          .vital-item[data-vital="blood_pressure"] input.vital-value::after {
-            content: " mmHg";
-          }
-          
-          .vital-item[data-vital="temperature"] input.vital-value::after {
-            content: "°F";
-          }
-          
-          .vital-item[data-vital="weight"] input.vital-value::after {
-            content: " kg";
-          }
-          
-          .vital-item[data-vital="bsr"] input.vital-value::after {
-            content: " mg/dL";
-          }
-          
-          .vital-item[data-vital="saturation"] input.vital-value::after {
-            content: "%";
+        }
+
+        @media screen {
+          .print-only {
+            display: none !important;
           }
         }
       `}</style>
