@@ -25,7 +25,7 @@ interface EditMedicineModalProps {
   onMedicineUpdated: () => void;
 }
 
-const categories = ['tablet', 'syrup', 'injection', 'capsule', 'ointment'];
+const categories = ['tablet', 'syrup', 'injection', 'sachet', 'drops', 'lotion', 'cream', 'ointment', 'suspension', 'gel', 'infusion', 'transfusion', 'Capsule'] as const;
 
 const EditMedicineModal: React.FC<EditMedicineModalProps> = ({
   isOpen,
@@ -35,7 +35,7 @@ const EditMedicineModal: React.FC<EditMedicineModalProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     name: '',
-    category: ''
+    category: '' as typeof categories[number]
   });
   const [loading, setLoading] = useState(false);
 
@@ -43,7 +43,7 @@ const EditMedicineModal: React.FC<EditMedicineModalProps> = ({
     if (medicine) {
       setFormData({
         name: medicine.name,
-        category: medicine.category
+        category: medicine.category as typeof categories[number]
       });
     }
   }, [medicine]);
@@ -86,7 +86,7 @@ const EditMedicineModal: React.FC<EditMedicineModalProps> = ({
   const handleClose = () => {
     setFormData({
       name: '',
-      category: ''
+      category: 'tablet'
     });
     onClose();
   };
@@ -112,7 +112,7 @@ const EditMedicineModal: React.FC<EditMedicineModalProps> = ({
             <Label htmlFor="category">Category *</Label>
             <Select
               value={formData.category}
-              onValueChange={(value) => setFormData({ ...formData, category: value })}
+              onValueChange={(value) => setFormData({ ...formData, category: value as typeof categories[number] })}
               required
             >
               <SelectTrigger>

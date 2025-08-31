@@ -33,9 +33,10 @@ interface Medicine {
 
 interface MedicineTableProps {
   medicines: Medicine[];
+  onEditMedicine: (medicine: Medicine) => void;
 }
 
-const MedicineTable = ({ medicines }: MedicineTableProps) => {
+const MedicineTable = ({ medicines, onEditMedicine }: MedicineTableProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -147,10 +148,18 @@ const MedicineTable = ({ medicines }: MedicineTableProps) => {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => onEditMedicine(medicine)}
+                          className="bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => navigate(`/medicines/${medicine.id}`)}
                           className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
                         >
-                          <Edit className="h-4 w-4" />
+                          View
                         </Button>
                         {(user?.role === 'admin' || user?.role === 'pharmacy') && (
                           <AlertDialog>
