@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,23 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
-
-interface Patient {
-  id: string;
-  patient_id: number;
-  name: string;
-  age: number;
-  gender: string;
-  phone_number: string;
-}
-
-interface ReceptionReport {
-  id: string;
-  report_id: number;
-  patient_id: string;
-  created_at: string;
-  patient: Patient;
-}
+import { ReceptionReport, Patient } from '@/types/reportTypes';
 
 interface PatientReportSearchBarProps {
   onReportSelect: (report: ReceptionReport) => void;
@@ -91,11 +76,10 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
             name: patient.name || 'Unknown Patient',
             age: patient.age || 0,
             gender: patient.gender || 'unknown',
-            phone_number: patient.phone_number || '',
-            cnic: patient.cnic || ''
+            phone_number: patient.phone_number || ''
           }
         };
-      }).filter(report => report !== null) || [];
+      }).filter(report => report !== null) as ReceptionReport[];
 
       // Filter results based on search term
       const filteredResults = reportsWithPatients.filter(report => {
@@ -105,7 +89,7 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
           report.patient.name.toLowerCase().includes(searchLower) ||
           report.patient.patient_id.toString().includes(searchTerm) ||
           (report.patient.phone_number && report.patient.phone_number.includes(searchTerm)) ||
-          (report.patient.cnic && report.patient.cnic.includes(searchTerm))
+          ((patientsMap.get(report.patient_id) as any)?.cnic && (patientsMap.get(report.patient_id) as any).cnic.includes(searchTerm))
         );
       });
 
