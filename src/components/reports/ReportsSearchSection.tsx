@@ -20,40 +20,36 @@ const ReportsSearchSection: React.FC<ReportsSearchSectionProps> = ({ onReportSel
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [searchResults, setSearchResults] = useState<PatientReport[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
+  const [allReports, setAllReports] = useState<PatientReport[]>([]);
+  const [filteredReports, setFilteredReports] = useState<PatientReport[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  const searchReports = async (page = 1) => {
+  // Load all reports on component mount
+  useEffect(() => {
+    loadAllReports();
+  }, []);
+
+  // Filter reports when search term or date filters change
+  useEffect(() => {
+    filterReports();
+  }, [searchTerm, startDate, endDate, allReports]);
+
+  const loadAllReports = async () => {
     setLoading(true);
     try {
       let query = supabase
         .from('patient_reports')
-        .select('*', { count: 'exact' })
+        .select('*, report_number')
         .not('created_by_role', 'is', null)
         .order('created_at', { ascending: false });
 
-      // Apply date filters
-      if (startDate) {
-        query = query.gte('created_at', startDate + 'T00:00:00.000Z');
-      }
-      if (endDate) {
-        query = query.lte('created_at', endDate + 'T23:59:59.999Z');
-      }
-
-      // Apply pagination
-      const from = (page - 1) * RECORDS_PER_PAGE;
-      const to = from + RECORDS_PER_PAGE - 1;
-      query = query.range(from, to);
-
-      const { data: reportsData, error: reportsError, count } = await query;
+      const { data: reportsData, error: reportsError } = await query;
       if (reportsError) throw reportsError;
 
-      setTotalCount(count || 0);
-
       if (!reportsData || reportsData.length === 0) {
-        setSearchResults([]);
+        setAllReports([]);
+        setFilteredReports([]);
         return;
       }
 
@@ -77,39 +73,52 @@ const ReportsSearchSection: React.FC<ReportsSearchSectionProps> = ({ onReportSel
         patient: patientMap.get(report.patient_id)
       })).filter(report => report.patient);
 
-      // Apply search filter
-      let filteredResults = reportsWithPatients;
-      if (searchTerm.trim()) {
-        const searchLower = searchTerm.toLowerCase();
-        filteredResults = reportsWithPatients.filter(report => 
-          report.patient?.name?.toLowerCase().includes(searchLower) ||
-          report.patient?.patient_id?.toString().includes(searchTerm) ||
-          report.patient?.phone_number?.toLowerCase().includes(searchLower) ||
-          report.patient?.age?.toString().includes(searchTerm)
-        );
-      }
-
-      setSearchResults(filteredResults);
+      setAllReports(reportsWithPatients);
     } catch (error: any) {
-      console.error('Error searching reports:', error);
+      console.error('Error loading reports:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to search reports"
+        description: "Failed to load reports"
       });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    setCurrentPage(1);
-    searchReports(1);
-  }, [searchTerm, startDate, endDate]);
+  const filterReports = () => {
+    let filtered = [...allReports];
+
+    // Apply date filters
+    if (startDate) {
+      filtered = filtered.filter(report => 
+        new Date(report.created_at) >= new Date(startDate + 'T00:00:00.000Z')
+      );
+    }
+    if (endDate) {
+      filtered = filtered.filter(report => 
+        new Date(report.created_at) <= new Date(endDate + 'T23:59:59.999Z')
+      );
+    }
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(report => 
+        report.patient?.name?.toLowerCase().includes(searchLower) ||
+        report.patient?.patient_id?.toString().includes(searchTerm) ||
+        report.patient?.phone_number?.toLowerCase().includes(searchLower) ||
+        report.patient?.age?.toString().includes(searchTerm) ||
+        report.report_number?.toString().includes(searchTerm)
+      );
+    }
+
+    setFilteredReports(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    searchReports(page);
   };
 
   const handleResetDates = () => {
@@ -133,7 +142,11 @@ const ReportsSearchSection: React.FC<ReportsSearchSectionProps> = ({ onReportSel
     return { dateStr, timeStr };
   };
 
+  // Paginate the filtered results
+  const totalCount = filteredReports.length;
   const totalPages = Math.ceil(totalCount / RECORDS_PER_PAGE);
+  const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
+  const paginatedResults = filteredReports.slice(startIndex, startIndex + RECORDS_PER_PAGE);
 
   return (
     <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
@@ -151,7 +164,7 @@ const ReportsSearchSection: React.FC<ReportsSearchSectionProps> = ({ onReportSel
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-6 w-6" />
           <Input
             type="text"
-            placeholder="🔍 Search by patient name, ID, phone number, or age..."
+            placeholder="🔍 Search by patient name, ID, phone number, age, or report number..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-12 py-4 text-lg border-2 border-gray-200 focus:ring-4 focus:ring-blue-200 focus:border-blue-500 rounded-xl shadow-sm"
@@ -194,17 +207,18 @@ const ReportsSearchSection: React.FC<ReportsSearchSectionProps> = ({ onReportSel
         {loading && (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
-            <p className="text-gray-600">Searching reports...</p>
+            <p className="text-gray-600">Loading reports...</p>
           </div>
         )}
 
         {/* Results Table */}
-        {!loading && searchResults.length > 0 && (
+        {!loading && paginatedResults.length > 0 && (
           <>
             <div className="overflow-x-auto rounded-lg border border-gray-200">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50">
+                    <TableHead className="font-semibold">Report ID</TableHead>
                     <TableHead className="font-semibold">Patient ID</TableHead>
                     <TableHead className="font-semibold">Name</TableHead>
                     <TableHead className="font-semibold">Age</TableHead>
@@ -215,10 +229,11 @@ const ReportsSearchSection: React.FC<ReportsSearchSectionProps> = ({ onReportSel
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {searchResults.map((report) => {
+                  {paginatedResults.map((report) => {
                     const { dateStr, timeStr } = formatDateTime(report.created_at);
                     return (
                       <TableRow key={report.id} className="hover:bg-gray-50">
+                        <TableCell className="font-medium">{report.report_number || 'N/A'}</TableCell>
                         <TableCell className="font-medium">{report.patient?.patient_id || 'N/A'}</TableCell>
                         <TableCell>{report.patient?.name || 'Unknown'}</TableCell>
                         <TableCell>{report.patient?.age || 'N/A'}</TableCell>
@@ -256,7 +271,7 @@ const ReportsSearchSection: React.FC<ReportsSearchSectionProps> = ({ onReportSel
         )}
 
         {/* No Results */}
-        {!loading && searchResults.length === 0 && (
+        {!loading && paginatedResults.length === 0 && (
           <div className="text-center py-12">
             <div className="text-gray-500 text-lg">
               {searchTerm || startDate || endDate 

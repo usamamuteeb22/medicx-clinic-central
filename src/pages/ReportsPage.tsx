@@ -173,13 +173,13 @@ const ReportsPage = () => {
                 <ReportPrintStyles />
                 <div className="report-container">
                   <ReportHeader 
-                    reportId={selectedReport.id}
-                    currentDate={new Date().toLocaleDateString('en-US', {
+                    reportNumber={selectedReport.report_number}
+                    currentDate={new Date(selectedReport.created_at).toLocaleDateString('en-US', {
                       day: '2-digit',
                       month: '2-digit',
                       year: 'numeric'
                     })}
-                    currentTime={new Date().toLocaleTimeString('en-US', {
+                    currentTime={new Date(selectedReport.created_at).toLocaleTimeString('en-US', {
                       hour: '2-digit',
                       minute: '2-digit',
                       second: '2-digit',

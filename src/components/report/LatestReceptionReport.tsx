@@ -24,6 +24,7 @@ interface ReceptionReport {
   id: string;
   patient_id: string;
   created_at: string;
+  report_number: number;
   patient: Patient;
 }
 
@@ -41,7 +42,8 @@ const LatestReceptionReport: React.FC<LatestReceptionReportProps> = ({ onReportS
           id,
           patient_id,
           created_at,
-          created_by_role
+          created_by_role,
+          report_number
         `)
         .eq('created_by_role', 'reception')
         .order('created_at', { ascending: false })
@@ -118,7 +120,7 @@ const LatestReceptionReport: React.FC<LatestReceptionReportProps> = ({ onReportS
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
           <div>
             <p className="text-sm text-gray-600">Report ID</p>
-            <p className="font-medium">{latestReport.id.slice(0, 8)}</p>
+            <p className="font-medium">{latestReport.report_number}</p>
           </div>
           
           <div className="flex items-center space-x-2">

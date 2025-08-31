@@ -2,12 +2,12 @@
 import React from 'react';
 
 interface ReportHeaderProps {
-  reportId: string;
+  reportNumber?: number;
   currentDate?: string;
   currentTime?: string;
 }
 
-const ReportHeader: React.FC<ReportHeaderProps> = ({ reportId, currentDate, currentTime }) => {
+const ReportHeader: React.FC<ReportHeaderProps> = ({ reportNumber, currentDate, currentTime }) => {
   const now = new Date();
   const displayDate = currentDate || now.toLocaleDateString('en-US', {
     day: '2-digit',
@@ -28,7 +28,7 @@ const ReportHeader: React.FC<ReportHeaderProps> = ({ reportId, currentDate, curr
       </div>
       
       <div className="report-info">
-        <div className="report-id">Report ID: {reportId.slice(0, 8)}</div>
+        <div className="report-id">Report ID: {reportNumber || 'N/A'}</div>
         <div className="report-date">Date: {displayDate}</div>
         <div className="report-time">Time: {displayTime}</div>
       </div>
