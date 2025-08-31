@@ -3,45 +3,7 @@ import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-
-interface Patient {
-  id: string;
-  patient_id: number;
-  name: string;
-  age: number;
-  gender: string;
-  phone_number: string;
-}
-
-interface Medicine {
-  id: string;
-  name: string;
-  category: string;
-  total_quantity: number;
-}
-
-interface PrescribedMedicine {
-  id: string;
-  medicine: Medicine;
-  quantity: number;
-  days: number;
-  morning: boolean;
-  afternoon: boolean;
-  evening: boolean;
-  night: boolean;
-  before_meal: boolean;
-  after_meal: boolean;
-  fasting: boolean;
-  note?: string;
-}
-
-interface ReceptionReport {
-  id: string;
-  report_id: number;
-  patient_id: string;
-  created_at: string;
-  patient: Patient;
-}
+import { Patient, PrescribedMedicine, ReceptionReport } from '@/types/reportTypes';
 
 export const usePatientReportForm = () => {
   const { user } = useAuth();
@@ -158,7 +120,7 @@ export const usePatientReportForm = () => {
         .eq('id', report.id)
         .single();
 
-      if (error) throw error;
+      if (error) throw receptionReportData;
 
       // Set the patient
       setSelectedPatient(report.patient);
