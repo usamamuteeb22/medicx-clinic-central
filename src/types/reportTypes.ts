@@ -62,12 +62,13 @@ export interface PatientReport {
   doctor_completed_at: string | null;
   reception_completed_at: string | null;
   report_date: string;
+  report_number: number; // Added missing property
   patient?: Patient;
 }
 
 export interface ReceptionReport {
   id: string;
-  report_id: number;
+  report_id: number; // Added missing property
   patient_id: string;
   created_at: string;
   patient: Patient;

@@ -131,7 +131,7 @@ const ReportPDFGenerator: React.FC<ReportPDFGeneratorProps> = ({
           <ReportPrintStyles />
           <div className="report-container">
             <ReportHeader 
-              reportId={reportId}
+              reportNumber={parseInt(reportId)}
               currentDate={currentDate}
               currentTime={currentTime}
             />

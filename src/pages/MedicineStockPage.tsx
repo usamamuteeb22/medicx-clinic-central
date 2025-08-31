@@ -26,7 +26,7 @@ interface Medicine {
 const MedicineStockPage = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'tablet' | 'syrup' | 'injection' | 'sachet' | 'drops' | 'lotion' | 'cream' | 'ointment' | 'suspension' | 'gel' | 'infusion' | 'transfusion' | 'Capsule'>('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
@@ -107,7 +107,7 @@ const MedicineStockPage = () => {
       />
 
       {/* Stock Management Section */}
-      <StockManagementSection />
+      <StockManagementSection medicines={medicines} />
 
       {/* Medicine Table */}
       <MedicineTable 
