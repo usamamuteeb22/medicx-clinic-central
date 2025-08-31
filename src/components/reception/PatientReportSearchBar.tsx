@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,10 +45,10 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
   const searchReports = async () => {
     setLoading(true);
     try {
-      // First, get the latest reception reports
+      // First, get the latest reception reports with report_number
       const { data: reportsData, error: reportsError } = await supabase
         .from('patient_reports')
-        .select('id, patient_id, created_at')
+        .select('id, patient_id, created_at, report_number')
         .eq('created_by_role', 'reception')
         .order('created_at', { ascending: false })
         .limit(100);
@@ -75,18 +74,15 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
       // Create a map of patient data for quick lookup
       const patientsMap = new Map(patientsData?.map(patient => [patient.id, patient]) || []);
 
-      // Transform data and create sequential report IDs
-      const reportsWithPatients = reportsData?.map((report, index) => {
+      // Transform data using the actual report_number from database
+      const reportsWithPatients = reportsData?.map((report) => {
         const patient = patientsMap.get(report.patient_id);
         
         if (!patient) return null;
 
-        // Sequential report ID starting from 2001 based on creation order (newest first)
-        const reportId = 2001 + index;
-
         return {
           id: report.id,
-          report_id: reportId,
+          report_id: report.report_number || 2000, // Use actual report_number or fallback
           patient_id: report.patient_id,
           created_at: report.created_at,
           patient: {

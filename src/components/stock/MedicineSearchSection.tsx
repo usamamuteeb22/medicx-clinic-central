@@ -9,15 +9,15 @@ import { Search } from 'lucide-react';
 interface MedicineSearchSectionProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
-  categoryFilter?: string;
-  onCategoryFilterChange?: (value: string) => void;
+  selectedCategory: 'all' | 'tablet' | 'syrup' | 'injection' | 'sachet' | 'drops' | 'lotion' | 'cream' | 'ointment' | 'suspension' | 'gel' | 'infusion' | 'transfusion' | 'Capsule';
+  onCategoryChange: (value: 'all' | 'tablet' | 'syrup' | 'injection' | 'sachet' | 'drops' | 'lotion' | 'cream' | 'ointment' | 'suspension' | 'gel' | 'infusion' | 'transfusion' | 'Capsule') => void;
 }
 
 const MedicineSearchSection: React.FC<MedicineSearchSectionProps> = ({
   searchTerm,
   onSearchChange,
-  categoryFilter = '',
-  onCategoryFilterChange
+  selectedCategory,
+  onCategoryChange
 }) => {
   return (
     <Card>
@@ -38,31 +38,30 @@ const MedicineSearchSection: React.FC<MedicineSearchSectionProps> = ({
             />
           </div>
           
-          {onCategoryFilterChange && (
-            <div className="space-y-2">
-              <Label>Filter by Category</Label>
-              <Select value={categoryFilter} onValueChange={onCategoryFilterChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
-                  <SelectItem value="tablet">Tablet</SelectItem>
-                  <SelectItem value="syrup">Syrup</SelectItem>
-                  <SelectItem value="injection">Injection</SelectItem>
-                  <SelectItem value="gel">Gel</SelectItem>
-                  <SelectItem value="ointment">Ointment</SelectItem>
-                  <SelectItem value="cream">Cream</SelectItem>
-                  <SelectItem value="suspension">Suspension</SelectItem>
-                  <SelectItem value="drops">Drops</SelectItem>
-                  <SelectItem value="sachet">Sachet</SelectItem>
-                  <SelectItem value="infusion">Infusion</SelectItem>
-                  <SelectItem value="transfusion">Transfusion</SelectItem>
-                  <SelectItem value="lotion">Lotion</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label>Filter by Category</Label>
+            <Select value={selectedCategory} onValueChange={onCategoryChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="tablet">Tablet</SelectItem>
+                <SelectItem value="syrup">Syrup</SelectItem>
+                <SelectItem value="injection">Injection</SelectItem>
+                <SelectItem value="gel">Gel</SelectItem>
+                <SelectItem value="ointment">Ointment</SelectItem>
+                <SelectItem value="cream">Cream</SelectItem>
+                <SelectItem value="suspension">Suspension</SelectItem>
+                <SelectItem value="drops">Drops</SelectItem>
+                <SelectItem value="sachet">Sachet</SelectItem>
+                <SelectItem value="infusion">Infusion</SelectItem>
+                <SelectItem value="transfusion">Transfusion</SelectItem>
+                <SelectItem value="lotion">Lotion</SelectItem>
+                <SelectItem value="Capsule">Capsule</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardContent>
     </Card>
