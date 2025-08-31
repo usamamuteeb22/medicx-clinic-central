@@ -4,40 +4,70 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { format, startOfYear, endOfYear, eachMonthOfInterval } from 'date-fns';
 import { Users, Pill, FileText } from 'lucide-react';
 
 const HomePage = () => {
   const { user } = useAuth();
+
+  // Fetch monthly patient counts for the current year
+  const { data: monthlyPatients = [] } = useQuery({
+    queryKey: ['monthly-patients-year'],
+    queryFn: async () => {
+      const now = new Date();
+      const yearStart = startOfYear(now);
+      const yearEnd = endOfYear(now);
+      
+      const monthsInYear = eachMonthOfInterval({ start: yearStart, end: yearEnd });
+
+      const results = await Promise.all(
+        monthsInYear.map(async (date) => {
+          const monthStart = format(date, 'yyyy-MM-01');
+          const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+          const monthEnd = format(nextMonth, 'yyyy-MM-01');
+          
+          const { count } = await supabase
+            .from('patients')
+            .select('*', { count: 'exact', head: true })
+            .gte('registration_date', monthStart)
+            .lt('registration_date', monthEnd);
+          
+          return {
+            month: format(date, 'MMM yyyy'),
+            patients: count || 0
+          };
+        })
+      );
+
+      return results;
+    }
+  });
 
   // Fetch daily patient counts for the current month
   const { data: dailyPatients = [] } = useQuery({
     queryKey: ['daily-patients-month'],
     queryFn: async () => {
       const now = new Date();
-      const monthStart = startOfMonth(now);
-      const monthEnd = endOfMonth(now);
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       
-      const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-
-      const results = await Promise.all(
-        daysInMonth.map(async (date) => {
-          const sqlDate = format(date, 'yyyy-MM-dd');
-          const nextDay = format(new Date(date.getTime() + 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
-          
-          const { count } = await supabase
-            .from('patients')
-            .select('*', { count: 'exact', head: true })
-            .gte('registration_date', sqlDate)
-            .lt('registration_date', nextDay);
-          
-          return {
-            date: format(date, 'MMM dd'),
-            patients: count || 0
-          };
-        })
-      );
+      const results = [];
+      for (let d = new Date(monthStart); d <= monthEnd; d.setDate(d.getDate() + 1)) {
+        const sqlDate = format(d, 'yyyy-MM-dd');
+        const nextDay = format(new Date(d.getTime() + 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
+        
+        const { count } = await supabase
+          .from('patients')
+          .select('*', { count: 'exact', head: true })
+          .gte('registration_date', sqlDate)
+          .lt('registration_date', nextDay);
+        
+        results.push({
+          date: format(d, 'MMM dd'),
+          patients: count || 0
+        });
+      }
 
       return results;
     }
@@ -101,7 +131,32 @@ const HomePage = () => {
         </Card>
       </div>
 
-      {/* Daily Patients Chart - Updated to show whole month */}
+      {/* Monthly Patients Chart */}
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Monthly Patients Count (Current Year)</CardTitle>
+          <CardDescription>Number of patients registered each month this year</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyPatients}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Bar 
+                  dataKey="patients" 
+                  fill="#3b82f6" 
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Daily Patients Chart - Current Month */}
       <Card className="w-full">
         <CardHeader>
           <CardTitle>Daily Patients Count (Current Month)</CardTitle>
@@ -128,7 +183,7 @@ const HomePage = () => {
         </CardContent>
       </Card>
 
-      {/* Footer - Updated with red text color */}
+      {/* Footer */}
       <footer className="mt-12 py-6 border-t border-gray-200">
         <div className="text-center text-sm text-red-600">
           This Website is Developed by Usama Muteeb

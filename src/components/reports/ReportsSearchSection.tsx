@@ -5,27 +5,32 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Calendar, Eye, Printer, RotateCcw } from 'lucide-react';
+import { Search, Calendar, Eye, RotateCcw } from 'lucide-react';
 import { PatientReport } from '@/types/reportTypes';
 import { toast } from '@/hooks/use-toast';
+import ReportsPagination from './ReportsPagination';
 
 interface ReportsSearchSectionProps {
   onReportSelect: (report: PatientReport) => void;
 }
+
+const RECORDS_PER_PAGE = 10;
 
 const ReportsSearchSection: React.FC<ReportsSearchSectionProps> = ({ onReportSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [searchResults, setSearchResults] = useState<PatientReport[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  const searchReports = async () => {
+  const searchReports = async (page = 1) => {
     setLoading(true);
     try {
       let query = supabase
         .from('patient_reports')
-        .select('*')
+        .select('*', { count: 'exact' })
         .not('created_by_role', 'is', null)
         .order('created_at', { ascending: false });
 
@@ -37,8 +42,15 @@ const ReportsSearchSection: React.FC<ReportsSearchSectionProps> = ({ onReportSel
         query = query.lte('created_at', endDate + 'T23:59:59.999Z');
       }
 
-      const { data: reportsData, error: reportsError } = await query;
+      // Apply pagination
+      const from = (page - 1) * RECORDS_PER_PAGE;
+      const to = from + RECORDS_PER_PAGE - 1;
+      query = query.range(from, to);
+
+      const { data: reportsData, error: reportsError, count } = await query;
       if (reportsError) throw reportsError;
+
+      setTotalCount(count || 0);
 
       if (!reportsData || reportsData.length === 0) {
         setSearchResults([]);
@@ -91,12 +103,19 @@ const ReportsSearchSection: React.FC<ReportsSearchSectionProps> = ({ onReportSel
   };
 
   useEffect(() => {
-    searchReports();
+    setCurrentPage(1);
+    searchReports(1);
   }, [searchTerm, startDate, endDate]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    searchReports(page);
+  };
 
   const handleResetDates = () => {
     setStartDate('');
     setEndDate('');
+    setCurrentPage(1);
   };
 
   const formatDateTime = (dateString: string) => {
@@ -113,6 +132,8 @@ const ReportsSearchSection: React.FC<ReportsSearchSectionProps> = ({ onReportSel
     });
     return { dateStr, timeStr };
   };
+
+  const totalPages = Math.ceil(totalCount / RECORDS_PER_PAGE);
 
   return (
     <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
@@ -179,46 +200,59 @@ const ReportsSearchSection: React.FC<ReportsSearchSectionProps> = ({ onReportSel
 
         {/* Results Table */}
         {!loading && searchResults.length > 0 && (
-          <div className="overflow-x-auto rounded-lg border border-gray-200">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50">
-                  <TableHead className="font-semibold">Patient ID</TableHead>
-                  <TableHead className="font-semibold">Name</TableHead>
-                  <TableHead className="font-semibold">Age</TableHead>
-                  <TableHead className="font-semibold">Date</TableHead>
-                  <TableHead className="font-semibold">Time</TableHead>
-                  <TableHead className="font-semibold">Phone Number</TableHead>
-                  <TableHead className="font-semibold text-center">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {searchResults.map((report) => {
-                  const { dateStr, timeStr } = formatDateTime(report.created_at);
-                  return (
-                    <TableRow key={report.id} className="hover:bg-gray-50">
-                      <TableCell className="font-medium">{report.patient?.patient_id || 'N/A'}</TableCell>
-                      <TableCell>{report.patient?.name || 'Unknown'}</TableCell>
-                      <TableCell>{report.patient?.age || 'N/A'}</TableCell>
-                      <TableCell>{dateStr}</TableCell>
-                      <TableCell>{timeStr}</TableCell>
-                      <TableCell>{report.patient?.phone_number || 'N/A'}</TableCell>
-                      <TableCell className="text-center">
-                        <Button
-                          onClick={() => onReportSelect(report)}
-                          size="sm"
-                          className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
-                        >
-                          <Eye className="h-4 w-4" />
-                          <span>Preview Report</span>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+          <>
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="font-semibold">Patient ID</TableHead>
+                    <TableHead className="font-semibold">Name</TableHead>
+                    <TableHead className="font-semibold">Age</TableHead>
+                    <TableHead className="font-semibold">Date</TableHead>
+                    <TableHead className="font-semibold">Time</TableHead>
+                    <TableHead className="font-semibold">Phone Number</TableHead>
+                    <TableHead className="font-semibold text-center">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {searchResults.map((report) => {
+                    const { dateStr, timeStr } = formatDateTime(report.created_at);
+                    return (
+                      <TableRow key={report.id} className="hover:bg-gray-50">
+                        <TableCell className="font-medium">{report.patient?.patient_id || 'N/A'}</TableCell>
+                        <TableCell>{report.patient?.name || 'Unknown'}</TableCell>
+                        <TableCell>{report.patient?.age || 'N/A'}</TableCell>
+                        <TableCell>{dateStr}</TableCell>
+                        <TableCell>{timeStr}</TableCell>
+                        <TableCell>{report.patient?.phone_number || 'N/A'}</TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            onClick={() => onReportSelect(report)}
+                            size="sm"
+                            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Eye className="h-4 w-4" />
+                            <span>Preview Report</span>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <ReportsPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                totalRecords={totalCount}
+                recordsPerPage={RECORDS_PER_PAGE}
+              />
+            )}
+          </>
         )}
 
         {/* No Results */}
@@ -233,9 +267,10 @@ const ReportsSearchSection: React.FC<ReportsSearchSectionProps> = ({ onReportSel
         )}
 
         {/* Results Count */}
-        {!loading && searchResults.length > 0 && (
+        {!loading && totalCount > 0 && (
           <div className="text-sm text-gray-600 text-center">
-            Found {searchResults.length} report{searchResults.length !== 1 ? 's' : ''}
+            Found {totalCount} report{totalCount !== 1 ? 's' : ''}
+            {totalPages > 1 && ` (Page ${currentPage} of ${totalPages})`}
           </div>
         )}
       </CardContent>

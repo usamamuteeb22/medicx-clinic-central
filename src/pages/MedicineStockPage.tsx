@@ -9,6 +9,7 @@ import MedicineSearchSection from '@/components/stock/MedicineSearchSection';
 import MedicineTable from '@/components/stock/MedicineTable';
 import { generateMedicineStockExcel } from '@/utils/medicineStockExcelUtils';
 import AddMedicineModal from '@/components/stock/AddMedicineModal';
+import EditMedicineModal from '@/components/stock/EditMedicineModal';
 
 interface Medicine {
   id: string;
@@ -23,6 +24,8 @@ interface Medicine {
 const MedicineStockPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
   const navigate = useNavigate();
 
   const { data: medicines = [], isLoading, refetch } = useQuery({
@@ -52,6 +55,15 @@ const MedicineStockPage = () => {
     refetch();
   };
 
+  const handleEditMedicine = (medicine: Medicine) => {
+    setSelectedMedicine(medicine);
+    setShowEditModal(true);
+  };
+
+  const handleMedicineUpdated = () => {
+    refetch();
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -77,12 +89,22 @@ const MedicineStockPage = () => {
       </div>
 
       <MedicineSearchSection searchTerm={searchTerm} onSearchChange={setSearchTerm} />
-      <MedicineTable medicines={filteredMedicines} />
+      <MedicineTable 
+        medicines={filteredMedicines} 
+        onEditMedicine={handleEditMedicine}
+      />
       
       <AddMedicineModal 
         isOpen={showAddModal} 
         onClose={() => setShowAddModal(false)} 
         onMedicineAdded={handleMedicineAdded}
+      />
+      
+      <EditMedicineModal 
+        isOpen={showEditModal} 
+        onClose={() => setShowEditModal(false)} 
+        medicine={selectedMedicine}
+        onMedicineUpdated={handleMedicineUpdated}
       />
     </div>
   );

@@ -50,13 +50,11 @@ const LatestReceptionReport: React.FC<LatestReceptionReportProps> = ({ onReportS
 
       if (error) {
         if (error.code === 'PGRST116') {
-          // No data found
           return null;
         }
         throw error;
       }
 
-      // Fetch complete patient data including all required fields
       const { data: patientData, error: patientError } = await supabase
         .from('patients')
         .select('id, patient_id, name, age, age_years, age_months, age_days, gender, phone_number, cnic, category')
@@ -70,7 +68,7 @@ const LatestReceptionReport: React.FC<LatestReceptionReportProps> = ({ onReportS
         patient: patientData
       } as ReceptionReport;
     },
-    refetchInterval: 30000 // Refresh every 30 seconds
+    refetchInterval: 30000
   });
 
   if (isLoading) {

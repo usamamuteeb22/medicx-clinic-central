@@ -10,7 +10,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 
-interface MedicineUsagePaginationProps {
+interface ReportsPaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -18,7 +18,7 @@ interface MedicineUsagePaginationProps {
   recordsPerPage: number;
 }
 
-const MedicineUsagePagination: React.FC<MedicineUsagePaginationProps> = ({
+const ReportsPagination: React.FC<ReportsPaginationProps> = ({
   currentPage,
   totalPages,
   onPageChange,
@@ -46,7 +46,6 @@ const MedicineUsagePagination: React.FC<MedicineUsagePaginationProps> = ({
         );
       }
     } else {
-      // Always show first page
       pages.push(
         <PaginationItem key={1}>
           <PaginationLink 
@@ -58,7 +57,6 @@ const MedicineUsagePagination: React.FC<MedicineUsagePaginationProps> = ({
         </PaginationItem>
       );
 
-      // Add ellipsis if needed
       if (currentPage > 3) {
         pages.push(
           <PaginationItem key="ellipsis-start">
@@ -67,7 +65,6 @@ const MedicineUsagePagination: React.FC<MedicineUsagePaginationProps> = ({
         );
       }
 
-      // Show pages around current page
       const start = Math.max(2, currentPage - 1);
       const end = Math.min(totalPages - 1, currentPage + 1);
 
@@ -84,7 +81,6 @@ const MedicineUsagePagination: React.FC<MedicineUsagePaginationProps> = ({
         );
       }
 
-      // Add ellipsis if needed
       if (currentPage < totalPages - 2) {
         pages.push(
           <PaginationItem key="ellipsis-end">
@@ -93,7 +89,6 @@ const MedicineUsagePagination: React.FC<MedicineUsagePaginationProps> = ({
         );
       }
 
-      // Always show last page
       if (totalPages > 1) {
         pages.push(
           <PaginationItem key={totalPages}>
@@ -114,7 +109,7 @@ const MedicineUsagePagination: React.FC<MedicineUsagePaginationProps> = ({
   return (
     <div className="flex items-center justify-between px-2">
       <div className="text-sm text-gray-700">
-        Showing {startRecord} to {endRecord} of {totalRecords} records
+        Showing {startRecord} to {endRecord} of {totalRecords} reports
       </div>
       <Pagination>
         <PaginationContent>
@@ -139,4 +134,4 @@ const MedicineUsagePagination: React.FC<MedicineUsagePaginationProps> = ({
   );
 };
 
-export default MedicineUsagePagination;
+export default ReportsPagination;

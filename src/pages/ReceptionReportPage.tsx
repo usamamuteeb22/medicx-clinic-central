@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import PatientSelector from '@/components/PatientSelector';
+import LatestReceptionReportsTable from '@/components/reception/LatestReceptionReportsTable';
 
 interface Patient {
   id: string;
@@ -75,7 +76,6 @@ const ReceptionReportPage = () => {
         description: "Reception report created successfully!"
       });
 
-      // Reset form
       setFormData({
         blood_pressure: '',
         temperature: '',
@@ -113,16 +113,18 @@ const ReceptionReportPage = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      {/* Latest Reception Reports Table */}
+      <LatestReceptionReportsTable />
+
+      {/* Create New Reception Report */}
       <Card>
         <CardHeader>
-          <CardTitle>Reception Report</CardTitle>
+          <CardTitle>Create New Reception Report</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Patient Selection */}
             <div className="space-y-2">
-              {/* <Label>Select Patient *</Label> */}
               <PatientSelector
                 selectedPatient={selectedPatient}
                 onPatientSelect={setSelectedPatient}
@@ -131,7 +133,6 @@ const ReceptionReportPage = () => {
 
             {selectedPatient && (
               <>
-                {/* Medical Vitals */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg">Medical Vitals</CardTitle>
