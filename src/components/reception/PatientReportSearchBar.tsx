@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -78,7 +79,7 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
             gender: patient.gender || 'unknown',
             phone_number: patient.phone_number || ''
           }
-        };
+        } as ReceptionReport;
       }).filter(report => report !== null) as ReceptionReport[];
 
       // Filter results based on search term
