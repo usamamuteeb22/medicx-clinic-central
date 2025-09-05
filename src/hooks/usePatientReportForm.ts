@@ -111,43 +111,49 @@ export const usePatientReportForm = () => {
     }
   }, [selectedPatient, prescribedMedicines, formData, user?.id]);
 
-  const handleReceptionReportSelect = useCallback(async (report: ReceptionReport) => {
-    try {
-      // Fetch the reception report details and pre-fill the form
-      const { data: receptionReportData, error } = await supabase
-        .from('patient_reports')
-        .select('*')
-        .eq('id', report.id)
-        .single();
+  const handleReceptionReportSelect = useCallback((report: ReceptionReport) => {
+    // Make function synchronous to match expected type
+    const loadReceptionReport = async () => {
+      try {
+        // Fetch the reception report details and pre-fill the form
+        const { data: receptionReportData, error } = await supabase
+          .from('patient_reports')
+          .select('*')
+          .eq('id', report.id)
+          .single();
 
-      if (error) throw receptionReportData;
+        if (error) throw error;
 
-      // Set the patient
-      setSelectedPatient(report.patient);
+        // Set the patient
+        setSelectedPatient(report.patient);
 
-      // Pre-fill the medical vitals from reception report
-      setFormData(prev => ({
-        ...prev,
-        bsr: receptionReportData.bsr?.toString() || '',
-        saturation: receptionReportData.saturation?.toString() || '',
-        blood_pressure: receptionReportData.blood_pressure || '',
-        temperature: receptionReportData.temperature?.toString() || '',
-        weight: receptionReportData.weight?.toString() || ''
-      }));
+        // Pre-fill the medical vitals from reception report
+        setFormData(prev => ({
+          ...prev,
+          bsr: receptionReportData.bsr?.toString() || '',
+          saturation: receptionReportData.saturation?.toString() || '',
+          blood_pressure: receptionReportData.blood_pressure || '',
+          temperature: receptionReportData.temperature?.toString() || '',
+          weight: receptionReportData.weight?.toString() || ''
+        }));
 
-      toast({
-        title: "Reception Report Loaded",
-        description: "Medical vitals have been pre-filled from the reception report."
-      });
+        toast({
+          title: "Reception Report Loaded",
+          description: "Medical vitals have been pre-filled from the reception report."
+        });
 
-    } catch (error: any) {
-      console.error('Error loading reception report:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to load reception report details"
-      });
-    }
+      } catch (error: any) {
+        console.error('Error loading reception report:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load reception report details"
+        });
+      }
+    };
+
+    // Call the async function
+    loadReceptionReport();
   }, []);
 
   const resetForm = useCallback(() => {

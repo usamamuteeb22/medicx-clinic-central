@@ -2,25 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Search } from 'lucide-react';
-import { ReceptionReport, Patient } from '@/types/reportTypes';
+import { Search, Clock } from 'lucide-react';
+import { ReceptionReport } from '@/types/reportTypes';
 
 interface PatientReportSearchBarProps {
   onReportSelect: (report: ReceptionReport) => void;
 }
 
-const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
-  onReportSelect
-}) => {
+const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({ onReportSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<ReceptionReport[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (searchTerm.trim()) {
-      searchReports();
+      const timeoutId = setTimeout(() => {
+        searchReports();
+      }, 300);
+      return () => clearTimeout(timeoutId);
     } else {
       setSearchResults([]);
     }
@@ -44,29 +44,24 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
         return;
       }
 
-      // Get unique patient IDs
       const patientIds = [...new Set(reportsData.map(report => report.patient_id))];
 
-      // Fetch patient details for these IDs
       const { data: patientsData, error: patientsError } = await supabase
         .from('patients')
-        .select('id, patient_id, name, age, gender, phone_number, cnic')
+        .select('id, patient_id, name, age, gender, phone_number')
         .in('id', patientIds);
 
       if (patientsError) throw patientsError;
 
-      // Create a map of patient data for quick lookup
-      const patientsMap = new Map(patientsData?.map(patient => [patient.id, patient]) || []);
+      const patientMap = new Map(patientsData?.map(p => [p.id, p]) || []);
 
-      // Transform data using the actual report_number from database
-      const reportsWithPatients = reportsData?.map((report) => {
-        const patient = patientsMap.get(report.patient_id);
-        
+      const reportsWithPatients = reportsData.map(report => {
+        const patient = patientMap.get(report.patient_id);
         if (!patient) return null;
 
         return {
           id: report.id,
-          report_id: report.report_number || 2000, // Use actual report_number or fallback
+          report_id: report.report_number || 0,
           patient_id: report.patient_id,
           created_at: report.created_at,
           patient: {
@@ -84,15 +79,14 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
       const filteredResults = reportsWithPatients.filter(report => {
         const searchLower = searchTerm.toLowerCase();
         return (
-          report.report_id.toString().includes(searchTerm) ||
           report.patient.name.toLowerCase().includes(searchLower) ||
-          report.patient.patient_id.toString().includes(searchTerm) ||
-          (report.patient.phone_number && report.patient.phone_number.includes(searchTerm)) ||
-          ((patientsMap.get(report.patient_id) as any)?.cnic && (patientsMap.get(report.patient_id) as any).cnic.includes(searchTerm))
+          report.patient.patient_id.toString().includes(searchLower) ||
+          report.patient.phone_number?.toLowerCase().includes(searchLower) ||
+          report.report_id.toString().includes(searchLower)
         );
       });
 
-      setSearchResults(filteredResults);
+      setSearchResults(filteredResults.slice(0, 10));
     } catch (error) {
       console.error('Error searching reports:', error);
       setSearchResults([]);
@@ -101,14 +95,20 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('en-US', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      }),
+      time: date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      })
+    };
   };
 
   return (
@@ -119,63 +119,65 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({
           <span>Search Reception Reports</span>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
           <Input
-            placeholder="Search by Report ID, Patient Name, Patient ID, Phone Number, or CNIC..."
+            placeholder="Search by patient name, ID, phone, or report number..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          
-          {loading && (
-            <div className="text-center py-4">
-              <div className="text-gray-500">Searching...</div>
-            </div>
-          )}
-
-          {searchResults.length > 0 && (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Report ID</TableHead>
-                    <TableHead>Patient Name</TableHead>
-                    <TableHead>Patient ID</TableHead>
-                    <TableHead>Date/Time</TableHead>
-                    <TableHead>Phone Number</TableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {searchResults.map((report) => (
-                    <TableRow key={report.id}>
-                      <TableCell className="font-medium">{report.report_id}</TableCell>
-                      <TableCell>{report.patient.name}</TableCell>
-                      <TableCell>{report.patient.patient_id}</TableCell>
-                      <TableCell>{formatDate(report.created_at)}</TableCell>
-                      <TableCell>{report.patient.phone_number || 'N/A'}</TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onReportSelect(report)}
-                        >
-                          Select Report
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-
-          {searchTerm.trim() && !loading && searchResults.length === 0 && (
-            <div className="text-center py-4 text-gray-500">
-              No reports found matching your search criteria.
-            </div>
-          )}
         </div>
+
+        {loading && (
+          <div className="text-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent mx-auto mb-2"></div>
+            <p className="text-sm text-gray-600">Searching reports...</p>
+          </div>
+        )}
+
+        {searchResults.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm text-gray-600">Found {searchResults.length} reports:</p>
+            <div className="max-h-64 overflow-y-auto space-y-2">
+              {searchResults.map((report) => {
+                const { date, time } = formatDateTime(report.created_at);
+                return (
+                  <div
+                    key={report.id}
+                    className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => onReportSelect(report)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium text-blue-600">Report #{report.report_id}</span>
+                          <span className="text-xs text-gray-500">({report.id.slice(0, 8)})</span>
+                        </div>
+                        <p className="font-medium">{report.patient.name}</p>
+                        <p className="text-sm text-gray-600">
+                          Patient ID: {report.patient.patient_id} | Age: {report.patient.age} | Phone: {report.patient.phone_number}
+                        </p>
+                        <div className="flex items-center space-x-2 text-xs text-gray-500 mt-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{date} at {time}</span>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline">
+                        Select
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {searchTerm && !loading && searchResults.length === 0 && (
+          <div className="text-center py-4 text-gray-500">
+            <p>No reception reports found matching "{searchTerm}"</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

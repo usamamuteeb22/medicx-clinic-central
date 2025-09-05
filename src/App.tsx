@@ -17,6 +17,7 @@ import PatientReportPage from "./pages/PatientReportPage";
 import ReceptionReportPage from "./pages/ReceptionReportPage";
 import ReportsPage from "./pages/ReportsPage";
 import MedicineUsagePage from "./pages/MedicineUsagePage";
+import VisitsPage from "./pages/VisitsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -156,6 +157,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <MedicineDetailPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/visits" 
+              element={
+                <ProtectedRoute>
+                  <VisitsPage />
                 </ProtectedRoute>
               } 
             />

@@ -77,9 +77,14 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
     const dosageTimings = [morning, afternoon, evening, night].filter(Boolean).length;
     const mealTimings = [beforeMeal, afterMeal, fasting].filter(Boolean).length;
     
-    const totalTimings = dosageTimings + mealTimings;
-    const calculatedQty = days * totalTimings;
-    setCalculatedQuantity(calculatedQty);
+    // If no dosage times selected (N/A), use days as quantity
+    if (dosageTimings === 0) {
+      setCalculatedQuantity(days);
+    } else {
+      const totalTimings = Math.max(dosageTimings, 1) * Math.max(mealTimings, 1);
+      const calculatedQty = days * totalTimings;
+      setCalculatedQuantity(calculatedQty);
+    }
   }, [days, morning, afternoon, evening, night, beforeMeal, afterMeal, fasting]);
 
   const handleAddMedicine = () => {
@@ -101,14 +106,8 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
       return;
     }
 
-    if (!morning && !afternoon && !evening && !night) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please select at least one dosage time"
-      });
-      return;
-    }
+    // Allow N/A option (no dosage times selected)
+    const hasNoDosageTimes = !morning && !afternoon && !evening && !night;
 
     if (calculatedQuantity > selectedMedicine.total_quantity) {
       toast({
@@ -201,9 +200,9 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
                       setSearchTerm('');
                     }}
                   >
-                    <div className="font-medium">{medicine.name}</div>
+                    <div className="font-medium">{medicine.category} - {medicine.name}</div>
                     <div className="text-sm text-gray-500">
-                      Category: {medicine.category} | Stock: {medicine.total_quantity}
+                      Stock: {medicine.total_quantity}
                     </div>
                   </div>
                 ))
@@ -217,12 +216,12 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
         {selectedMedicine && (
           <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
             <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium">{selectedMedicine.name}</h3>
-                <p className="text-sm text-gray-600">
-                  Available Stock: {selectedMedicine.total_quantity} | Category: {selectedMedicine.category}
-                </p>
-              </div>
+                <div>
+                  <h3 className="font-medium">{selectedMedicine.category} - {selectedMedicine.name}</h3>
+                  <p className="text-sm text-gray-600">
+                    Available Stock: {selectedMedicine.total_quantity}
+                  </p>
+                </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -280,6 +279,21 @@ const MedicineSearchForm: React.FC<MedicineSearchFormProps> = ({
                     onCheckedChange={(checked) => setNight(checked === true)}
                   />
                   <Label htmlFor="night">Night</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="na-dosage"
+                    checked={!morning && !afternoon && !evening && !night}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setMorning(false);
+                        setAfternoon(false);
+                        setEvening(false);
+                        setNight(false);
+                      }
+                    }}
+                  />
+                  <Label htmlFor="na-dosage">N/A</Label>
                 </div>
               </div>
             </div>

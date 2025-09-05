@@ -5,28 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Clock, User, Phone } from 'lucide-react';
-
-interface Patient {
-  id: string;
-  patient_id: number;
-  name: string;
-  age?: number;
-  age_years?: number;
-  age_months?: number;
-  age_days?: number;
-  gender: string;
-  phone_number: string;
-  cnic?: string;
-  category?: string;
-}
-
-interface ReceptionReport {
-  id: string;
-  patient_id: string;
-  created_at: string;
-  report_number: number;
-  patient: Patient;
-}
+import { Patient, ReceptionReport } from '@/types/reportTypes';
 
 interface LatestReceptionReportProps {
   onReportSelect: (report: ReceptionReport) => void;
@@ -67,7 +46,11 @@ const LatestReceptionReport: React.FC<LatestReceptionReportProps> = ({ onReportS
 
       return {
         ...data,
-        patient: patientData
+        report_id: data.report_number || 0,
+        patient: {
+          ...patientData,
+          age: patientData.age || patientData.age_years || 0
+        }
       } as ReceptionReport;
     },
     refetchInterval: 30000
@@ -120,7 +103,7 @@ const LatestReceptionReport: React.FC<LatestReceptionReportProps> = ({ onReportS
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
           <div>
             <p className="text-sm text-gray-600">Report ID</p>
-            <p className="font-medium">{latestReport.report_number}</p>
+            <p className="font-medium">{latestReport.report_id}</p>
           </div>
           
           <div className="flex items-center space-x-2">

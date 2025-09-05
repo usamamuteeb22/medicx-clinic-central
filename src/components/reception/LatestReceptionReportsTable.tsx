@@ -17,6 +17,7 @@ interface ReceptionReport {
   id: string;
   patient_id: string;
   created_at: string;
+  report_number: number;
   patient: Patient;
 }
 
@@ -26,7 +27,7 @@ const LatestReceptionReportsTable: React.FC = () => {
     queryFn: async () => {
       const { data: reportsData, error: reportsError } = await supabase
         .from('patient_reports')
-        .select('id, patient_id, created_at')
+        .select('id, patient_id, created_at, report_number')
         .eq('created_by_role', 'reception')
         .order('created_at', { ascending: false })
         .limit(10);
@@ -107,7 +108,7 @@ const LatestReceptionReportsTable: React.FC = () => {
                   const { dateStr, timeStr } = formatDateTime(report.created_at);
                   return (
                     <TableRow key={report.id} className="hover:bg-gray-50">
-                      <TableCell className="font-medium">{report.id.slice(0, 8)}</TableCell>
+                      <TableCell className="font-medium">{report.report_number || 'N/A'}</TableCell>
                       <TableCell>{report.patient?.patient_id || 'N/A'}</TableCell>
                       <TableCell>{report.patient?.name || 'Unknown'}</TableCell>
                       <TableCell>{report.patient?.phone_number || 'N/A'}</TableCell>
