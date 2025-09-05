@@ -345,6 +345,51 @@ export type Database = {
         }
         Relationships: []
       }
+      visits: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          patient_id: string
+          payment_amount: number
+          updated_at: string
+          visit_date: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          patient_id: string
+          payment_amount?: number
+          updated_at?: string
+          visit_date?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          patient_id?: string
+          payment_amount?: number
+          updated_at?: string
+          visit_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visits_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
