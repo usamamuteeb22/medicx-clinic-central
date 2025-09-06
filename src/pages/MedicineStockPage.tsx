@@ -40,9 +40,7 @@ const MedicineStockPage = () => {
         .order('serial_number', { ascending: true });
 
       if (searchTerm) {
-        // Search in both name and category, or combined format "category - medicine name"
-        const searchLower = searchTerm.toLowerCase();
-        query = query.or(`name.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%`);
+        query = query.ilike('name', `%${searchTerm}%`);
       }
 
       if (selectedCategory !== 'all') {

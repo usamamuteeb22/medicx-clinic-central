@@ -2,9 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Printer, FileText, Package } from 'lucide-react';
+import { Printer, FileText } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { PatientReport, PrescribedMedicine } from '@/types/reportTypes';
@@ -22,8 +20,6 @@ import ReportsSearchSection from '@/components/reports/ReportsSearchSection';
 const ReportsPage = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState<PatientReport | null>(null);
-  const [showStockModal, setShowStockModal] = useState(false);
-  const [stockDays, setStockDays] = useState('');
   const [reportFormData, setReportFormData] = useState({
     blood_pressure: '',
     temperature: '',
@@ -113,70 +109,6 @@ const ReportsPage = () => {
     setSelectedReport(null);
   };
 
-  const handleStockDeduction = async () => {
-    if (!stockDays || parseInt(stockDays) <= 0) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please enter a valid number of days"
-      });
-      return;
-    }
-
-    if (!selectedReport || prescribedMedicines.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Error", 
-        description: "No medicines found to deduct stock"
-      });
-      return;
-    }
-
-    try {
-      const days = parseInt(stockDays);
-      
-      for (const medicine of prescribedMedicines) {
-        // Calculate daily usage based on prescription
-        let dailyUsage = 0;
-        if (medicine.morning) dailyUsage++;
-        if (medicine.afternoon) dailyUsage++;
-        if (medicine.evening) dailyUsage++;
-        if (medicine.night) dailyUsage++;
-        
-        if (dailyUsage === 0) dailyUsage = 1; // Default to 1 if no timing specified
-        
-        const totalQuantity = dailyUsage * days;
-        
-        // Insert stock deduction record
-        const { error } = await supabase
-          .from('medicine_stock_history')
-          .insert({
-            medicine_id: medicine.medicine.id,
-            stock_type: 'remove',
-            quantity: totalQuantity,
-            created_by: selectedReport.created_by
-          });
-
-        if (error) throw error;
-      }
-
-      toast({
-        title: "Stock Deducted",
-        description: `Successfully deducted ${days} days of medicine stock`
-      });
-
-      setShowStockModal(false);
-      setStockDays('');
-    } catch (error) {
-      console.error('Error deducting stock:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to deduct stock. Please try again."
-      });
-    }
-  };
-
   const handlePrint = () => {
     const printContent = document.getElementById('medical-report-print');
     if (printContent) {
@@ -232,13 +164,6 @@ const ReportsPage = () => {
                     <Printer className="h-4 w-4" />
                     <span>Print Report</span>
                   </Button>
-                  <Button 
-                    onClick={() => setShowStockModal(true)} 
-                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
-                  >
-                    <Package className="h-4 w-4" />
-                    <span>Stock</span>
-                  </Button>
                 </div>
               </div>
             </DialogHeader>
@@ -288,44 +213,6 @@ const ReportsPage = () => {
                 <p className="text-sm text-gray-700 leading-relaxed">{reportFormData.patient_history}</p>
               </div>
             )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Stock Deduction Modal */}
-        <Dialog open={showStockModal} onOpenChange={setShowStockModal}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center space-x-2">
-                <Package className="h-5 w-5" />
-                <span>Deduct Medicine Stock</span>
-              </DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="stock-days">Number of Days</Label>
-                <Input
-                  id="stock-days"
-                  type="number"
-                  min="1"
-                  placeholder="Enter number of days..."
-                  value={stockDays}
-                  onChange={(e) => setStockDays(e.target.value)}
-                />
-                <p className="text-sm text-gray-600">
-                  Stock will be deducted based on daily usage × number of days for each medicine.
-                </p>
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button variant="outline" onClick={() => setShowStockModal(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleStockDeduction}>
-                  Save
-                </Button>
-              </div>
-            </div>
           </DialogContent>
         </Dialog>
       </div>
