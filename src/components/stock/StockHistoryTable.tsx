@@ -66,6 +66,20 @@ const StockHistoryTable: React.FC<StockHistoryTableProps> = ({ medicineId }) => 
       // For stock reductions (type 'remove'), get patient names from medicine_usage
       const usageRecords = historyData.filter(h => h.stock_type === 'remove');
       let patientMap = new Map();
+      let userMap = new Map();
+
+      // Get user information for all records
+      const userIds = [...new Set(historyData.map(h => h.created_by).filter(Boolean))];
+      if (userIds.length > 0) {
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('id, full_name, username')
+          .in('id', userIds);
+        
+        if (!usersError && usersData) {
+          userMap = new Map(usersData.map(u => [u.id, u.full_name || u.username || 'Unknown User']));
+        }
+      }
 
       if (usageRecords.length > 0) {
         // Get medicine usage records to find patient info
@@ -102,17 +116,21 @@ const StockHistoryTable: React.FC<StockHistoryTableProps> = ({ medicineId }) => 
       // Combine data
       const stockHistory: StockHistory[] = historyData.map(history => {
         const medicineName = medicineMap.get(history.medicine_id) || 'Unknown Medicine';
-        let patientName;
+        const userName = userMap.get(history.created_by) || 'Unknown User';
+        let displayName = userName;
         
         if (history.stock_type === 'remove') {
           const key = `${history.medicine_id}_${history.created_by}`;
-          patientName = patientMap.get(key);
+          const patientName = patientMap.get(key);
+          if (patientName) {
+            displayName = `${patientName} (via ${userName})`;
+          }
         }
 
         return {
           ...history,
           medicine_name: medicineName,
-          patient_name: patientName
+          patient_name: displayName
         };
       });
 
@@ -214,10 +232,10 @@ const StockHistoryTable: React.FC<StockHistoryTableProps> = ({ medicineId }) => 
                         {history.stock_type === 'add' ? '+' : '-'}{history.quantity}
                       </td>
                       <td className="p-3">
-                        {history.stock_type === 'remove' && history.patient_name 
+                        {history.stock_type === 'remove' 
                           ? history.patient_name 
                           : history.stock_type === 'add' 
-                          ? 'Stock Added' 
+                          ? history.patient_name
                           : 'N/A'}
                       </td>
                       <td className="p-3">{formatDate(history.created_at)}</td>
