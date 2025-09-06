@@ -69,8 +69,12 @@ const VisitsPage: React.FC = () => {
         .select('*')
         .order('name');
 
-      if (searchTerm.trim()) {
-        query = query.or(`patient_id.eq.${searchTerm},name.ilike.%${searchTerm}%,phone_number.ilike.%${searchTerm}%,cnic.ilike.%${searchTerm}%`);
+      // Handle numeric search (patient_id) vs text search
+      const isNumeric = /^\d+$/.test(searchTerm.trim());
+      if (isNumeric) {
+        query = query.eq('patient_id', parseInt(searchTerm.trim()));
+      } else {
+        query = query.or(`name.ilike.%${searchTerm}%,phone_number.ilike.%${searchTerm}%,cnic.ilike.%${searchTerm}%`);
       }
 
       const { data, error } = await query.limit(10);
@@ -87,10 +91,16 @@ const VisitsPage: React.FC = () => {
       if (!visitSearchTerm.trim()) return [];
       
       // First find patients matching the search
-      const { data: patientData, error: patientError } = await supabase
-        .from('patients')
-        .select('id')
-        .or(`patient_id.eq.${visitSearchTerm},name.ilike.%${visitSearchTerm}%`);
+      const isNumeric = /^\d+$/.test(visitSearchTerm.trim());
+      let patientQuery = supabase.from('patients').select('id');
+      
+      if (isNumeric) {
+        patientQuery = patientQuery.eq('patient_id', parseInt(visitSearchTerm.trim()));
+      } else {
+        patientQuery = patientQuery.ilike('name', `%${visitSearchTerm}%`);
+      }
+      
+      const { data: patientData, error: patientError } = await patientQuery;
       
       if (patientError) throw patientError;
       if (!patientData || patientData.length === 0) return [];

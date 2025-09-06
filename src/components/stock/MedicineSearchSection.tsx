@@ -30,9 +30,9 @@ const MedicineSearchSection: React.FC<MedicineSearchSectionProps> = ({
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Search by Name or Serial Number</Label>
+            <Label>Search by Category - Medicine Name or Serial Number</Label>
             <Input
-              placeholder="Enter medicine name or serial number..."
+              placeholder="Search by Category - Medicine Name or serial number..."
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
             />

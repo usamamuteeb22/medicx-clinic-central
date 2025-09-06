@@ -17,6 +17,7 @@ interface StockHistory {
   expiry_date?: string;
   medicine_name: string;
   patient_name?: string;
+  user_name?: string;
 }
 
 interface StockHistoryTableProps {
@@ -63,7 +64,23 @@ const StockHistoryTable: React.FC<StockHistoryTableProps> = ({ medicineId }) => 
 
       const medicineMap = new Map(medicinesData?.map(m => [m.id, m.name]) || []);
 
-      // For stock reductions (type 'remove'), get patient names from medicine_usage
+      // Get user information for all stock operations  
+      let userMap = new Map();
+      if (historyData.length > 0) {
+        const userIds = [...new Set(historyData.map(h => h.created_by).filter(id => id))];
+        if (userIds.length > 0) {
+          const { data: usersData, error: usersError } = await supabase
+            .from('users')
+            .select('id, full_name, username')
+            .in('id', userIds);
+          
+          if (!usersError && usersData) {
+            userMap = new Map(usersData.map(u => [u.id, u.full_name || u.username || 'Unknown User']));
+          }
+        }
+      }
+
+      // For stock reductions (type 'remove'), also get patient names from medicine_usage
       const usageRecords = historyData.filter(h => h.stock_type === 'remove');
       let patientMap = new Map();
 
@@ -102,6 +119,7 @@ const StockHistoryTable: React.FC<StockHistoryTableProps> = ({ medicineId }) => 
       // Combine data
       const stockHistory: StockHistory[] = historyData.map(history => {
         const medicineName = medicineMap.get(history.medicine_id) || 'Unknown Medicine';
+        const userName = userMap.get(history.created_by) || 'Unknown User';
         let patientName;
         
         if (history.stock_type === 'remove') {
@@ -112,7 +130,8 @@ const StockHistoryTable: React.FC<StockHistoryTableProps> = ({ medicineId }) => 
         return {
           ...history,
           medicine_name: medicineName,
-          patient_name: patientName
+          patient_name: patientName,
+          user_name: userName
         };
       });
 
@@ -215,10 +234,8 @@ const StockHistoryTable: React.FC<StockHistoryTableProps> = ({ medicineId }) => 
                       </td>
                       <td className="p-3">
                         {history.stock_type === 'remove' && history.patient_name 
-                          ? history.patient_name 
-                          : history.stock_type === 'add' 
-                          ? 'Stock Added' 
-                          : 'N/A'}
+                          ? `Patient: ${history.patient_name}` 
+                          : `User: ${history.user_name}`}
                       </td>
                       <td className="p-3">{formatDate(history.created_at)}</td>
                       <td className="p-3">
