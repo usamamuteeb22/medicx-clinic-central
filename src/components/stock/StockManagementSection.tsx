@@ -138,15 +138,23 @@ const StockManagementSection = ({ medicines }: StockManagementSectionProps) => {
               {/* Search Results Dropdown */}
               {medicineSearchTerm && !selectedMedicine && filteredMedicines.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-purple-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                  {filteredMedicines.slice(0, 10).map((medicine) => (
+                  {filteredMedicines.slice(0, 10).map((medicine: any) => (
                     <div
                       key={medicine.id}
                       onClick={() => handleMedicineSelect(medicine)}
                       className="p-3 hover:bg-purple-50 cursor-pointer border-b last:border-b-0"
                     >
-                      <div className="font-medium text-gray-900">{medicine.name}</div>
-                      <div className="text-sm text-gray-500">
-                        Current Stock: {medicine.total_quantity}
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
+                        <div className="flex-1">
+                          <div className="font-semibold text-gray-900">{medicine.name}</div>
+                          <div className="text-xs text-gray-600 mt-0.5">
+                            <span className="inline-block mr-3">Serial: #{medicine.serial_number}</span>
+                            <span className="inline-block">Category: {medicine.category}</span>
+                          </div>
+                        </div>
+                        <div className="text-sm font-medium text-purple-700">
+                          Stock: {medicine.total_quantity}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -162,9 +170,11 @@ const StockManagementSection = ({ medicines }: StockManagementSectionProps) => {
             
             {selectedMedicine && (
               <div className="p-3 bg-white border border-purple-200 rounded-md">
-                <div className="font-medium">{selectedMedicine.name}</div>
-                <div className="text-sm text-gray-500">
-                  Current Stock: {selectedMedicine.total_quantity}
+                <div className="font-semibold text-gray-900">{(selectedMedicine as any).name}</div>
+                <div className="text-xs text-gray-600 mt-1">
+                  <span className="inline-block mr-3">Serial: #{(selectedMedicine as any).serial_number}</span>
+                  <span className="inline-block mr-3">Category: {(selectedMedicine as any).category}</span>
+                  <span className="inline-block font-medium text-purple-700">Stock: {selectedMedicine.total_quantity}</span>
                 </div>
               </div>
             )}

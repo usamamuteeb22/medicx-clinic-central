@@ -125,7 +125,7 @@ const MedicineTable = ({ medicines, onEditMedicine }: MedicineTableProps) => {
                         {medicine.serial_number}
                       </Badge>
                     </td>
-                    <td className="p-3 font-medium">{medicine.category} - {medicine.name}</td>
+                    <td className="p-3 font-medium">{medicine.name}</td>
                     <td className="p-3">
                       <Badge variant="outline" className={getCategoryColor(medicine.category)}>
                         {medicine.category}
