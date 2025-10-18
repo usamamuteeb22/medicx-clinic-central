@@ -90,17 +90,24 @@ const VisitsPage: React.FC = () => {
     queryFn: async () => {
       if (!visitSearchTerm.trim()) return [];
       
-      // First find patients matching the search
-      const isNumeric = /^\d+$/.test(visitSearchTerm.trim());
-      let patientQuery = supabase.from('patients').select('id');
+      const trimmedSearch = visitSearchTerm.trim();
       
-      if (isNumeric) {
-        patientQuery = patientQuery.eq('patient_id', parseInt(visitSearchTerm.trim()));
-      } else {
-        patientQuery = patientQuery.ilike('name', `%${visitSearchTerm}%`);
+      // Build OR conditions for all searchable patient fields
+      const conditions = [
+        `name.ilike.%${trimmedSearch}%`,
+        `phone_number.ilike.%${trimmedSearch}%`,
+        `cnic.ilike.%${trimmedSearch}%`
+      ];
+      
+      // If the search term is numeric, also search patient_id
+      if (/^\d+$/.test(trimmedSearch)) {
+        conditions.push(`patient_id.eq.${parseInt(trimmedSearch)}`);
       }
       
-      const { data: patientData, error: patientError } = await patientQuery;
+      const { data: patientData, error: patientError } = await supabase
+        .from('patients')
+        .select('id')
+        .or(conditions.join(','));
       
       if (patientError) throw patientError;
       if (!patientData || patientData.length === 0) return [];

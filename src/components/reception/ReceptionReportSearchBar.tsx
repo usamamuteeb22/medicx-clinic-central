@@ -35,16 +35,35 @@ const ReceptionReportSearchBar: React.FC<ReceptionReportSearchBarProps> = ({
 
   const searchPatients = async () => {
     try {
+      const trimmedSearch = searchTerm.trim();
+      if (!trimmedSearch) {
+        setSearchResults([]);
+        return;
+      }
+      
+      // Build OR conditions for all searchable fields
+      const conditions = [
+        `name.ilike.%${trimmedSearch}%`,
+        `phone_number.ilike.%${trimmedSearch}%`,
+        `cnic.ilike.%${trimmedSearch}%`
+      ];
+      
+      // If the search term is numeric, also search patient_id
+      if (/^\d+$/.test(trimmedSearch)) {
+        conditions.push(`patient_id.eq.${parseInt(trimmedSearch)}`);
+      }
+      
       const { data, error } = await supabase
         .from('patients')
         .select('*')
-        .or(`name.ilike.%${searchTerm}%,patient_id.eq.${parseInt(searchTerm) || 0},phone_number.ilike.%${searchTerm}%`)
+        .or(conditions.join(','))
         .limit(10);
 
       if (error) throw error;
       setSearchResults(data || []);
     } catch (error) {
       console.error('Error searching patients:', error);
+      setSearchResults([]);
     }
   };
 
@@ -59,7 +78,7 @@ const ReceptionReportSearchBar: React.FC<ReceptionReportSearchBarProps> = ({
       <CardContent>
         <div className="relative">
           <Input
-            placeholder="Search by Patient ID, Name, or Phone Number..."
+            placeholder="Search by Patient ID, Name, Phone, or CNIC..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="mb-4"

@@ -29,33 +29,53 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({ onRepor
   const searchReports = async () => {
     setLoading(true);
     try {
-      // First, get the latest reception reports with report_number
-      const { data: reportsData, error: reportsError } = await supabase
-        .from('patient_reports')
-        .select('id, patient_id, created_at, report_number')
-        .eq('created_by_role', 'reception')
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (reportsError) throw reportsError;
-
-      if (!reportsData || reportsData.length === 0) {
+      const trimmedSearch = searchTerm.trim();
+      if (!trimmedSearch) {
         setSearchResults([]);
         return;
       }
 
-      const patientIds = [...new Set(reportsData.map(report => report.patient_id))];
+      // Build OR conditions for all searchable patient fields
+      const conditions = [
+        `name.ilike.%${trimmedSearch}%`,
+        `phone_number.ilike.%${trimmedSearch}%`,
+        `cnic.ilike.%${trimmedSearch}%`
+      ];
+      
+      // If the search term is numeric, also search patient_id
+      if (/^\d+$/.test(trimmedSearch)) {
+        conditions.push(`patient_id.eq.${parseInt(trimmedSearch)}`);
+      }
 
+      // First, find matching patients
       const { data: patientsData, error: patientsError } = await supabase
         .from('patients')
         .select('id, patient_id, name, age, gender, phone_number')
-        .in('id', patientIds);
+        .or(conditions.join(','));
 
       if (patientsError) throw patientsError;
 
-      const patientMap = new Map(patientsData?.map(p => [p.id, p]) || []);
+      if (!patientsData || patientsData.length === 0) {
+        setSearchResults([]);
+        return;
+      }
 
-      const reportsWithPatients = reportsData.map(report => {
+      const patientIds = patientsData.map(p => p.id);
+
+      // Then get their latest reception reports
+      const { data: reportsData, error: reportsError } = await supabase
+        .from('patient_reports')
+        .select('id, patient_id, created_at, report_number')
+        .eq('created_by_role', 'reception')
+        .in('patient_id', patientIds)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (reportsError) throw reportsError;
+
+      const patientMap = new Map(patientsData.map(p => [p.id, p]));
+
+      const reportsWithPatients = reportsData?.map(report => {
         const patient = patientMap.get(report.patient_id);
         if (!patient) return null;
 
@@ -75,18 +95,7 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({ onRepor
         } as ReceptionReport;
       }).filter(report => report !== null) as ReceptionReport[];
 
-      // Filter results based on search term
-      const filteredResults = reportsWithPatients.filter(report => {
-        const searchLower = searchTerm.toLowerCase();
-        return (
-          report.patient.name.toLowerCase().includes(searchLower) ||
-          report.patient.patient_id.toString().includes(searchLower) ||
-          report.patient.phone_number?.toLowerCase().includes(searchLower) ||
-          report.report_id.toString().includes(searchLower)
-        );
-      });
-
-      setSearchResults(filteredResults.slice(0, 10));
+      setSearchResults(reportsWithPatients.slice(0, 10));
     } catch (error) {
       console.error('Error searching reports:', error);
       setSearchResults([]);
@@ -122,7 +131,7 @@ const PatientReportSearchBar: React.FC<PatientReportSearchBarProps> = ({ onRepor
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Input
-            placeholder="Search by patient name, ID, phone, or report number..."
+            placeholder="Search by patient name, ID, phone, CNIC..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />

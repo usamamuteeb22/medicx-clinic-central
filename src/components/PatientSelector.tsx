@@ -24,41 +24,52 @@ const PatientSelector: React.FC<PatientSelectorProps> = ({
   selectedPatient,
   onPatientSelect
 }) => {
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
-    fetchPatients();
-  }, []);
-
-  useEffect(() => {
-    if (searchQuery) {
-      const filtered = patients.filter(patient =>
-        patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        patient.patient_id.toString().includes(searchQuery) ||
-        (patient.phone_number && patient.phone_number.includes(searchQuery))
-      );
-      setFilteredPatients(filtered);
+    if (searchQuery.trim()) {
+      searchPatients(searchQuery);
       setShowDropdown(true);
     } else {
       setFilteredPatients([]);
       setShowDropdown(false);
     }
-  }, [searchQuery, patients]);
+  }, [searchQuery]);
 
-  const fetchPatients = async () => {
+  const searchPatients = async (query: string) => {
     try {
+      const trimmedSearch = query.trim();
+      if (!trimmedSearch) {
+        setFilteredPatients([]);
+        return;
+      }
+      
+      // Build OR conditions for all searchable fields
+      const conditions = [
+        `name.ilike.%${trimmedSearch}%`,
+        `phone_number.ilike.%${trimmedSearch}%`,
+        `cnic.ilike.%${trimmedSearch}%`
+      ];
+      
+      // If the search term is numeric, also search patient_id
+      if (/^\d+$/.test(trimmedSearch)) {
+        conditions.push(`patient_id.eq.${parseInt(trimmedSearch)}`);
+      }
+      
       const { data, error } = await supabase
         .from('patients')
         .select('*')
-        .order('name');
+        .or(conditions.join(','))
+        .order('name')
+        .limit(50);
 
       if (error) throw error;
-      setPatients(data || []);
+      setFilteredPatients(data || []);
     } catch (error) {
-      console.error('Error fetching patients:', error);
+      console.error('Error searching patients:', error);
+      setFilteredPatients([]);
     }
   };
 
@@ -83,7 +94,7 @@ const PatientSelector: React.FC<PatientSelectorProps> = ({
           <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
           <Input
             id="patient-search"
-            placeholder="Search by name, ID, or phone number..."
+            placeholder="Search by name, ID, phone number, or CNIC..."
             value={searchQuery}
             onChange={handleSearchChange}
             className="pl-10"
